@@ -34,7 +34,10 @@ import {
 import { inputMessages } from "./messages/codec.js";
 import type { Model, ModelProfile } from "./models/profile.js";
 import type { ModelRegistry } from "./models/registry.js";
-import { snapshotModelOptions } from "./models/options.js";
+import {
+  snapshotModelOptions,
+  validateModelOptions,
+} from "./models/options.js";
 import type { ModelRef } from "./models/contract.js";
 import { HumanMessage, type MessageData } from "./messages/message.js";
 import type { Scope, PageOptions, SessionRecord } from "./state/schema.js";
@@ -327,28 +330,7 @@ export class Session {
   private switchModel(modelId: string, options?: JsonObject): Promise<void> {
     return this.control(async () => {
       requireId(modelId, "model id");
-      if (
-        options !== undefined &&
-        (!options || typeof options !== "object" || Array.isArray(options))
-      )
-        fail("InvalidConfiguration", "Model options must be an object");
-      for (const key of [
-        "api",
-        "model",
-        "input",
-        "messages",
-        "instructions",
-        "tools",
-        "stream",
-        "apiKey",
-        "baseURL",
-        "defaultHeaders",
-        "maxRetries",
-        "timeout",
-        "connectionId",
-      ])
-        if (options && key in options)
-          fail("UnsupportedOption", key + " is not a model option");
+      validateModelOptions(options);
       const previous = this.selectedModel.ref;
       const slash = modelId.indexOf("/");
       const ref =
@@ -437,11 +419,15 @@ export class Session {
       timestamp: new Date().toISOString(),
     };
   }
-  private notify<N extends AnyEvent>(name: N, payload: PayloadOf<N>): void {
+  private notify<N extends AnyEvent>(
+    name: N,
+    payload: PayloadOf<N>,
+  ): Promise<void> {
     const context = this.context();
     this.emit(new EventEnvelope(name, payload, context));
-    void this.controller.hooks
+    return this.controller.hooks
       .dispatch(name, payload, context)
+      .then(() => {})
       .catch((error) => this.controller.report(errorInfo(error)));
   }
   readonly thread = {
@@ -735,7 +721,9 @@ export class Session {
     await this.foreground?.done;
     this.check();
     if (this.busy) fail("SessionBusy", "Session has active work");
-    return this.attach(thread, options, false);
+    const ref = options.model ?? (await thread.snapshot()).execution?.modelRef;
+    const adapter = ref ? this.controller.sessionModel(ref).adapter : undefined;
+    return this.attach(thread, { ...options, adapter }, false);
   }
   resume(options: {
     interruptId: string;
@@ -788,20 +776,30 @@ export class Session {
     if (this.controlPending)
       fail("SessionBusy", "Session control operation is pending");
     this.checkSelectionChange();
+    return this.close();
+  }
+  /** @internal Controller closes handles while its runtime is shutting down. */
+  close(force = false): Promise<void> {
+    if (this.disposed) return Promise.resolve();
+    if (this.disposal)
+      return force
+        ? this.disposal.catch(() => this.close(true))
+        : this.disposal;
     this.closing = true;
     this.disposal = (async () => {
       try {
-        await this.controller.hooks.dispatch(
-          sessionHooks.beforeClose,
-          {},
-          this.context(),
-        );
+        await this.controller.hooks
+          .dispatch(sessionHooks.beforeClose, {}, this.context())
+          .catch((error) => {
+            if (!force) throw error;
+            this.controller.report(errorInfo(error));
+          });
         await this.foreground?.done;
         this.discard("Closed");
         this.disposed = true;
         this.publishState({ status: "closed" });
         this.controller.forgetSession(this);
-        this.notify(sessionHooks.closed, {});
+        await this.notify(sessionHooks.closed, {});
         this.observers.clear();
       } catch (error) {
         this.closing = false;

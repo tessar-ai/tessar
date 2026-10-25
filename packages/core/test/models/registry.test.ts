@@ -1,5 +1,23 @@
 import { expect, it } from "vitest";
 import { ModelRegistry } from "../../src/models/registry.js";
+it("forgets retained connections when a provider is detached or replaced", () => {
+  const registry = new ModelRegistry();
+  const adapter = (endpoint: string): import("../../src/models/contract.js").ModelAdapter => ({
+    ref: { providerId: "custom", modelId: "model", connectionId: "named" },
+    connection: { providerId: "custom", connectionId: "named", protocol: "test", endpoint },
+    validate() {}, async *stream() {},
+  });
+  try {
+    const old = adapter("old"), remove = registry.registerProvider({ id: "custom", create: () => old });
+    registry.retain(old);
+    expect(() => registry.retain(adapter("different"))).toThrowError(expect.objectContaining({ code: "ModelContextIncompatible" }));
+    remove();
+    expect(() => registry.resolve(old.ref)).toThrowError(expect.objectContaining({ code: "MissingProvider" }));
+    const next = adapter("new");
+    registry.registerProvider({ id: "custom", create: () => next });
+    expect(registry.resolve(next.ref)).toBe(next);
+  } finally { registry.dispose(); }
+});
 it("resolves metadata automatically while its synchronous getter remains immutable", async () => {
   let calls = 0;
   const registry = new ModelRegistry({

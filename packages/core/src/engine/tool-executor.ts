@@ -91,7 +91,7 @@ function saveResult(
   record.result = MessageCodec.encode(
     normalizeToolOutput(message, record.toolCallId),
   );
-  record.endedAt = context.clock.now();
+  record.endedAt ??= context.clock.now();
   record.durationMs = record.startedAt
     ? Date.parse(record.endedAt) - Date.parse(record.startedAt)
     : null;
@@ -154,6 +154,8 @@ async function publishResults(
         toolCallId: record.toolCallId,
         result: message,
         status: record.status,
+        startedAt: record.startedAt,
+        endedAt: record.endedAt,
       },
       record.id,
     );
@@ -267,7 +269,12 @@ export async function callTools(
       await context.hook(
         frame,
         toolHooks.error,
-        { toolExecutionId: record.id, error: record.error! },
+        {
+          toolExecutionId: record.id,
+          error: record.error!,
+          startedAt: record.startedAt,
+          endedAt: record.endedAt,
+        },
         record.id,
       );
     }
@@ -297,8 +304,12 @@ export async function callTools(
           frame,
           toolHooks.start,
           {
-            toolExecutionId: record.id, toolCallId: record.toolCallId,
-            turnId: record.turnId, name: record.toolName, arguments: record.arguments,
+            toolExecutionId: record.id,
+            toolCallId: record.toolCallId,
+            startedAt: record.startedAt,
+            turnId: record.turnId,
+            name: record.toolName,
+            arguments: record.arguments,
           },
           record.id,
         );
@@ -340,10 +351,16 @@ export async function callTools(
           record.status = "succeeded";
         } catch (error) {
           result = toolFailure(record, error);
+          record.endedAt = context.clock.now();
           await context.hook(
             frame,
             toolHooks.error,
-            { toolExecutionId: record.id, error: record.error! },
+            {
+              toolExecutionId: record.id,
+              error: record.error!,
+              startedAt: record.startedAt,
+              endedAt: record.endedAt,
+            },
             record.id,
           );
         }

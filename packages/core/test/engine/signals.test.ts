@@ -12,6 +12,7 @@ import {
 } from "../../src/index.js";
 import { ScriptedProvider } from "../../src/testing/scripted-provider.js";
 import type { Stream } from "../../src/agent.js";
+import { createMemoryBackend } from "../../src/state/memory-backend.js";
 
 async function collect(stream: Stream) {
   const events = [];
@@ -295,13 +296,18 @@ it("reports a failed signal write through execution events after acknowledging r
     { text: "done" },
   ]);
   const agent = new Agent({ id: "signal-write-fail", model: provider });
-  const controller = new Controller({ id: "signal-write-fail", agent });
+  const backend = createMemoryBackend();
+  const controller = new Controller({
+    id: "signal-write-fail",
+    agent,
+    plugins: [{ id: "storage", setup(tessar) { tessar.storage.register(backend); } }],
+  });
   await controller.initialize();
   try {
     const stream = agent.stream("start"),
       result = collect(stream);
     await vi.waitFor(() => expect(provider.calls).toHaveLength(1));
-    const publish = vi.spyOn(controller.backend.commits, "publish");
+    const publish = vi.spyOn(backend.commits, "publish");
     publish.mockRejectedValueOnce(new Error("storage unavailable"));
     await expect(
       agent.sendSignal({ streamId: stream.id!, content: "failed-input" }),

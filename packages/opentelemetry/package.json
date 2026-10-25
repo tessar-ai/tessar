@@ -1,0 +1,55 @@
+{
+  "name": "@tessar/opentelemetry",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "OpenTelemetry tracing for Tessar with OTLP, Langfuse, Arize and Traceloop adapters.",
+  "keywords": [
+    "tessar",
+    "ai-agent",
+    "opentelemetry",
+    "otlp",
+    "tracing",
+    "llm",
+    "langfuse",
+    "arize",
+    "traceloop",
+    "typescript"
+  ],
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24.22.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tessar-ai/tessar.git",
+    "directory": "packages/opentelemetry"
+  },
+  "homepage": "https://github.com/tessar-ai/tessar#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@tessar/core": "workspace:*",
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/core": "2.12.0",
+    "@opentelemetry/sdk-trace-base": "2.12.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.223.0",
+    "@opentelemetry/resources": "2.12.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}
+

@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@tessar/core": "workspace:*",
-    "@tessar/langfuse": "workspace:*",
+    "@tessar/opentelemetry": "workspace:*",
     "@tessar/mongodb": "workspace:*",
     "@tessar/plugins": "workspace:*",
     "@tessar/postgresql": "workspace:*",

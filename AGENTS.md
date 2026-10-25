@@ -5,7 +5,7 @@
 Tessar is a TypeScript ESM monorepo for building CLI agents and application integrations. Keep its core minimal; additional capabilities belong in plugins.
 
 - `packages/core/src/`: Agent, Controller, Session, loop, hooks, messages and state contracts.
-- `packages/{openai,plugins,sqlite,postgresql,mongodb}/src/`: provider adapters, plugin utilities and storage backends.
+- `packages/{openai,plugins,opentelemetry,sqlite,postgresql,mongodb}/src/`: provider adapters, plugin utilities, tracing and storage backends.
 - `packages/*/test/`: package tests; `tests/integration/`: cross-package and process tests.
 - `tests/fixtures/apps/{cli,headless}/`: private applications exercised by integration tests.
 - `examples/guide/`: public developer guides. Build output goes into ignored `dist/` directories.

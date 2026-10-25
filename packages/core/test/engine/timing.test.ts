@@ -12,6 +12,53 @@ import {
   stream as events,
 } from "../../src/index.js";
 const model = { providerId: "scripted", modelId: "test" };
+it.each([false, true])("exposes record timestamps consistently on Stream, Turn, model and tool events; tool failure=%s", async (fails) => {
+  const work = createTool({
+    name: "work", description: "Timing", schema: z.object({}),
+    execute: () => { if (fails) throw Error("Tool failed"); return "done"; },
+  });
+  const h = await AgentHarness.create({
+    tools: { work }, modelScripts: [{ response: { message: MessageCodec.encode(new AssistantMessage([
+      { type: "tool-call", name: "work", toolCallId: "work", arguments: {} },
+    ])) } }, { text: "answer" }],
+  });
+  try {
+    const stream = h.agent.stream("work");
+    const events = await h.collect(stream), records = await h.records(stream.id!);
+    const timing = (record: { startedAt: string | null; endedAt: string | null }) => ({
+      startedAt: record.startedAt, endedAt: record.endedAt,
+    });
+    expect(events.find((event) => event.type === "stream.started")!.payload).toMatchObject({ startedAt: records.stream.startedAt });
+    expect(events.find((event) => event.type === "stream.end")!.payload).toMatchObject(timing(records.stream));
+    for (const record of records.turns) {
+      expect(events.find((event) => event.type === "turn.start" && event.payload.turnId === record.id)!.payload).toMatchObject({ startedAt: record.startedAt });
+      expect(events.find((event) => event.type === "turn.end" && event.payload.turnId === record.id)!.payload).toMatchObject(timing(record));
+    }
+    for (const record of records.attempts) {
+      expect(events.find((event) => event.type === "model.start" && event.payload.attemptId === record.id)!.payload).toMatchObject({ startedAt: record.startedAt });
+      expect(events.find((event) => event.type === "model.end" && event.payload.attemptId === record.id)!.payload).toMatchObject(timing(record));
+    }
+    for (const record of records.tools) {
+      expect(events.find((event) => event.type === "tool.start" && event.payload.toolExecutionId === record.id)!.payload).toMatchObject({ startedAt: record.startedAt });
+      expect(events.find((event) => event.type === "tool.end" && event.payload.toolExecutionId === record.id)!.payload).toMatchObject(timing(record));
+      if (fails) expect(events.find((event) => event.type === "tool.error" && event.payload.toolExecutionId === record.id)!.payload).toMatchObject(timing(record));
+    }
+  } finally { await h.dispose(); }
+});
+
+it("exposes failed primary model timestamps and the final Stream/Turn record times", async () => {
+  const h = await AgentHarness.create({ modelScripts: [{ error: Error("Provider unavailable") }] });
+  try {
+    const stream = h.agent.stream("hello"), events = await h.collect(stream);
+    const records = await h.records(stream.id!);
+    const attempt = records.attempts[0]!;
+    expect(events.find((event) => event.type === "model.error")!.payload).toMatchObject({ startedAt: attempt.startedAt, endedAt: attempt.endedAt });
+    expect(events.find((event) => event.type === "stream.end")!.payload).toMatchObject({ startedAt: records.stream.startedAt, endedAt: records.stream.endedAt });
+    const turn = records.turns[0]!;
+    expect(events.find((event) => event.type === "turn.end")!.payload).toMatchObject({ startedAt: turn.startedAt, endedAt: turn.endedAt });
+  } finally { await h.dispose(); }
+});
+
 it("measures monotonic attempt duration and first output", async () => {
   let now = 0;
   const timer = vi.spyOn(performance, "now").mockImplementation(() => now);

@@ -32,6 +32,24 @@ const response = (count: number) => ({
     ),
   },
 });
+it("uses Agent tool keys as aliases without mutating the reusable Tool", async () => {
+  const original = createTool({ name: "original", description: "Shared tool", schema: z.object({}), execute: () => "result" });
+  const harness = await AgentHarness.create({
+    tools: { first: original, second: original },
+    modelScripts: [{ response: { message: MessageCodec.encode(new AssistantMessage([
+      { type: "tool-call", name: "second", toolCallId: "alias-call", arguments: {} },
+    ])) } }, { text: "done" }],
+  });
+  try {
+    expect(original.name).toBe("original");
+    expect(harness.agent.listTool().map((tool) => tool.name)).toEqual(["first", "second"]);
+    const result = await harness.agent.generate("use second");
+    expect(result.status).toBe("completed");
+    expect(harness.provider.calls[0]!.tools.map((tool) => tool.name)).toEqual(["first", "second"]);
+    expect((await harness.records(result.streamId)).tools[0]!.toolName).toBe("second");
+    expect(result.output.find((message) => message.role === "tool")!.content).toEqual([{ type: "text", text: "result" }]);
+  } finally { await harness.dispose(); }
+});
 function deferred() {
   let resolve!: () => void;
   const promise = new Promise<void>((done) => {
@@ -305,7 +323,7 @@ it("recovers every dispatched tool and preserves completed siblings without redi
   }
 });
 
-it("rejects invalid concurrency and duplicate tool names from direct or later plugin registrations", async () => {
+it("rejects invalid concurrency and plugin registrations colliding with Agent tool aliases", async () => {
   const work = createTool({
     name: "work",
     description: "Work",
@@ -321,14 +339,6 @@ it("rejects invalid concurrency and duplicate tool names from direct or later pl
           tools: { concurrency, work },
         }),
     ).toThrow();
-  expect(
-    () =>
-      new Agent({
-        id: "bad",
-        model: { providerId: "test", modelId: "test" },
-        tools: { work, duplicate: work },
-      }),
-  ).toThrow();
   const controller = new Controller({
     id: "duplicate",
     agent: new Agent({

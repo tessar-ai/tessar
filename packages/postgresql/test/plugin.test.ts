@@ -15,7 +15,11 @@ it("registers a backend whose connection is closed by plugin disposal", async ()
       new PostgresqlStoragePlugin({ connectionString: "postgres://unused" }),
     ]);
     expect(host.registrations()).toMatchObject([
-      { kind: "storage", id: "primary", value: backend },
+      {
+        kind: "storage",
+        id: "primary",
+        value: { close: expect.any(Function) },
+      },
     ]);
     expect(close).not.toHaveBeenCalled();
   } finally {

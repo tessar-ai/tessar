@@ -149,7 +149,7 @@ export class LoggerPlugin implements Plugin {
         if (ranks[level] < ranks[this.#level]) return;
         const entry: LogEntry = Object.freeze({
           ...event,
-          timestamp: event.timestamp ?? new Date().toISOString(),
+          timestamp: event.timestamp,
           level,
         });
         const writing = settle(

@@ -1,5 +1,11 @@
 import { stream as streamHooks } from "@tessar/core";
-import { Agent, Controller, HumanMessage, type Plugin, type PluginContext } from "@tessar/core";
+import {
+  Agent,
+  Controller,
+  HumanMessage,
+  type Plugin,
+  type PluginContext,
+} from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 
 const provider = new ScriptedProvider([
@@ -33,7 +39,9 @@ try {
     if (event.type === streamHooks.error)
       throw Error(event.payload.error.message);
   }
-  const session = await controller.createSession({ scope: { userId: "example" } });
+  const session = await controller.createSession({
+    scope: { userId: "example" },
+  });
   await session.thread.create();
   const done = new Promise<void>((resolve, reject) =>
     session.subscribe((event) => {

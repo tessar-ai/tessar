@@ -11,12 +11,12 @@ importers:
       '@tessar/core':
         specifier: workspace:*
         version: link:packages/core
-      '@tessar/langfuse':
-        specifier: workspace:*
-        version: link:packages/langfuse
       '@tessar/mongodb':
         specifier: workspace:*
         version: link:packages/mongodb
+      '@tessar/opentelemetry':
+        specifier: workspace:*
+        version: link:packages/opentelemetry
       '@tessar/plugins':
         specifier: workspace:*
         version: link:packages/plugins
@@ -48,33 +48,6 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
-  packages/langfuse:
-    dependencies:
-      '@langfuse/otel':
-        specifier: ^6.0.1
-        version: 6.0.1(@opentelemetry/api@1.9.0)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.0))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.0))(@opentelemetry/otlp-exporter-base@0.223.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.0))
-      '@langfuse/tracing':
-        specifier: ^6.0.1
-        version: 6.0.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/api':
-        specifier: 1.9.0
-        version: 1.9.0
-      '@opentelemetry/core':
-        specifier: 2.12.0
-        version: 2.12.0(@opentelemetry/api@1.9.0)
-      '@opentelemetry/exporter-trace-otlp-http':
-        specifier: 0.223.0
-        version: 0.223.0(@opentelemetry/api@1.9.0)
-      '@opentelemetry/otlp-exporter-base':
-        specifier: 0.223.0
-        version: 0.223.0(@opentelemetry/api@1.9.0)
-      '@opentelemetry/sdk-trace-base':
-        specifier: 2.12.0
-        version: 2.12.0(@opentelemetry/api@1.9.0)
-      '@tessar/core':
-        specifier: workspace:*
-        version: link:../core
-
   packages/mongodb:
     dependencies:
       '@tessar/core':
@@ -92,6 +65,27 @@ importers:
       openai:
         specifier: 7.34.0
         version: 7.34.0(zod@4.6.7)
+
+  packages/opentelemetry:
+    dependencies:
+      '@opentelemetry/api':
+        specifier: 1.9.0
+        version: 1.9.0
+      '@opentelemetry/core':
+        specifier: 2.12.0
+        version: 2.12.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-trace-otlp-http':
+        specifier: 0.223.0
+        version: 0.223.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/resources':
+        specifier: 2.12.0
+        version: 2.12.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-base':
+        specifier: 2.12.0
+        version: 2.12.0(@opentelemetry/api@1.9.0)
+      '@tessar/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/plugins:
     devDependencies:
@@ -152,28 +146,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
-
-  '@langfuse/core@6.0.1':
-    resolution: {integrity: sha512-/VOavi3MFe5ugYcBXk9yDoG0JtMXGP5fMi1J5VdRM/yhTnYTfFDuX4Mw5r3GHBGxU9rcs2ywUiaWwdxxdWzvqg==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      '@opentelemetry/api': ^1.9.0
-
-  '@langfuse/otel@6.0.1':
-    resolution: {integrity: sha512-ANYEd/+E7cwQLMgmRguiJArYuNN/eNWzBvKRhxY6Pz1OKKHtmUIKxxi/2Hfgs9FRQh1lNOgiW1LmIujorIoxJQ==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      '@opentelemetry/api': ^1.9.0
-      '@opentelemetry/core': ^2.0.1
-      '@opentelemetry/exporter-trace-otlp-http': '>=0.202.0 <1.0.0'
-      '@opentelemetry/otlp-exporter-base': '>=0.202.0 <1.0.0'
-      '@opentelemetry/sdk-trace-base': ^2.0.1
-
-  '@langfuse/tracing@6.0.1':
-    resolution: {integrity: sha512-jh+Kx4HZOyzvzPAjakU9VdJXCzPruJ7U4fCHF0DDygv0xwSjvXhLcP01+yesWFSNaFfo89lEdmhn2Bku0aOfqQ==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      '@opentelemetry/api': ^1.9.0
 
   '@mongodb-js/saslprep@1.6.1':
     resolution: {integrity: sha512-D4CQtk9IwjCLAvCf1xvHEod3960q8XMUzfmdRU9qjUNlHnesGuTOvJcOTaPm9koZ1caUKA2aTbszZiAkcmSgmg==}
@@ -918,24 +890,6 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
-
-  '@langfuse/core@6.0.1(@opentelemetry/api@1.9.0)':
-    dependencies:
-      '@opentelemetry/api': 1.9.0
-
-  '@langfuse/otel@6.0.1(@opentelemetry/api@1.9.0)(@opentelemetry/core@2.12.0(@opentelemetry/api@1.9.0))(@opentelemetry/exporter-trace-otlp-http@0.223.0(@opentelemetry/api@1.9.0))(@opentelemetry/otlp-exporter-base@0.223.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.12.0(@opentelemetry/api@1.9.0))':
-    dependencies:
-      '@langfuse/core': 6.0.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/api': 1.9.0
-      '@opentelemetry/core': 2.12.0(@opentelemetry/api@1.9.0)
-      '@opentelemetry/exporter-trace-otlp-http': 0.223.0(@opentelemetry/api@1.9.0)
-      '@opentelemetry/otlp-exporter-base': 0.223.0(@opentelemetry/api@1.9.0)
-      '@opentelemetry/sdk-trace-base': 2.12.0(@opentelemetry/api@1.9.0)
-
-  '@langfuse/tracing@6.0.1(@opentelemetry/api@1.9.0)':
-    dependencies:
-      '@langfuse/core': 6.0.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/api': 1.9.0
 
   '@mongodb-js/saslprep@1.6.1':
     dependencies:

@@ -192,6 +192,11 @@ export class OpenAIProvider<
     );
   }
 
+  /** @internal Shared provider registration used by the built-in plugin. */
+  providerRegistration(): ModelProviderRegistration {
+    return this.registration;
+  }
+
   override validate(request: ModelRequest): void {
     if (this.chat) this.chat.validate(request);
     else super.validate(request);

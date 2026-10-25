@@ -6,51 +6,19 @@ import {
   type PluginContext,
 } from "@tessar/core";
 import { time, update, type TraceRuntime } from "./trace.js";
-import type { LangfuseOptions } from "./types.js";
-
-// Langfuse flat usage details must contain exclusive, non-overlapping buckets.
-function usageDetails(usage: ModelUsage): Record<string, number> | undefined {
-  const details: Record<string, number> = {};
-  const read = usage.cacheReadInputTokens,
-    write = usage.cacheWriteInputTokens;
-  if (usage.inputTokens !== null) {
-    if ((read ?? 0) + (write ?? 0) <= usage.inputTokens) {
-      details.input = usage.inputTokens - (read ?? 0) - (write ?? 0);
-      if (read !== null) details.input_cached_tokens = read;
-      if (write !== null) details.input_cache_write = write;
-    } else details.input = usage.inputTokens;
-  } else {
-    if (read !== null) details.input_cached_tokens = read;
-    if (write !== null) details.input_cache_write = write;
-    if (usage.uncachedInputTokens !== null)
-      details.input = usage.uncachedInputTokens;
-  }
-  if (usage.outputTokens !== null) {
-    const reasoning = usage.reasoningOutputTokens;
-    if (reasoning !== null && reasoning <= usage.outputTokens) {
-      details.output = usage.outputTokens - reasoning;
-      details.output_reasoning_tokens = reasoning;
-    } else details.output = usage.outputTokens;
-  } else if (usage.reasoningOutputTokens !== null) {
-    details.output_reasoning_tokens = usage.reasoningOutputTokens;
-  }
-  if (usage.totalTokens !== null) details.total = usage.totalTokens;
-  return Object.keys(details).length ? details : undefined;
-}
 
 /** Records model requests, retries, usage and time to first output. */
 export function registerModelHooks(
   tessar: PluginContext,
   tracing: TraceRuntime,
-  options: LangfuseOptions,
 ): void {
-  const { current, parentTurn, start, failure } = tracing;
+  const { current, parentTurn, start, end, failure } = tracing;
   tessar.hook(model.start, (event) => {
     const state = current(event);
     if (!state || state.models.has(event.payload.attemptId)) return;
     const { attemptId, request, purpose, parentToolExecutionId, turnId } =
       event.payload;
-    if (turnId) state.currentTurn = turnId;
+    if (turnId && purpose !== "auxiliary") state.currentTurn = turnId;
     if (purpose !== "auxiliary" && request) {
       update(parentTurn(state, event, turnId), "span", {
         input: request,
@@ -73,13 +41,13 @@ export function registerModelHooks(
         providerId: event.payload.model.providerId,
         options: request?.options,
       },
-      parent ?? parentTurn(state, event, turnId),
+      parent ??
+        (purpose === "auxiliary" && state.currentTurn !== turnId
+          ? state.root
+          : parentTurn(state, event, turnId)),
       {
         model: event.payload.model.modelId,
         input: request,
-        ...(purpose !== "auxiliary" && options.prompt
-          ? { prompt: { ...options.prompt, isFallback: false } }
-          : {}),
         modelParameters: Object.fromEntries(
           Object.entries(request?.options ?? {}).filter(
             ([, value]) =>
@@ -87,6 +55,7 @@ export function registerModelHooks(
           ),
         ) as Record<string, string | number>,
       },
+      event.payload.startedAt,
     );
     state.models.set(attemptId, span);
   });
@@ -101,7 +70,7 @@ export function registerModelHooks(
   });
   const recordUsage = (span: Span, usage: ModelUsage) =>
     update(span, "generation", {
-      usageDetails: usageDetails(usage),
+      usage,
       metadata: { usage },
     });
   tessar.hook(model.usage, (event) => {
@@ -128,7 +97,7 @@ export function registerModelHooks(
             name: part.name,
             arguments: part.arguments,
           });
-    span.end(time(event));
+    end(span, event, event.payload.endedAt);
     state!.models.delete(event.payload.attemptId);
     state!.firstOutputs.delete(event.payload.attemptId);
   });
@@ -137,7 +106,7 @@ export function registerModelHooks(
       span = state?.models.get(event.payload.attemptId);
     if (!span) return;
     failure(span, "generation", event.payload.error);
-    span.end(time(event));
+    end(span, event, event.payload.endedAt);
     state!.models.delete(event.payload.attemptId);
     state!.firstOutputs.delete(event.payload.attemptId);
   });
