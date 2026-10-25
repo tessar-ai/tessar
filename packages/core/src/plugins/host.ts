@@ -22,6 +22,8 @@ import {
   type ValueRegistration,
 } from "./registry.js";
 import { definePluginState } from "../state/plugin-state.js";
+import { systemClock } from "../json.js";
+import { guardStorage } from "../state/storage-errors.js";
 export class PluginHost {
   private slots: PluginSlot[] = [];
   private definitions = new Map<string, { kind: EventKind; version: number }>(
@@ -188,12 +190,12 @@ export class PluginHost {
               tool.name,
               tool,
               1,
-              tool.resumeSchema || tool.resume
-                ? JSON.stringify([
-                    plugin.configurationId ?? null,
+              plugin.configurationId === undefined
+                ? tool.configurationId
+                : JSON.stringify([
+                    plugin.configurationId,
                     tool.configurationId,
-                  ])
-                : (plugin.configurationId ?? null),
+                  ]),
             ),
         },
         models: {
@@ -201,8 +203,9 @@ export class PluginHost {
         },
         storage: {
           register: (backend) => {
-            register("storage", "primary", backend);
-            tessar.defer(() => backend.close());
+            const storage = guardStorage(backend);
+            register("storage", "primary", storage);
+            tessar.defer(() => storage.close());
           },
         },
         defer: (disposer) => {
@@ -291,6 +294,7 @@ export class PluginHost {
     context: Partial<HookContext> & EventContext = {},
     captured?: RegistryLease,
   ): Promise<ResultOf<D>> {
+    context = { ...context, timestamp: context.timestamp ?? systemClock.now() };
     const lease = captured ?? this.capture();
     try {
       return await dispatch(

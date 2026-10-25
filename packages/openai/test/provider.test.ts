@@ -1,8 +1,33 @@
 import { randomUUID } from "node:crypto";
 import { expect, it } from "vitest";
-import { Agent, HumanMessage, normalizeInstruction } from "@tessar/core";
+import { Agent, Controller, HumanMessage, normalizeInstruction } from "@tessar/core";
 import OpenAI from "openai";
-import { OpenAIProvider } from "../src/index.js";
+import { OpenAIProvider, OpenAIPlugin } from "../src/index.js";
+
+it.each(["responses", "chat-completions"] as const)("builds the same native %s connection through OpenAIPlugin", async (api) => {
+  const calls: { url: string; body: any }[] = [];
+  let registration!: import("@tessar/core").ModelProviderRegistration;
+  const plugin = new OpenAIPlugin({ api, apiKey: "test", baseURL: "https://plugin.test/v1", connectionId: "plugin", temperature: 0.3,
+    fetch: async (url: any, init: any) => {
+      calls.push({ url: String(url), body: JSON.parse(init.body) });
+      if (api === "responses") return completed();
+      return new Response('data: {"id":"chat","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', { headers: { "Content-Type": "text/event-stream" } });
+    },
+  });
+  await plugin.setup({ models: { register(value) { registration = value; } } } as import("@tessar/core").PluginContext);
+  const provider = registration.create("fixture");
+  const agent = new Agent({ id: randomUUID(), model: provider });
+  try {
+    expect(provider).toBeInstanceOf(OpenAIProvider);
+    expect(provider.ref.connectionId).toBe("plugin");
+    expect(registration.create("another").connection).toEqual(provider.connection);
+    expect((await agent.generate("hello")).status).toBe("completed");
+    expect(calls[0]!.url).toBe("https://plugin.test/v1/" + (api === "responses" ? "responses" : "chat/completions"));
+    expect(calls[0]!.body.temperature).toBe(0.3);
+    for (const key of ["api", "connectionId", "apiKey", "baseURL"])
+      expect(calls[0]!.body).not.toHaveProperty(key);
+  } finally { await agent.shutdown(); }
+});
 
 function completed(text = "ok") {
   return new Response(
@@ -34,6 +59,44 @@ function completed(text = "ok") {
     { headers: { "Content-Type": "text/event-stream" } },
   );
 }
+
+it("retains a Session's executable connection across follow-ups, handle restoration and model-ID switches", async () => {
+  const calls: { url: string; body: any }[] = [];
+  const defaultModel = new OpenAIProvider({ apiKey: "first", model: "fixture", connectionId: "first" });
+  const other = new OpenAIProvider({
+    apiKey: "other", baseURL: "https://other.test/v1", model: "fixture", connectionId: "other", temperature: 0.25,
+    fetch: async (url: any, init: any) => { calls.push({ url: String(url), body: JSON.parse(init.body) }); return completed(); },
+  });
+  const agent = new Agent({ id: randomUUID(), model: defaultModel });
+  const controller = new Controller({ id: randomUUID(), agent });
+  const ask = async (session: import("@tessar/core").Session) => {
+    const done = new Promise<void>((resolve, reject) => {
+      const stop = session.subscribe((event) => {
+        if (event.type === "stream.end") {
+          stop();
+          if (event.payload.status === "completed") resolve();
+          else reject(Error(event.payload.error?.message ?? event.payload.status));
+        }
+        if (event.type === "stream.error") { stop(); reject(Error(event.payload.error.message)); }
+      });
+    });
+    await session.followUp("hello");
+    await done;
+  };
+  try {
+    await controller.initialize();
+    await agent.generate("direct", { model: other });
+    const session = await controller.createSession({ model: other, threadId: randomUUID() });
+    await ask(session);
+    const restored = (await controller.getSession(session.id))!;
+    await restored.model.switch("another");
+    await restored.thread.create({ id: randomUUID() });
+    await ask(restored);
+    expect(calls).toHaveLength(3);
+    expect(calls.every((call) => call.url === "https://other.test/v1/responses" && call.body.temperature === 0.25)).toBe(true);
+    expect(calls.at(-1)!.body.model).toBe("another");
+  } finally { await controller.dispose(); }
+});
 
 it("forwards native options and headers without adding undeclared provider defaults", async () => {
   const calls: { url: string; body: any; headers: Headers }[] = [];
@@ -153,14 +216,16 @@ it("rejects runtime overrides and unsupported execution modes before making requ
     { input: "bypass" },
     { stream: false },
     { model: "bypass" },
-    { background: true },
-    { previous_response_id: "resp" },
   ]) {
     await expect(
       new Agent({ id: randomUUID(), model }).generate("hello", {
         modelOptions: options as any,
       }),
     ).rejects.toMatchObject({ code: "UnsupportedOption" });
+  }
+  for (const options of [{ background: true }, { previous_response_id: "resp" }]) {
+    const result = await new Agent({ id: randomUUID(), model }).generate("hello", { modelOptions: options as any });
+    expect(result).toMatchObject({ status: "failed", error: { code: "UnsupportedOption" } });
   }
   const invalid = await new Agent({ id: randomUUID(), model }).generate(
     "hello",

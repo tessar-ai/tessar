@@ -14,6 +14,52 @@ import { ToolDecision } from "../../src/events/type.js";
 import { AssistantMessage, HumanMessage } from "../../src/messages/message.js";
 import { MessageCodec } from "../../src/messages/codec.js";
 import { createTool } from "../../src/tools/tool.js";
+it("retains a detached plugin until its asynchronous consumer-error hook settles", async () => {
+  let release!: () => void, ended!: () => void, disposed = false;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const done = new Promise<void>((resolve) => { ended = resolve; });
+  const h = await AgentHarness.create({ plugins: [{ id: "watch", setup(tessar) {
+    tessar.hook("stream.error", async () => { await gate; });
+    tessar.hook("stream.end", () => ended());
+    tessar.defer(() => { disposed = true; });
+  } }] });
+  h.provider.stream = async function* () {
+    for (let index = 0; index < 600; index++) yield { type: "message-delta", messageId: "answer", partId: "text", partKind: "text", delta: "x" };
+    yield { type: "response", response: { message: MessageCodec.encode(new AssistantMessage("answer")) } };
+  };
+  try {
+    h.agent.stream("hello");
+    await done;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await h.controller.plugins.detach("watch");
+    expect(disposed).toBe(false);
+    release();
+    await expect.poll(() => disposed).toBe(true);
+  } finally { release(); await h.dispose(); }
+});
+it("publishes consumer overflow to hooks without cancelling its execution", async () => {
+  const failures: import("../../src/events/definition.js").StreamEvent[] = [];
+  let ended!: () => void;
+  const done = new Promise<void>((resolve) => { ended = resolve; });
+  const h = await AgentHarness.create({ modelScripts: [{ text: "x".repeat(600) }], plugins: [{ id: "watch", setup(tessar) {
+    tessar.hook("stream.error", (event) => { failures.push(event); });
+    tessar.hook("stream.end", () => ended());
+  } }] });
+  h.provider.stream = async function* () {
+    for (let index = 0; index < 600; index++) yield { type: "message-delta", messageId: "answer", partId: "text", partKind: "text", delta: "x" };
+    yield { type: "response", response: { message: MessageCodec.encode(new AssistantMessage("answer")) } };
+  };
+  try {
+    const stream = h.agent.stream("hello");
+    await done;
+    const events = [];
+    for await (const event of stream) events.push(event);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]!.payload).toMatchObject({ target: "consumer", error: { code: "ConsumerTooSlow" } });
+    expect(failures[0]!.timestamp).toBe(events[0]!.timestamp);
+    expect((await h.records(stream.id!)).stream.status).toBe("completed");
+  } finally { await h.dispose(); }
+});
 it("detaches overflowing consumers at 512 events without cancelling execution", async () => {
   const delivery = createDelivery("t", randomIds, { kind: "iterator" });
   delivery.setId("s");

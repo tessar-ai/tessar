@@ -5,8 +5,8 @@ import {
   stateChanged,
 } from "../events/type.js";
 import { StateView, type RuntimeState } from "../runtime-state.js";
-import { fail, type ErrorInfo } from "../errors.js";
-import type { IdGenerator } from "../json.js";
+import { fail, errorInfo, type ErrorInfo } from "../errors.js";
+import { systemClock, type IdGenerator } from "../json.js";
 import {
   EventEnvelope,
   type AnyEvent,
@@ -53,6 +53,12 @@ export function createDelivery(
   limits = { maxEvents: 512, maxBytes: 4 * 1024 * 1024 },
   initialId?: string,
   changed: (state: RuntimeState, context: EventContext) => void = () => {},
+  failed: (
+    event: EventEnvelope<
+      PayloadOf<typeof streamHooks.error>,
+      typeof streamHooks.error
+    >,
+  ) => void = () => {},
 ): Attachment {
   const view = new StateView();
   const controller = new AbortController(),
@@ -145,16 +151,23 @@ export function createDelivery(
       queue.length = 0;
       bytes = 0;
       consumerEnded = true;
+      const failure = new EventEnvelope(
+        streamHooks.error,
+        {
+          target: "consumer" as const,
+          error,
+          lastKnownCheckpointId: lastCheckpoint,
+          persistedStatus: null,
+        },
+        { ...context, streamId: id, threadId, handleId },
+      );
+      try {
+        failed(failure);
+      } catch (cause) {
+        report(errorInfo(cause), failure);
+      }
       queue.push({
-        event: new EventEnvelope(
-          streamHooks.error,
-          {
-            error,
-            lastKnownCheckpointId: lastCheckpoint,
-            persistedStatus: null,
-          },
-          { ...context, streamId: id, threadId, handleId },
-        ),
+        event: failure,
         bytes: 0,
       });
       report(error, { ...context, streamId: id, threadId, handleId });
@@ -174,7 +187,13 @@ export function createDelivery(
     },
     emit(definition, payload, context) {
       if (closed) return;
-      const identity = { ...context, streamId: id, threadId, handleId };
+      const identity = {
+        ...context,
+        timestamp: context.timestamp ?? systemClock.now(),
+        streamId: id,
+        threadId,
+        handleId,
+      };
       const event = new EventEnvelope(
         definition,
         payload,

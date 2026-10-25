@@ -5,6 +5,23 @@ import {
   createMemoryBackend,
   type Plugin,
 } from "../src/index.js";
+import { AgentHarness } from "../src/testing/harness.js";
+
+it("closes live Session handles before disposing plugins and permits repeated Session disposal", async () => {
+  const seen: string[] = [];
+  const h = await AgentHarness.create({ plugins: [{ id: "lifecycle", setup(tessar) {
+    tessar.hook("session.closed", () => { seen.push("session.closed"); });
+    tessar.defer(() => { seen.push("plugin.disposed"); });
+  } }] });
+  const session = await h.controller.createSession();
+  session.subscribe("session.closed", () => { seen.push("subscriber.closed"); });
+  await h.dispose();
+  expect(session.isDisposed()).toBe(true);
+  expect(session.state.get().status).toBe("closed");
+  expect(session.followUp.count()).toBe(0);
+  await expect(session.dispose()).resolves.toBeUndefined();
+  expect(seen).toEqual(["subscriber.closed", "session.closed", "plugin.disposed"]);
+});
 it("requires explicit IDs and binds an Agent to exactly one Controller", async () => {
   expect(
     () => new Agent({ id: "", model: { providerId: "test", modelId: "test" } }),

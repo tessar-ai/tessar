@@ -4,7 +4,7 @@ import { immutable, type JsonObject, type JsonValue } from "./json.js";
 import { inputMessages } from "./messages/codec.js";
 import type { Controller } from "./controller.js";
 import type { Model } from "./models/profile.js";
-import type { ModelRef } from "./models/contract.js";
+import type { ModelAdapter, ModelRef } from "./models/contract.js";
 import type { MessageData } from "./messages/message.js";
 import type {
   PageOptions,
@@ -19,6 +19,7 @@ import { aggregateUsage } from "./trace/usage.js";
 import type { SessionHookHandle } from "./plugins/context.js";
 /** @internal */
 export type ThreadStreamOptions = {
+  adapter?: ModelAdapter;
   signal?: AbortSignal;
   context?: JsonObject;
   modelOptions?: JsonObject;
@@ -146,14 +147,16 @@ export class Thread {
   ): Stream {
     this.check();
     const controller = this.controller,
-      model = options.model
-        ? controller.resolveModel(options.model).ref
-        : undefined;
+      selection = options.model
+        ? controller.sessionModel(options.model)
+        : undefined,
+      model = selection?.stored.ref;
     const common = {
       threadId: this.id,
       signal: options.signal,
       thread: this,
       session,
+      adapter: options.adapter ?? selection?.adapter,
     };
     const prepare = async () => {
       await controller.queries.requireThread(this.id, this.filter);
@@ -166,7 +169,7 @@ export class Thread {
           ...common,
           kind: "input",
           input: inputMessages(options.input),
-          model: controller.resolveModel(options.model).ref,
+          model: model!,
           context: options.context,
           modelOptions: options.modelOptions,
           limits: options.limits,

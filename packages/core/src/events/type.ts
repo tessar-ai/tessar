@@ -59,6 +59,9 @@ export interface ToolPreparation {
   arguments: JsonObject;
 }
 export interface StreamOutcome {
+  /** Logical Stream lifetime; suspension does not finish it. */
+  startedAt?: string;
+  endedAt?: string | null;
   status: string;
   reason: string | null;
   output: readonly MessageData[];
@@ -273,13 +276,21 @@ declare module "./definition.js" {
     "input.prepare": Transform<InputPreparation>;
     "input.received": HookSpec<{ messages: readonly MessageData[] }>;
     "stream.before": Decision<{ input: readonly MessageData[] }>;
-    "stream.started": HookSpec<{ modelRef: ModelRef; checkpointId: string }>;
+    "stream.started": HookSpec<{
+      modelRef: ModelRef;
+      checkpointId: string;
+      startedAt?: string;
+    }>;
     "stream.before-end": HookSpec<StreamOutcome>;
     "stream.end": HookSpec<StreamOutcome>;
     "stream.error": HookSpec<{
+      /** Consumer errors detach delivery without failing the execution. Defaults to execution. */
+      target?: "execution" | "consumer";
       error: ErrorInfo;
       lastKnownCheckpointId: string | null;
       persistedStatus: string | null;
+      startedAt?: string;
+      endedAt?: string | null;
     }>;
     "stream.suspended": HookSpec<{
       checkpointId: string;
@@ -290,8 +301,17 @@ declare module "./definition.js" {
       interruptId: string | null;
       reason: string;
     }>;
-    "turn.start": HookSpec<{ turnId: string; index: number }>;
-    "turn.end": HookSpec<{ turnId: string; usage: UsageSummary }>;
+    "turn.start": HookSpec<{
+      turnId: string;
+      index: number;
+      startedAt?: string;
+    }>;
+    "turn.end": HookSpec<{
+      turnId: string;
+      usage: UsageSummary;
+      startedAt?: string;
+      endedAt?: string | null;
+    }>;
     "turn.decision": Decision<{ turnId: string; hadTools: boolean }>;
     "context.prepare": Transform<ModelRequest>;
     "tools.select": Transform<readonly ToolDescription[]>;
@@ -299,16 +319,33 @@ declare module "./definition.js" {
     "model.request": Transform<ModelRequest>;
     "model.start": HookSpec<{
       attemptId: string;
+      startedAt?: string;
       model: ModelRef;
       request?: ModelRequest;
       purpose?: "primary" | "auxiliary";
       turnId?: string;
       parentToolExecutionId?: string | null;
     }>;
-    "model.end": HookSpec<{ attemptId: string; response: ModelResponse; purpose?: "primary" | "auxiliary" }>;
+    "model.end": HookSpec<{
+      attemptId: string;
+      response: ModelResponse;
+      purpose?: "primary" | "auxiliary";
+      startedAt?: string;
+      endedAt?: string | null;
+    }>;
     "model.response": Transform<ModelResponse>;
-    "model.usage": HookSpec<{ attemptId: string; usage: ModelUsage; purpose?: "primary" | "auxiliary" }>;
-    "model.error": HookSpec<{ attemptId: string; error: ErrorInfo; purpose?: "primary" | "auxiliary" }>;
+    "model.usage": HookSpec<{
+      attemptId: string;
+      usage: ModelUsage;
+      purpose?: "primary" | "auxiliary";
+    }>;
+    "model.error": HookSpec<{
+      attemptId: string;
+      error: ErrorInfo;
+      purpose?: "primary" | "auxiliary";
+      startedAt?: string;
+      endedAt?: string | null;
+    }>;
     "model.recover": Decision<{ attemptId: string; error: ErrorInfo }>;
     "message.prepare": Transform<MessageData>;
     "message.before-commit": HookSpec<{ message: MessageData }>;
@@ -327,6 +364,7 @@ declare module "./definition.js" {
     "tool.before": Decision<ToolPreparation>;
     "tool.start": HookSpec<{
       toolExecutionId: string;
+      startedAt?: string | null;
       toolCallId: string;
       turnId?: string;
       name?: string;
@@ -338,8 +376,16 @@ declare module "./definition.js" {
       toolCallId: string;
       result: MessageData;
       status: string;
+      /** Execution times; notification may follow ordered result publication. */
+      startedAt?: string | null;
+      endedAt?: string | null;
     }>;
-    "tool.error": HookSpec<{ toolExecutionId: string; error: ErrorInfo }>;
+    "tool.error": HookSpec<{
+      toolExecutionId: string;
+      error: ErrorInfo;
+      startedAt?: string | null;
+      endedAt?: string | null;
+    }>;
     "tool.result": Transform<MessageData>;
     "stream.cancel": HookSpec<{ reason: string }>;
     "checkpoint.committed": HookSpec<{

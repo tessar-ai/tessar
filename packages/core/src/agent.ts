@@ -175,7 +175,13 @@ export class Agent<M extends ModelSelection = ModelSelection> {
     const values = Object.values(tools);
     if (values.some((tool) => !(tool instanceof Tool)))
       fail("InvalidConfiguration", "Agent tools must be Tool instances");
-    this.tools = Object.freeze(values as Tool[]);
+    this.tools = Object.freeze(
+      Object.entries(tools).map(([name, tool]) => {
+        requireId(name, "tool alias");
+        const value = tool as Tool;
+        return name === value.name ? value : new Tool({ ...value, name });
+      }),
+    );
     if (new Set(this.tools.map((tool) => tool.name)).size !== this.tools.length)
       fail("RegistrationConflict", "Tool name already registered");
     this.toolConcurrency = concurrency ?? Infinity;
@@ -213,13 +219,15 @@ export class Agent<M extends ModelSelection = ModelSelection> {
   limits(): StreamLimits {
     return this.configuredLimits;
   }
-  stream<T extends ModelAdapter = Extract<M, ModelAdapter>>(
+  stream<T extends ModelAdapter = M extends ModelAdapter ? M : ModelAdapter>(
     input: AgentInput,
     options: AgentStreamOptions<T> = {},
   ): Stream {
     return callAgent(this, input, options, this.controller);
   }
-  async generate<T extends ModelAdapter = Extract<M, ModelAdapter>>(
+  async generate<
+    T extends ModelAdapter = M extends ModelAdapter ? M : ModelAdapter,
+  >(
     input: AgentInput,
     options: AgentExecutionOptions<T> = {},
   ): Promise<GenerateOutcome> {
@@ -347,6 +355,13 @@ export class Agent<M extends ModelSelection = ModelSelection> {
           )
           .catch((error) => environment.report(errorInfo(error), context));
       },
+      (event) => {
+        const release = registry.retain();
+        void environment.hooks
+          .dispatch(streamHooks.error, event.payload, { ...event }, registry)
+          .finally(release)
+          .catch((error) => environment.report(errorInfo(error), event));
+      },
     );
     const registry = environment.hooks.capture();
     if (request.kind === "input") this.reservedStreamIds.add(id!);
@@ -376,17 +391,28 @@ export class Agent<M extends ModelSelection = ModelSelection> {
         result = await readOutcome(environment, sink.stream);
         return result;
       } catch (error) {
-        if (!entered) await registry.release();
         environment.report(errorInfo(error));
-        sink.emit(
-          streamHooks.error,
-          {
-            error: errorInfo(error),
-            lastKnownCheckpointId: null,
-            persistedStatus: null,
-          },
-          {},
-        );
+        const context = {
+          controllerId: environment.id,
+          agentId: this.id,
+          threadId: request.threadId,
+          streamId: sink.stream.id,
+          handleId: sink.stream.handleId,
+          timestamp: this.clock.now(),
+        };
+        const payload = {
+          target: "execution" as const,
+          error: errorInfo(error),
+          lastKnownCheckpointId: null,
+          persistedStatus: null,
+        };
+        if (!entered) {
+          await environment.hooks
+            .dispatch(streamHooks.error, payload, context, registry)
+            .catch((cause) => environment.report(errorInfo(cause), context));
+          await registry.release();
+        }
+        sink.emit(streamHooks.error, payload, context);
         sink.rejected(errorInfo(error));
         sink.close();
         throw error;

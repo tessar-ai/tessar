@@ -31,7 +31,7 @@ it("reads Agent defaults without initialization or changing them during executio
   const agent = new core.Agent({
     id: randomUUID(),
     model,
-    tools: { tool },
+    tools: { lookup: tool },
     instructions,
   });
   try {

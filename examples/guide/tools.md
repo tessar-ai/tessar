@@ -54,9 +54,15 @@ console.log(result.output);
 node --env-file=.env tools.ts
 ```
 
-The target model must support function tools. The key `explain` is a local
-JavaScript property; the name sent to the model is the tool's
-`name: "explain_addition"` in the current API.
+The target model must support function tools. Object keys are registered names:
+`tools: { explain }` exposes `explain`; `tools: { explain_addition: explain }`
+exposes `explain_addition`. Aliases apply to provider descriptions, dispatch and
+history without mutating the original Tool. The same Tool can have distinct aliases.
+
+Plugin-registered tools use the Tool's own name. Both registration paths retain
+the Tool's schema identity for safe resume; changing a pending tool's schema can
+reject continuation with `ResumeIncompatible`, including older plugin manifests
+that did not retain that identity.
 
 ## Results and execution context
 

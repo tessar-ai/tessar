@@ -1,5 +1,5 @@
 export type { OpenAIOptions } from "./adapter.js";
-export { OpenAIPlugin } from "./plugin.js";
+export { OpenAIPlugin, type OpenAIPluginOptions } from "./plugin.js";
 export {
   OpenAIProvider,
   type OpenAIProviderOptions,

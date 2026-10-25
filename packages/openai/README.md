@@ -98,7 +98,7 @@ metadata may be incomplete and carries provenance.
 
 `OpenAIProvider` and `OpenAIPlugin` are the public runtime exports. The low-level
 adapters are internal implementations. `OpenAIAPI`, `OpenAIProviderOptions`,
-`OpenAIModelOptions`, `OpenAIChatModelOptions` and `OpenAIOptions` remain public
+`OpenAIModelOptions`, `OpenAIChatModelOptions`, `OpenAIPluginOptions` and `OpenAIOptions` remain public
 types for application configuration. For example, `OpenAIAPI` describes
 `"responses" | "chat-completions"`; importing it does not load a runtime value.
 
@@ -106,10 +106,18 @@ types for application configuration. For example, `OpenAIAPI` describes
 to Controller already registers its provider; do not additionally register the
 same provider ID with a plugin.
 
+The plugin accepts the same protocol, connection and native request options as
+`OpenAIProvider`, except `model`: the registered factory selects that per request.
+For example, `new OpenAIPlugin({ api: "chat-completions", providerId: "gateway",
+connectionId: "gateway-main", baseURL: "https://gateway.example/v1", temperature: 0.2 })`.
+Omitted native request options are not supplied by Tessar.
+
 Each new provider has a separate opaque connection identity; `withModel()` keeps
-the existing client and identity. In-process suspension retains a per-call
-connection until the execution ends. Rebinding these connections after process
-restart is not yet supported by the Controller compatibility bridge.
+the existing client and identity. A Controller retains explicitly named executable
+connections supplied to Session selection in its current runtime, including when
+reopening a Session handle. After restart, recreate/register the original binding
+with a stable `connectionId`; stored references do not contain executable clients
+or credentials. Changing the endpoint or protocol under that ID is rejected.
 
 This is an early 0.x release. See the
 [repository](https://github.com/tessar-ai/tessar) for complete contracts.

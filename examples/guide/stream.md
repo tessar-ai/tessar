@@ -174,10 +174,17 @@ In turn 0, the model reads the prompt, reasons, and decides to call a tool. In t
 | Event | When it fires | Payload |
 | :--- | :--- | :--- |
 | `"message.delta"` | Each streamed content fragment | `delta` (the text chunk), `partKind` (`"reasoning"` or `"text"`), `partId`, `messageId` |
-| `"tool.start"` | Model requested a tool call, execution begins | `toolCallId`, `toolExecutionId` |
-| `"tool.end"` | Tool function returned a result | `status` (`"succeeded"` / `"failed"`), `result.content` (the serialized output) |
-| `"stream.end"` | Entire execution completed | `status`, `usage.metrics` (token breakdown), `output` (final messages) |
-| `"stream.error"` | Unrecoverable error during execution | `error` (with `code` and `message`) |
+| `"tool.start"` | Model requested a tool call, execution begins | `toolCallId`, `toolExecutionId`, `startedAt` |
+| `"tool.end"` | Tool result was published | `status` (`"succeeded"` / `"failed"`), `result.content`, `startedAt`, `endedAt` |
+| `"stream.end"` | Entire execution completed | `status`, `usage.metrics`, `output`, `startedAt`, `endedAt` |
+| `"stream.error"` | Execution failure or consumer delivery failure | `error`, `target` (`"execution"` / `"consumer"`), available record times |
+
+Every event envelope has `timestamp`, the publication time. Lifecycle payloads
+for Stream, Turn, model and tool carry their recorded `startedAt` and, on completion
+or failure, `endedAt`; unavailable legacy times may be absent. These can precede
+publication after storage commits or ordered parallel-tool result delivery.
+`stream.error` also reaches plugin hooks. A `target: "consumer"` error detaches
+an overflowing consumer without cancelling the Agent; it is not execution failure.
 
 ### Separating reasoning from the answer
 

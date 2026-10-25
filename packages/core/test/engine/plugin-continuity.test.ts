@@ -11,6 +11,36 @@ import { HumanMessage } from "../../src/messages/message.js";
 import { MessageCodec } from "../../src/messages/codec.js";
 import { AssistantMessage } from "../../src/messages/message.js";
 import { createTool } from "../../src/tools/tool.js";
+it("rejects changed input schemas for ordinary plugin tools when resuming", async () => {
+  const approval = defineInterruption({
+    id: "approval", version: 1,
+    response: { jsonSchema: {}, parse: () => ({}) }, resolve: () => ToolDecision.allow(),
+  });
+  const plugin = (changed: boolean) => ({
+    id: "work", setup(tessar: import("../../src/plugins/context.js").PluginContext) {
+      tessar.tools.register(createTool({ name: "work", description: "Work",
+        schema: changed ? z.object({ extra: z.string().optional() }) : z.object({}), execute: () => "ok" }));
+    },
+  });
+  const harness = await AgentHarness.create({
+    plugins: [plugin(false), { id: "policy", setup(tessar) {
+      tessar.interruptions.register(approval);
+      tessar.hook("tool.before", (_event, context) => context.suspend(approval, {}));
+    } }],
+    modelScripts: [{ response: { message: MessageCodec.encode(new AssistantMessage([
+      { type: "tool-call", toolCallId: "work", name: "work", arguments: {} },
+    ])) } }, { text: "done" }],
+  });
+  try {
+    const pending = await harness.agent.generate("work");
+    await harness.controller.plugins.detach("work");
+    await harness.controller.plugins.attach(plugin(true));
+    await expect(harness.collect(harness.agent.resume({
+      threadId: pending.threadId, interruptId: pending.interrupt!.id, value: {},
+    }))).rejects.toMatchObject({ code: "ResumeIncompatible" });
+  } finally { await harness.dispose(); }
+});
+
 it("keeps custom capabilities for the entire stream and cleans up after the final reader", async () => {
   let release!: () => void,
     started!: () => void,

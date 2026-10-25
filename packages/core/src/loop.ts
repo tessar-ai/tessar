@@ -105,6 +105,7 @@ export async function loop(
       await context.hook(frame, turnHooks.start, {
         turnId: turn.id,
         index: turn.index,
+        startedAt: turn.startedAt,
       });
       continue;
     }
@@ -132,6 +133,8 @@ export async function loop(
       await context.hook(frame, turnHooks.end, {
         turnId: turn.id,
         usage: turn.usage,
+        startedAt: turn.startedAt,
+        endedAt: turn.endedAt,
       });
       const hadTools = !!frame.cp.state.messages
         .find((m) => m.id === turn.assistantMessageId)
@@ -237,6 +240,7 @@ async function callModel(
   await context.commit(frame, "ExecutionTransition");
   await context.hook(frame, modelHooks.start, {
     attemptId: attempt.id,
+    startedAt: attempt.startedAt,
     model: position.modelRef,
     request: immutable(request),
     purpose: attempt.purpose,
@@ -318,6 +322,8 @@ async function callModel(
       attemptId: attempt.id,
       response,
       purpose: attempt.purpose,
+      startedAt: attempt.startedAt,
+      endedAt: attempt.endedAt,
     });
     return true;
   } catch (error) {
@@ -333,6 +339,8 @@ async function callModel(
       attemptId: attempt.id,
       error: attempt.error,
       purpose: attempt.purpose,
+      startedAt: attempt.startedAt,
+      endedAt: attempt.endedAt,
     });
     const recovery = await context.hook(frame, modelHooks.recover, {
       attemptId: attempt.id,

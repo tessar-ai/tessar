@@ -134,7 +134,7 @@ public SDK and credentials you supply.
 | [Tools and messages](examples/guide/tools.md)        | Zod schemas, tool context and `ToolMessage`                        |
 | [Controller and Session](examples/guide/sessions.md) | Conversations, queues, subscriptions and threads                   |
 | [Plugins](examples/guide/plugins.md)                 | Custom plugins, hooks, logging and loading plugins after packaging |
-| [Langfuse](examples/guide/langfuse.md)               | Trace model calls, tools, retries and resumed executions           |
+| [OpenTelemetry](examples/guide/opentelemetry.md)    | Trace model calls, tools, retries and resumed executions           |
 | [Storage](examples/guide/storage.md)                 | SQLite, PostgreSQL, MongoDB and restoring conversations            |
 
 ## Packages
@@ -146,7 +146,7 @@ Install the packages your application uses:
 | [`@tessar/core`](packages/core/README.md)             | Agent execution, sessions, messages, tools, hooks, state and in-memory storage |
 | [`@tessar/openai`](packages/openai/README.md)         | OpenAI Responses and Chat Completions adapters, including compatible endpoints |
 | [`@tessar/plugins`](packages/plugins/README.md)       | Plugin discovery/loading, npm plugin management and the `/logger` plugin       |
-| [`@tessar/langfuse`](packages/langfuse/README.md)     | Optional Langfuse tracing through the official SDK and OpenTelemetry           |
+| [`@tessar/opentelemetry`](packages/opentelemetry/README.md)     | OTLP tracing with Langfuse, Arize and Traceloop adapters       |
 | [`@tessar/sqlite`](packages/sqlite/README.md)         | SQLite persistence using Node's built-in SQLite API                            |
 | [`@tessar/postgresql`](packages/postgresql/README.md) | PostgreSQL persistence                                                         |
 | [`@tessar/mongodb`](packages/mongodb/README.md)       | MongoDB persistence                                                            |

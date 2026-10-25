@@ -2,6 +2,22 @@ import { expect, it } from "vitest";
 import { HumanMessage, session as events, stream } from "../src/index.js";
 import { fixture } from "./test-fixture.js";
 
+it("applies generic option ownership equally while leaving provider-specific options to the provider", async () => {
+  const { agent, controller, provider } = await fixture([{ text: "direct" }, { text: "session" }]);
+  const options = { background: true, conversation: "custom", previous_response_id: "custom-id" };
+  try {
+    expect((await agent.generate("hello", { modelOptions: options })).status).toBe("completed");
+    const session = await controller.createSession({ threadId: "options" });
+    await session.model.switch("test", options);
+    const done = new Promise<void>((resolve) => { const stop = session.subscribe("stream.end", () => { stop(); resolve(); }); });
+    await session.followUp("hello");
+    await done;
+    expect(provider.calls.map((request) => request.options)).toEqual([options, options]);
+    await expect(agent.generate("bad", { modelOptions: { connectionId: "transport" } })).rejects.toMatchObject({ code: "UnsupportedOption" });
+    await expect(session.model.switch("test", { connectionId: "transport" })).rejects.toMatchObject({ code: "UnsupportedOption" });
+  } finally { await controller.dispose(); }
+});
+
 it("normalizes follow-up strings to user messages and persists them", async () => {
   const { controller, provider } = await fixture([
     { text: "one" },

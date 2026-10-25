@@ -11,7 +11,10 @@ import { inputMessages } from "../messages/codec.js";
 import { fail, requireId, errorInfo } from "../errors.js";
 import { immutable } from "../json.js";
 import { isModelAdapter } from "../models/stream.js";
-import { snapshotModelOptions } from "../models/options.js";
+import {
+  snapshotModelOptions,
+  validateModelOptions,
+} from "../models/options.js";
 import type { ModelAdapter, ModelRef } from "../models/contract.js";
 import { ThreadService } from "../state/threads.js";
 import { prepareThread } from "../state/thread-operations.js";
@@ -80,36 +83,12 @@ export function callAgent(
     );
     requireId(ref.providerId, "provider id");
     requireId(ref.modelId, "model id");
+    validateModelOptions(options.modelOptions);
     const overrides = Object.fromEntries(
       Object.entries(options.modelOptions ?? {}).filter(
         ([, value]) => value !== undefined,
       ),
     );
-    for (const key of [
-      "api",
-      "model",
-      "input",
-      "messages",
-      "instructions",
-      "tools",
-      "stream",
-      "apiKey",
-      "baseURL",
-      "defaultHeaders",
-      "maxRetries",
-      "timeout",
-    ])
-      if (key in overrides)
-        fail("UnsupportedOption", key + " is not a modelOptions field");
-    if (
-      overrides.background === true ||
-      overrides.conversation != null ||
-      overrides.previous_response_id != null
-    )
-      fail(
-        "UnsupportedOption",
-        "Background and provider-managed conversations are not supported by the Agent loop",
-      );
     const modelOptions = snapshotModelOptions({
       ...selected.adapter?.options,
       ...overrides,

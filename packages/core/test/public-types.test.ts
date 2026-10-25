@@ -72,6 +72,9 @@ it("infers the public plugin type map and discriminated event union", () => {
       id: "typed",
       model: { providerId: "test", modelId: "test" },
     });
+    // References use the registered provider's runtime validation, with JSON options.
+    agent.stream("hello", { modelOptions: { temperature: 0.2 } });
+    agent.generate("hello", { modelOptions: { temperature: 0.2 } });
     // @ts-expect-error Agent accepts messages first, not the legacy input wrapper
     agent.stream({ input: [] });
     // @ts-expect-error Agent accepts messages first, not the legacy input wrapper
