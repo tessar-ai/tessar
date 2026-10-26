@@ -32,12 +32,6 @@ export class OpenAIPlugin implements Plugin {
       id,
       endpoint: options.baseURL ?? "https://api.openai.com/v1",
       metadataPartition: options.metadataPartition,
-      metadata: {
-        resolve: (ref, context) =>
-          create(ref.modelId)
-            .providerRegistration()
-            .metadata!.resolve(ref, context),
-      },
       catalogModelRef: (ref) =>
         !options.baseURL ||
         options.baseURL.replace(/\/$/, "") === "https://api.openai.com/v1"

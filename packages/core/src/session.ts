@@ -85,7 +85,6 @@ interface QueuedInput {
 interface Foreground {
   thread: Thread;
   stream?: Stream;
-  streamId?: string;
   status: string;
   done: Promise<void>;
   close: () => void;
@@ -684,7 +683,6 @@ export class Session {
             kind: "observer",
             admitted: (receipt) => {
               foreground.admitted = true;
-              foreground.streamId = receipt.streamId;
               this.blocked.delete(thread.id);
               resolve(receipt);
             },

@@ -115,8 +115,7 @@ Mọi handler nhận `event.type`, `event.payload` và các field identity/conte
 
 Đọc identity từ envelope; không giả định mọi event đều có Session hoặc Thread.
 Ví dụ `ready` không cần một cuộc hội thoại, còn Agent chạy trực tiếp không có
-Session. `event.type === model.end` narrow payload; `.is(name)` vẫn là helper
-public nếu ứng dụng muốn dùng.
+Session. Dùng `event.type === model.end` để narrow payload.
 
 Lifecycle payload có `startedAt` và `endedAt` lấy từ **record của tác vụ**:
 

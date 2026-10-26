@@ -7,8 +7,7 @@ import {
   OpenTelemetryPlugin,
   OTLPAdapter,
   LangfuseAdapter,
-  ArizeAdapter,
-  TraceloopAdapter,
+  LaminarAdapter,
 } from "../src/index.js";
 
 const decode = (span: ReadableSpan, key: string) => {
@@ -37,10 +36,7 @@ it("maps sequential tool calls, structured results and definitions without movin
   class Langfuse extends LangfuseAdapter {
     constructor() { super({ publicKey: "pk", secretKey: "sk" }); }
   }
-  class Arize extends ArizeAdapter {
-    constructor() { super({ apiKey: "key", spaceId: "space", projectName: "test" }); }
-  }
-  class Traceloop extends TraceloopAdapter {
+  class Laminar extends LaminarAdapter {
     constructor() { super({ apiKey: "key" }); }
   }
   const time = createTool({
@@ -71,7 +67,7 @@ it("maps sequential tool calls, structured results and definitions without movin
       { text: "Today is 30 degrees." },
     ],
     plugins: [new OpenTelemetryPlugin({
-      adapters: [capture(OTLPAdapter), capture(Langfuse), capture(Arize), capture(Traceloop)],
+      adapters: [capture(OTLPAdapter), capture(Langfuse), capture(Laminar)],
     })],
   });
   try {
@@ -79,7 +75,7 @@ it("maps sequential tool calls, structured results and definitions without movin
   } finally {
     await harness.dispose();
   }
-  const [generic, langfuse, arize, traceloop] = captured;
+  const [generic, langfuse, laminar] = captured;
   for (const spans of captured) {
     const turns = [1, 2, 3].map((n) => spans.find((span) => span.name === `turn ${n}`)!);
     expect(turns.every(Boolean)).toBe(true);
@@ -98,42 +94,22 @@ it("maps sequential tool calls, structured results and definitions without movin
   })));
   expect(decode(final, "gen_ai.input.messages")[2].parts[0].response).toEqual({ date: "2026-10-23" });
 
-  const aiFirst = generations(arize!)[0]!;
-  const aiFinal = generations(arize!).at(-1)!;
-  expect(aiFirst.attributes["llm.output_messages.0.message.tool_calls.0.tool_call.function.name"]).toBe("get_current_time");
-  expect(aiFirst.attributes["llm.output_messages.0.message.tool_calls.0.tool_call.id"]).toBe("time-call");
-  // AX accepts conventional tool_calls; unsupported ordered tool_use contents
-  // otherwise arrive as an empty block with their call fields stranded in metadata.
-  expect(aiFirst.attributes["llm.output_messages.0.message.contents.1.message_content.type"]).toBeUndefined();
-  expect(aiFirst.attributes["output.mime_type"]).toBe("text/plain");
-  expect(aiFirst.attributes["output.value"]).toContain("[Tool call: get_current_time]");
-  expect(aiFinal.attributes["input.value"]).toContain('TOOL\n{"date":"2026-10-23"}');
-  expect(aiFinal.attributes["input.value"]).toContain('TOOL\n{"date":"2026-10-23","temperature":30}');
-  expect(aiFinal.attributes["llm.input_messages.2.message.tool_call_id"]).toBe("time-call");
-  expect(decode(aiFinal, "llm.input_messages.2.message.content")).toEqual({ date: "2026-10-23" });
-  expect(aiFinal.attributes["llm.input_messages.2.message.contents.0.message_content.type"]).toBe("text");
-  expect(aiFirst.attributes["llm.tools.1.tool.name"]).toBe("get_weather");
-  expect(decode(aiFirst, "llm.tools.1.tool.json_schema")).toEqual(weather.jsonSchema);
-  const aiTool = arize!.find((span) => span.name === "get_weather")!;
-  expect(aiTool.attributes["tool.description"]).toBe(weather.description);
-  expect(decode(aiTool, "tool.parameters")).toEqual(weather.jsonSchema);
-  expect(decode(aiTool, "gen_ai.tool.call.result")).toEqual({ date: "2026-10-23", temperature: 30 });
+  const lmFirst = generations(laminar!)[0]!;
+  const lmFinal = generations(laminar!).at(-1)!;
+  expect(decode(lmFirst, "lmnr.span.output")[0].parts[1]).toEqual({
+    type: "tool_call", id: "time-call", name: "get_current_time", arguments: {},
+  });
+  const lmInput = decode(lmFinal, "lmnr.span.input");
+  expect(lmInput[2].parts[0]).toEqual({ type: "tool_call_response", id: "time-call", result: { date: "2026-10-23" } });
+  expect(lmInput[4].parts[0]).toEqual({ type: "tool_call_response", id: "weather-call", result: { date: "2026-10-23", temperature: 30 } });
+  const lmTool = laminar!.find(span => span.name === "get_weather")!;
+  expect(lmTool.attributes["gen_ai.tool.description"]).toBe(weather.description);
+  expect(decode(lmTool, "tessar.metadata.toolParameters")).toEqual(weather.jsonSchema);
+  expect(decode(lmTool, "lmnr.span.output")).toEqual({ date: "2026-10-23", temperature: 30 });
 
-  const tlFirst = generations(traceloop!)[0]!;
-  const tlFinal = generations(traceloop!).at(-1)!;
-  expect(tlFirst.attributes["gen_ai.completion.0.tool_calls.0.name"]).toBe("get_current_time");
-  expect(tlFirst.attributes["gen_ai.completion.0.tool_calls.0.id"]).toBe("time-call");
-  expect(tlFinal.attributes["gen_ai.prompt.2.tool_call_id"]).toBe("time-call");
-  expect(decode(tlFinal, "gen_ai.prompt.2.content")).toEqual({ date: "2026-10-23" });
-  expect(decode(tlFinal, "gen_ai.input.messages")[2].parts[0].response).toBe('{"date":"2026-10-23"}');
-  for (const [spans, prefix] of [
-    [langfuse!, "langfuse.observation.metadata."],
-    [traceloop!, "traceloop.association.properties."],
-  ] as const) {
-    const tool = spans.find((span) => span.name === "get_weather")!;
-    expect(decode(tool, prefix + "toolDescription")).toBe(weather.description);
-    expect(decode(tool, prefix + "toolParameters")).toEqual(weather.jsonSchema);
-  }
+  const lfTool = langfuse!.find(span => span.name === "get_weather")!;
+  expect(decode(lfTool, "langfuse.observation.metadata.toolDescription")).toBe(weather.description);
+  expect(decode(lfTool, "langfuse.observation.metadata.toolParameters")).toEqual(weather.jsonSchema);
   // Display mappings must never mutate the requests seen by the provider.
   expect(decode(final, "tessar.input")).toEqual(harness.provider.calls.at(-1));
 });

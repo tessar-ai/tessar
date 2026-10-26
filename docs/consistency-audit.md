@@ -231,7 +231,7 @@ Hướng thống nhất: dùng chung contract/cách tạo executable provider, g
 - Root package entrypoints tách implementation; OpenAIAdapter không được export
   từ root. OpenAIAPI hiện là public union cấu hình protocol, khác adapter nội bộ.
 - Tracing adapters dùng snapshot độc lập để map dữ liệu platform. Khác cách
-  Langfuse/OpenInference/OpenLLMetry hiển thị không tự nó là lỗi Core contract.
+  Cách các adapter trace hiển thị không tự nó là lỗi Core contract.
 
 ## Kiểm chứng và hướng xử lý
 

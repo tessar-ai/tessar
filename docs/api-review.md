@@ -48,7 +48,7 @@ Danh mục gồm API ứng dụng, API viết plugin/provider/storage và các s
 | `@tessar/openai` | OpenAIProvider, OpenAIPlugin và các type cấu hình |
 | `@tessar/plugins` | PluginManager, PluginManagerOptions |
 | `@tessar/plugins/logger` | LoggerPlugin, FileTransport, ConsoleTransport, logGroup và các type logger; default export là một instance logger |
-| `@tessar/opentelemetry` | OpenTelemetryPlugin, OTLPAdapter, LangfuseAdapter, ArizeAdapter, TraceloopAdapter và các type cấu hình |
+| `@tessar/opentelemetry` | OpenTelemetryPlugin, OTLPAdapter, LangfuseAdapter, LaminarAdapter và các type cấu hình |
 | `@tessar/sqlite` | SqliteStoragePlugin, createSqliteBackend, SqliteStorageOptions |
 | `@tessar/postgresql` | PostgresqlStoragePlugin, createPostgresqlBackend, PostgresqlStorageOptions |
 | `@tessar/mongodb` | MongoDBStoragePlugin, createMongoDBBackend, MongoDBStorageOptions |
@@ -61,7 +61,7 @@ Danh mục gồm API ứng dụng, API viết plugin/provider/storage và các s
 | Controller | `new Controller(options)` | initialize, dispose, createSession, getSession, listSessions, plugins.attach/detach | id, agent, plugins |
 | Session | Controller tạo/khôi phục | scope, metadata, subscribe, followUp, resume, recover, abort, dispose, model manager, thread manager | id, agent, controller, model/thread namespace |
 | Thread | Session.thread tạo/lấy/fork | scope, snapshot, history/checkpoint/trace/interrupt reads, dispose | id |
-| Message / Event | Constructors và MessageCodec | normalizeContent, encode/decode, EventEnvelope.is | Các field message/event và event map |
+| Message / Event | Constructors và MessageCodec | normalizeContent, encode/decode | Các field message/event và event map |
 | Instruction / Tool | buildInstruction, normalizeInstruction, createTool/new Tool, ToolSuspension | execute/resume, emit/suspend, recovery callbacks | Sections, schema, tool definition và identity |
 | Provider / Model | OpenAIProvider, provider registration factory | profile, refreshProfile, withModel, validate, stream | ref, connection, options, api và các metadata DTO |
 | ProfileResolver | `new ProfileResolver(options?)` | current, resolve, needsRefresh, clear | Không expose cache/catalog implementation |
@@ -512,7 +512,7 @@ Session hook handle cung cấp identity `id`, method `scope()`, namespace `model
 
 ### EventEnvelope và helper quyết định
 
-`new EventEnvelope(type, payload, context?)` với type string, payload generic và EventContext. Thuộc tính đọc gồm `type`, `payload` và identity/context. Dùng `event.type === message.delta` để narrow payload. Method `.is(name: AnyEvent)` **vẫn còn public** và trả type guard.
+`new EventEnvelope(type, payload, context?)` với type string, payload generic và EventContext. Thuộc tính đọc gồm `type`, `payload` và identity/context. Dùng `event.type === message.delta` để narrow payload. Helper `.is()` đã được xóa khỏi public API.
 
 | API | Parameter | Trả về |
 | --- | --- | --- |
@@ -594,7 +594,7 @@ Mặc định level `info`, dùng ConsoleTransport ghi JSON qua stderr. LogLevel
 
 `new OpenTelemetryPlugin(options: OpenTelemetryOptions)`; `.id = "opentelemetry"`, `.setup(tessar): Promise<void>`. `adapters` bắt buộc là mảng không rỗng các TraceAdapter; `realtime?: boolean` mặc định false, `serviceName?`, `traceName?`, `tags?: readonly string[]`. Mỗi adapter có `createExporter(): SpanExporter`; OTLPAdapter còn có protected `mapSpan` cho lớp kế thừa.
 
-Adapter constructors nhận optional options: OTLP `{ endpoint?, headers? }`; Langfuse `{ publicKey?, secretKey?, baseUrl?, prompt?: { name, version } }`; Arize `{ apiKey?, spaceId?, projectName?, endpoint? }`; Traceloop `{ apiKey?, endpoint? }`. Credentials có thể lấy từ environment; xem [guide](../examples/guide/opentelemetry.md).
+Adapter constructors nhận optional options: OTLP `{ endpoint?, headers? }`; Langfuse `{ publicKey?, secretKey?, baseUrl?, prompt?: { name, version } }`; Laminar `{ apiKey?, endpoint? }`. Laminar dùng `LMNR_PROJECT_API_KEY`, optional `LMNR_BASE_URL`; endpoint explicit là URL đầy đủ `/v1/traces`. Credentials có thể lấy từ environment; xem [guide](../examples/guide/opentelemetry.md).
 
 Mỗi invocation/followUp có trace mới với Agent root. Langfuse Session nhóm theo Thread ID; Tessar Session ID giữ trong metadata. Resume/recover tạo segment mới, không tái sử dụng span đã đóng. `realtime: true` gửi mỗi span đã hoàn thành qua native SimpleSpanProcessor; không gửi token hoặc span đang chạy. Mặc định native batching; disposal flush các export đang chờ.
 
@@ -708,7 +708,7 @@ Các dòng này ghi nhận contract hiện tại sau đợt sửa tính nhất q
 - **Concurrency:** field `tools.concurrency` hiện vẫn có; bỏ khai báo thì Infinity.
 - **Session input:** followUp nhận string, Message hoặc mảng Message; chưa có options per followUp. count()/isEmpty() đọc hàng đợi.
 - **Provider plugin:** OpenAIPlugin và OpenAIProvider dùng chung protocol/native options. Session giữ executable named connection trong runtime; restart phải đăng ký lại binding có cùng ID và descriptor.
-- **Event:** mỗi envelope có timestamp phát event; lifecycle Stream/Turn/model/tool có record startedAt/endedAt. stream.error tới cả hooks và consumer, phân biệt target execution/consumer. `.is()` vẫn tồn tại bên cạnh `.type`. Các group map là lowercase/camelCase và giá trị event là string.
+- **Event:** mỗi envelope có timestamp phát event; lifecycle Stream/Turn/model/tool có record startedAt/endedAt. stream.error tới cả hooks và consumer, phân biệt target execution/consumer. Kiểm tra loại event qua `.type`. Các group map là lowercase/camelCase và giá trị event là string.
 - **Instructions:** Session.thread.create không nhận instructions; type CreateThreadOptions dùng trong hook/testing vẫn có field này.
 - **Suspend:** Agent.resume trả Stream; Session.resume/recover trả receipt và phát event qua subscription.
 - **Signal:** Agent.sendSignal nhận input theo streamId hoặc threadId; khác hàng đợi followUp. Metadata cấp content part đã có; core không định nghĩa visibility hoặc policy của metadata.
@@ -948,7 +948,6 @@ export declare class EventEnvelope<P = any, N extends string = string> implement
     readonly timestamp: string;
     readonly checkpointRevision?: number;
     constructor(type: N, payload: P, context?: EventContext);
-    is<E extends AnyEvent>(name: E): this is EventEnvelope<PayloadOf<E>, E> & this;
 }
 ```
 
@@ -3340,21 +3339,12 @@ interface LangfuseOptions {
 class LangfuseAdapter extends OTLPAdapter {
   constructor(options?: LangfuseOptions);
 }
-interface ArizeOptions {
-  apiKey?: string;
-  spaceId?: string;
-  projectName?: string;
-  endpoint?: string;
-}
-class ArizeAdapter extends OTLPAdapter {
-  constructor(options?: ArizeOptions);
-}
-interface TraceloopOptions {
+interface LaminarOptions {
   apiKey?: string;
   endpoint?: string;
 }
-class TraceloopAdapter extends OTLPAdapter {
-  constructor(options?: TraceloopOptions);
+class LaminarAdapter extends OTLPAdapter {
+  constructor(options?: LaminarOptions);
 }
 ```
 

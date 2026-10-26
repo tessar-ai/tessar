@@ -2,7 +2,7 @@
   "name": "@tessar/opentelemetry",
   "version": "0.1.0",
   "license": "Apache-2.0",
-  "description": "OpenTelemetry tracing for Tessar with OTLP, Langfuse, Arize and Traceloop adapters.",
+  "description": "OpenTelemetry tracing for Tessar with OTLP, Langfuse and Laminar adapters.",
   "keywords": [
     "tessar",
     "ai-agent",
@@ -11,8 +11,7 @@
     "tracing",
     "llm",
     "langfuse",
-    "arize",
-    "traceloop",
+    "laminar",
     "typescript"
   ],
   "type": "module",

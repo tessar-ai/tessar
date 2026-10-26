@@ -182,8 +182,6 @@ export class Agent<M extends ModelSelection = ModelSelection> {
         return name === value.name ? value : new Tool({ ...value, name });
       }),
     );
-    if (new Set(this.tools.map((tool) => tool.name)).size !== this.tools.length)
-      fail("RegistrationConflict", "Tool name already registered");
     this.toolConcurrency = concurrency ?? Infinity;
     this.model = (
       "ref" in options.model ? options.model : immutable(options.model)
