@@ -1,6 +1,6 @@
 # Tessar — Event hooks và Plugin API
 
-Đối chiếu code và public declarations trong checkout ngày **2026-10-25**.
+Đối chiếu code và public declarations trong checkout ngày **2026-10-26**.
 Tài liệu mô tả API hiện tại, không khẳng định mọi thay đổi đã có trên npm.
 Chỉ liệt kê contract public và capability nhận qua context; không đưa engine,
 host hay registry implementation nội bộ thành API sử dụng.
@@ -10,6 +10,98 @@ Nguồn: [PluginContext](../packages/core/src/plugins/context.ts),
 [event catalog](../packages/core/src/events/type.ts).
 Xem [API reference đầy đủ](api-review.md) cho cấu trúc Message, ModelRequest,
 StorageBackend, records và các parameter Session/Thread mở rộng.
+Xem [audit phạm vi mở rộng](plugin-surface-audit.md) để phân biệt điểm cần giữ,
+điểm trùng và điểm chưa chứng minh nhu cầu. Bảng contract bên dưới mô tả code
+hiện tại, không khẳng định mọi event hiện tại đều nên giữ trong thiết kế tối thiểu.
+
+Đọc nhanh: [chọn theo nhu cầu](#bắt-đầu-từ-nhu-cầu-không-từ-danh-sách-event),
+[tra từng event](#5-toàn-bộ-event-built-in),
+[phần trùng và giới hạn hiện tại](#11-eventapi-nào-trùng-hoặc-có-thể-gây-hiểu-nhầm).
+
+## Bắt đầu từ nhu cầu, không từ danh sách event
+
+Không cần sử dụng toàn bộ API trong tài liệu để làm một ứng dụng. Phân biệt ba
+người sử dụng:
+
+| Người sử dụng | Cần biết gì? |
+| --- | --- |
+| Dev dùng SDK xây ứng dụng | Provider, Agent, `stream()`/`generate()`; thêm Controller khi cần plugin, Session khi cần phiên làm việc |
+| Dev viết plugin | `setup(tessar)` và đúng các registration/hook phục vụ khả năng muốn thêm |
+| Người dùng ứng dụng đã đóng gói | Chọn, cài, cấu hình plugin qua khả năng ứng dụng cung cấp; không cần gọi hook hoặc học PluginContext |
+
+Một người có thể vừa làm ứng dụng vừa viết plugin. Việc có Controller không bắt
+buộc phải tạo Session; Agent đã gắn Controller vẫn dùng `stream()`/`generate()`.
+
+### Chọn API theo việc cần làm
+
+| Tôi muốn… | Bắt đầu bằng | Chỉ thêm khi cần |
+| --- | --- | --- |
+| Gọi model, dùng tool của ứng dụng | `new Agent({ model, tools })`, `createTool()` | Không cần bọc tool thành plugin |
+| Render chat đang chạy, gồm text/thinking/tool/status | `state_changed`, đọc `event.payload.state` | `message.delta` khi tự quản lý việc ghép nội dung; không cần dựng lại state từ mọi event |
+| Hiển thị chọn model hoặc danh sách cuộc trò chuyện | Session model/thread APIs, `session.modelChanged`, các notification Session tương ứng | Không dùng `state_changed` thay cho toàn bộ dữ liệu sidebar |
+| Thêm tool sau khi ứng dụng đã đóng gói | `tessar.tools.register()` | PluginManager khi host cần load từ filesystem/npm |
+| Thêm provider hoặc đổi nơi lưu state | `tessar.models.register()` / `tessar.storage.register()` | Không cần tự viết hook cho từng lần gọi model hoặc từng lần ghi DB |
+| Thêm skill, memory vào context gửi model | `context.prepare` | `tessar.state.define()` nếu cần lưu tiến độ/dữ liệu plugin; dùng section `order` cho thứ tự instruction |
+| Compact history gửi model | `context.prepare` + plugin state lưu summary/mốc đã xử lý | Lời gọi model phụ nếu cách compact cần LLM; thay request không tự xóa history đã lưu |
+| Kiểm soát tool được thấy hoặc được chạy | `tools.select` để lọc danh sách; `tool.before` để cho phép/từ chối/tạm dừng thực thi | `tool.prepare` khi cần sửa arguments trước kiểm tra |
+| Làm tool hỏi user | `context.suspend()` bên trong tool và `resume()` của tool | `interruptions.register()` cho policy yêu cầu approval từ decision hook, không bắt buộc với tool hỏi user |
+| Ghi log hoặc gửi trace | Dùng LoggerPlugin / OpenTelemetryPlugin có sẵn | Chỉ nghe lifecycle model/tool/stream nếu tự viết exporter |
+| Nhận tin từ background task hoặc dịch vụ ngoài | `agent.sendSignal()` với target phù hợp | `followUp()` khi muốn một input đợi lượt hiện tại kết thúc; `emit()` không thay thế hai API này |
+| Làm delegate/subagent | Tạo Agent độc lập và tool điều phối; `tessar.agent.register()` nếu Agent do plugin cung cấp | Process, context mới/fork và trả kết quả do plugin quyết định |
+
+Ví dụ UI dùng Session:
+
+```ts
+import { stateChanged } from "@tessar/core";
+
+// session đã được tạo; render là hàm của ứng dụng.
+const unsubscribe = session.subscribe(stateChanged, event => {
+  render(event.payload.state);
+});
+// Khi UI không còn quan sát Session: unsubscribe();
+```
+
+UI cho Agent trực tiếp đọc cùng event từ Stream. Đây là snapshot runtime, không
+phải yêu cầu framework frontend; Tessar không tự render terminal hay browser.
+
+### Những API nâng cao có thể bỏ qua lúc đầu
+
+| API | Chỉ cần khi… |
+| --- | --- |
+| `state.define` và `context.state.*` | Plugin có dữ liệu cần được khôi phục; ví dụ summary và mốc compact của từng Thread |
+| `context.state.owned()` | Plugin cần state cấp Session/Agent, cập nhật bằng revision để phát hiện ghi đè đồng thời |
+| `context.models.stream()` | Plugin/tool cần một lời gọi model phụ được ghi nhận attempt/usage; ví dụ tạo summary bằng LLM |
+| `effects.register` / `context.effects.execute()` | Muốn lưu kết quả một thao tác ngoài theo key và đối soát khi không biết thao tác đã thành công chưa; không bắt buộc cho mọi tool/fetch |
+| `interruptions.register()` | Policy ở decision hook cần dừng và khôi phục quyết định; ví dụ approval trước một tool |
+| `registry.register/get/list` | Các plugin cần chia sẻ một capability tự định nghĩa; plugin độc lập không cần registry riêng |
+| `tessar.emit()` | Các plugin trao đổi custom hook ở host; không cần context của một execution đang chạy |
+| `context.events.emit()` | Custom notification cần đi theo execution hiện tại ra Stream/subscriber |
+| `tessar.defer()` hoặc disposer trả từ `setup()` | Plugin mở tài nguyên cần cleanup khi detach/dispose; không cần cả hai cho cùng một tài nguyên |
+
+Các tầng này không tự tạo background job, scheduler, memory hay subagent. Chúng
+cấp điểm nối để plugin tự triển khai, không buộc mọi plugin theo một cách làm.
+
+### Một lượt chạy đi qua những đâu?
+
+Luồng chính dưới đây giúp chọn vị trí can thiệp; đây không phải danh sách mọi
+notification/checkpoint hoặc nhánh retry, suspend, resume:
+
+```text
+input.prepare → stream.started → input.received → stream.before
+  → turn.start
+  → model.select → tools.select → context.prepare → model.request
+  → model.start → message.delta / model.usage → model.response
+  → message.prepare → message.beforeCommit → message.committed → model.end
+  → nếu có tool: tool.prepare → tool.before → tool.start
+                 → tool.update → tool.result → message.prepare/commit → tool.end
+  → turn.end → turn.decision
+  → turn tiếp theo hoặc stream.beforeEnd → stream.end
+```
+
+Một lần gửi input có thể sinh nhiều Turn; một Turn có thể có nhiều model attempt
+do retry và lời gọi phụ. Event `tool.update` hay `model.usage` chỉ có khi có dữ
+liệu tương ứng. Không phải event nào cũng xuất hiện trong mọi lần chạy. Xem mục 6
+trước khi return một quyết định; không phải mọi decision hook đều dùng `deny`.
 
 ## 1. Plugin được gắn ở đâu?
 
@@ -74,7 +166,7 @@ Các method bên dưới thuộc cùng instance context truyền vào `setup()`.
 | `tessar.tools.register(tool)` | `Tool` tạo bằng `createTool()` hoặc `new Tool()` | `void` | Đăng ký tool theo `tool.name`, giữ schema identity cho resume |
 | `tessar.models.register(provider)` | `ModelProviderRegistration` | `void` | Đăng ký provider factory và metadata |
 | `tessar.storage.register(backend)` | `StorageBackend` | `void` | Chọn storage backend; chỉ trước khi storage được chốt lúc initialize |
-| `tessar.agent.register(agent)` | `Agent` | `void` | Đăng ký Agent độc lập; plugin sở hữu cleanup bằng `agent.shutdown()` |
+| `tessar.agent.register(agent)` | `Agent` | `void` | Đăng ký Agent độc lập; host đăng ký `agent.shutdown()` khi plugin được giải phóng |
 | `tessar.state.define(definition)` | `Omit<PluginStateDefinition<T>, "pluginId">`, `T extends JsonValue` | `PluginStateDefinition<T>` | Đăng ký namespace; `pluginId` lấy từ plugin hiện tại |
 | `tessar.effects.register(definition)` | `EffectDefinition` | `void` | Đăng ký external effect có contract phục hồi |
 | `tessar.interruptions.register(definition)` | `InterruptionDefinition` | `void` | Đăng ký câu hỏi/approval tại decision boundary |
@@ -172,106 +264,106 @@ Type được tham chiếu như `ModelRequest`, `ThreadInfo` là type public tro
 
 ### Framework và UI
 
-| Map (string nếu khác) | Kind | event.payload | Return / context |
-| --- | --- | --- | --- |
-| `ready` | notification | `{ agentId: string; }` | `void` / H |
-| `shutdown` | barrier | `{}` | `void` / H |
-| `diagnostic` | notification | `{ error: ErrorInfo; }` | `void` / H |
-| `stateChanged`<br>`"state_changed"` | notification | `{ state: RuntimeState; }` | `void` / H |
+| Map (string nếu khác) | Kind | event.payload | Return / context | Khi nào dùng? |
+| --- | --- | --- | --- | --- |
+| `ready` | notification | `{ agentId: string; }` | `void` / H | Khởi động kết nối hoặc dịch vụ của plugin sau khi Controller ready; không phải báo mỗi lần model sẵn sàng. |
+| `shutdown` | barrier | `{}` | `void` / H | Chờ tác vụ cần hoàn tất trước khi Controller đóng; cleanup tài nguyên riêng dùng defer. |
+| `diagnostic` | notification | `{ error: ErrorInfo; }` | `void` / H | Thu lỗi từ observer, plugin hoặc runtime để ghi log/cảnh báo; không dùng quyết định retry. |
+| `stateChanged`<br>`"state_changed"` | notification | `{ state: RuntimeState; }` | `void` / H | Render lại UI từ snapshot mới, gồm nội dung đang stream, tool, interrupt và queue. |
 
 ### Session
 
-| Map (string nếu khác) | Kind | event.payload | Return / context |
-| --- | --- | --- | --- |
-| `session.created` | notification | `{ model: ModelRef; }` | `void` / S |
-| `session.modelChanged`<br>`"session.model-changed"` | notification | `{ previous: ModelRef; model: ModelRef; previousOptions?: JsonObject; options?: JsonObject; }` | `void` / S |
-| `session.threadCreated`<br>`"session.thread-created"` | notification | `{ threadId: string; }` | `void` / S |
-| `session.threadSwitched`<br>`"session.thread-switched"` | notification | `{ previousThreadId: string \| null; threadId: string; }` | `void` / S |
-| `session.threadRenamed`<br>`"session.thread-renamed"` | notification | `{ threadId: string; title: string; }` | `void` / S |
-| `session.threadForked`<br>`"session.thread-forked"` | notification | `{ sourceThreadId: string; threadId: string; }` | `void` / S |
-| `session.threadDeleted`<br>`"session.thread-deleted"` | notification | `{ threadId: string; }` | `void` / S |
-| `session.inputQueued`<br>`"session.input-queued"` | notification | `{ receipt: QueuedInputReceipt; }` | `void` / S |
-| `session.inputDiscarded`<br>`"session.input-discarded"` | notification | `{ receipt: QueuedInputReceipt; cause: string; }` | `void` / S |
-| `session.beforeClose`<br>`"session.before-close"` | barrier | `{}` | `void` / S |
-| `session.closed` | notification | `{}` | `void` / S |
-| `session.model.beforeChange`<br>`"session.model.before-change"` | decision | `{ previous: ModelRef; model: ModelRef; previousOptions?: JsonObject; options?: JsonObject; }` | `OperationDecision` / S |
-| `session.thread.beforeSwitch`<br>`"session.thread.before-switch"` | decision | `{ previousThreadId: string \| null; threadId: string; }` | `OperationDecision` / S |
+| Map (string nếu khác) | Kind | event.payload | Return / context | Khi nào dùng? |
+| --- | --- | --- | --- | --- |
+| `session.created` | notification | `{ model: ModelRef; }` | `void` / S | Theo dõi một Session mới, ví dụ ghi audit hoặc cập nhật danh sách phiên. |
+| `session.modelChanged`<br>`"session.model-changed"` | notification | `{ previous: ModelRef; model: ModelRef; previousOptions?: JsonObject; options?: JsonObject; }` | `void` / S | Cập nhật model/options hiển thị hoặc ghi audit sau khi đổi model của Session thành công. |
+| `session.threadCreated`<br>`"session.thread-created"` | notification | `{ threadId: string; }` | `void` / S | Cập nhật danh sách và lựa chọn cuộc trò chuyện sau thao tác tạo qua Session. |
+| `session.threadSwitched`<br>`"session.thread-switched"` | notification | `{ previousThreadId: string \| null; threadId: string; }` | `void` / S | Đổi tiêu đề, tab hoặc dữ liệu phụ khi Session chọn Thread khác. |
+| `session.threadRenamed`<br>`"session.thread-renamed"` | notification | `{ threadId: string; title: string; }` | `void` / S | Cập nhật tên cuộc trò chuyện trong UI của Session. |
+| `session.threadForked`<br>`"session.thread-forked"` | notification | `{ sourceThreadId: string; threadId: string; }` | `void` / S | Hiển thị nhánh mới sau thao tác fork qua Session. |
+| `session.threadDeleted`<br>`"session.thread-deleted"` | notification | `{ threadId: string; }` | `void` / S | Bỏ cuộc trò chuyện đã xóa khỏi UI của Session. |
+| `session.inputQueued`<br>`"session.input-queued"` | notification | `{ receipt: QueuedInputReceipt; }` | `void` / S | Hiển thị input followUp đang đợi; không coi là input đã gửi model. |
+| `session.inputDiscarded`<br>`"session.input-discarded"` | notification | `{ receipt: QueuedInputReceipt; cause: string; }` | `void` / S | Báo input đang đợi bị bỏ và nguyên nhân. |
+| `session.beforeClose`<br>`"session.before-close"` | barrier | `{}` | `void` / S | Hoàn tất phần việc gắn với Session trước khi đóng; không dùng thay cleanup toàn plugin. |
+| `session.closed` | notification | `{}` | `void` / S | Ngừng quan sát và cập nhật UI khi Session đã đóng. |
+| `session.model.beforeChange`<br>`"session.model.before-change"` | decision | `{ previous: ModelRef; model: ModelRef; previousOptions?: JsonObject; options?: JsonObject; }` | `OperationDecision` / S | Cho phép/từ chối người dùng đổi model hoặc options theo policy ứng dụng. |
+| `session.thread.beforeSwitch`<br>`"session.thread.before-switch"` | decision | `{ previousThreadId: string \| null; threadId: string; }` | `OperationDecision` / S | Cho phép/từ chối Session chuyển sang Thread được yêu cầu. |
 
 ### Thread
 
-| Map (string nếu khác) | Kind | event.payload | Return / context |
-| --- | --- | --- | --- |
-| `thread.prepare` | transformation | `CreateThreadOptions` | `CreateThreadOptions` / H |
-| `thread.started` | notification | `ThreadInfo` | `void` / H |
-| `thread.beforeShutdown`<br>`"thread.before-shutdown"` | barrier | `{ threadId: string; }` | `void` / H |
-| `thread.shutdown` | notification | `{ threadId: string; }` | `void` / H |
-| `thread.updated` | notification | `{ checkpointId: string; revision: number; }` | `void` / H |
-| `thread.beforeFork`<br>`"thread.before-fork"` | decision | `{ threadId: string; options: ForkOptions; }` | `OperationDecision` / T |
-| `thread.forked` | notification | `{ threadId: string; forkedThreadId: string; }` | `void` / T |
-| `thread.beforeRename`<br>`"thread.before-rename"` | decision | `{ threadId: string; title: string; }` | `OperationDecision` / T |
-| `thread.renamed` | notification | `{ threadId: string; title: string; }` | `void` / T |
-| `thread.beforeDelete`<br>`"thread.before-delete"` | decision | `{ threadId: string; permanent?: boolean; }` | `OperationDecision` / T |
-| `thread.deleted` | notification | `{ threadId: string; permanent?: boolean; }` | `void` / T |
+| Map (string nếu khác) | Kind | event.payload | Return / context | Khi nào dùng? |
+| --- | --- | --- | --- | --- |
+| `thread.prepare` | transformation | `CreateThreadOptions` | `CreateThreadOptions` / H | Bổ sung dữ liệu khởi tạo mặc định, ví dụ metadata hoặc tin nhắn mở đầu; giữ scope và ID đã cấp. |
+| `thread.started` | notification | `ThreadInfo` | `void` / H | Ghi audit hoặc liên kết tài nguyên khi Thread được tạo; không phải mỗi lần resume hoặc gọi model. |
+| `thread.beforeShutdown`<br>`"thread.before-shutdown"` | barrier | `{ threadId: string; }` | `void` / H | Chờ giải phóng phần việc gắn với một Thread handle trước khi handle đóng. |
+| `thread.shutdown` | notification | `{ threadId: string; }` | `void` / H | Biết Thread handle đã đóng; không có nghĩa dữ liệu cuộc trò chuyện bị xóa. |
+| `thread.updated` | notification | `{ checkpointId: string; revision: number; }` | `void` / H | Hiện lặp notification checkpoint.committed; không dùng làm tín hiệu tổng quát cho rename/delete. |
+| `thread.beforeFork`<br>`"thread.before-fork"` | decision | `{ threadId: string; options: ForkOptions; }` | `OperationDecision` / T | Kiểm tra policy trước khi tạo nhánh lịch sử. |
+| `thread.forked` | notification | `{ threadId: string; forkedThreadId: string; }` | `void` / T | Liên kết nhánh mới hoặc ghi audit quan hệ fork ở tầng Thread. |
+| `thread.beforeRename`<br>`"thread.before-rename"` | decision | `{ threadId: string; title: string; }` | `OperationDecision` / T | Kiểm tra quyền/quy tắc đặt tên trước khi đổi tiêu đề. |
+| `thread.renamed` | notification | `{ threadId: string; title: string; }` | `void` / T | Đồng bộ index hoặc ghi audit sau khi Thread đổi tên. |
+| `thread.beforeDelete`<br>`"thread.before-delete"` | decision | `{ threadId: string; permanent?: boolean; }` | `OperationDecision` / T | Kiểm tra policy trước khi xóa mềm hoặc purge vĩnh viễn. |
+| `thread.deleted` | notification | `{ threadId: string; permanent?: boolean; }` | `void` / T | Dọn tham chiếu bên ngoài hoặc ghi audit sau khi thao tác xóa thành công. |
 
 ### Input và Stream
 
-| Map (string nếu khác) | Kind | event.payload | Return / context |
-| --- | --- | --- | --- |
-| `input.prepare` | transformation | `InputPreparation` | `InputPreparation` / E |
-| `input.received` | notification | `{ messages: readonly MessageData[]; }` | `void` / H |
-| `stream.before` | decision | `{ input: readonly MessageData[]; }` | `ControlDecision` / D |
-| `stream.started` | notification | `{ modelRef: ModelRef; checkpointId: string; startedAt?: string; }` | `void` / H |
-| `stream.beforeEnd`<br>`"stream.before-end"` | barrier | `StreamOutcome` | `void` / H |
-| `stream.end` | notification | `StreamOutcome` | `void` / H |
-| `stream.error` | notification | `{ target?: "execution" \| "consumer"; error: ErrorInfo; lastKnownCheckpointId: string \| null; persistedStatus: string \| null; startedAt?: string; endedAt?: string \| null; }` | `void` / H |
-| `stream.suspended` | notification | `{ checkpointId: string; interrupt: InterruptRecord; }` | `void` / H |
-| `stream.resumed` | notification | `{ checkpointId: string; interruptId: string \| null; reason: string; }` | `void` / H |
-| `stream.cancel` | notification | `{ reason: string; }` | `void` / H |
+| Map (string nếu khác) | Kind | event.payload | Return / context | Khi nào dùng? |
+| --- | --- | --- | --- | --- |
+| `input.prepare` | transformation | `InputPreparation` | `InputPreparation` / E | Biến đổi input mới, xử lý slash command, trả câu trả lời trực tiếp hoặc từ chối trước loop. |
+| `input.received` | notification | `{ messages: readonly MessageData[]; }` | `void` / H | Ghi nhận input đã được nhận sau chuẩn bị; không sửa input hoặc history. |
+| `stream.before` | decision | `{ input: readonly MessageData[]; }` | `ControlDecision` / D | Cho phép, dừng hoặc yêu cầu xác nhận trước khi bắt đầu loop của lượt này. |
+| `stream.started` | notification | `{ modelRef: ModelRef; checkpointId: string; startedAt?: string; }` | `void` / H | Mở log/trace cho lượt chạy và nhận identity của Stream. |
+| `stream.beforeEnd`<br>`"stream.before-end"` | barrier | `StreamOutcome` | `void` / H | Chờ một bước đồng bộ trước khi lượt được chốt kết thúc; không thay đổi output bằng return. |
+| `stream.end` | notification | `StreamOutcome` | `void` / H | Đọc status/output/usage cuối của lượt để kết thúc tác vụ UI hoặc log/trace. |
+| `stream.error` | notification | `{ target?: "execution" \| "consumer"; error: ErrorInfo; lastKnownCheckpointId: string \| null; persistedStatus: string \| null; startedAt?: string; endedAt?: string \| null; }` | `void` / H | Báo lỗi execution hoặc consumer; đọc target để phân biệt phạm vi lỗi. |
+| `stream.suspended` | notification | `{ checkpointId: string; interrupt: InterruptRecord; }` | `void` / H | Hiển thị câu hỏi/approval từ interrupt và chờ ứng dụng cung cấp câu trả lời. |
+| `stream.resumed` | notification | `{ checkpointId: string; interruptId: string \| null; reason: string; }` | `void` / H | Tiếp tục hiển thị/theo dõi một Stream được resume hoặc recovery, theo payload.reason. |
+| `stream.cancel` | notification | `{ reason: string; }` | `void` / H | Ghi nhận yêu cầu/hành động hủy; trạng thái kết thúc vẫn đọc từ stream.end hoặc lỗi. |
 
 ### Turn, context và tool selection
 
-| Map (string nếu khác) | Kind | event.payload | Return / context |
-| --- | --- | --- | --- |
-| `turn.start` | notification | `{ turnId: string; index: number; startedAt?: string; }` | `void` / H |
-| `turn.end` | notification | `{ turnId: string; usage: UsageSummary; startedAt?: string; endedAt?: string \| null; }` | `void` / H |
-| `turn.decision` | decision | `{ turnId: string; hadTools: boolean; }` | `ControlDecision` / D |
-| `context.prepare` | transformation | `ModelRequest` | `ModelRequest` / E |
-| `tools.select` | transformation | `readonly ToolDescription[]` | `readonly ToolDescription[]` / E |
+| Map (string nếu khác) | Kind | event.payload | Return / context | Khi nào dùng? |
+| --- | --- | --- | --- | --- |
+| `turn.start` | notification | `{ turnId: string; index: number; startedAt?: string; }` | `void` / H | Theo dõi bước tiếp theo trong loop; mở span hoặc thống kê theo Turn. |
+| `turn.end` | notification | `{ turnId: string; usage: UsageSummary; startedAt?: string; endedAt?: string \| null; }` | `void` / H | Chốt số liệu và thời gian của Turn; chưa chắc toàn bộ Stream đã kết thúc. |
+| `turn.decision` | decision | `{ turnId: string; hadTools: boolean; }` | `ControlDecision` / D | Dừng loop hoặc yêu cầu thêm Turn sau bước vừa hoàn tất. |
+| `context.prepare` | transformation | `ModelRequest` | `ModelRequest` / E | Dựng instruction, thêm skill/memory, chọn history hoặc thay bằng summary cho primary model. |
+| `tools.select` | transformation | `readonly ToolDescription[]` | `readonly ToolDescription[]` / E | Chọn tập tool primary model được thấy ở lần gọi sắp tới; không phải kiểm tra quyền thực thi. |
 
 ### Model
 
-| Map (string nếu khác) | Kind | event.payload | Return / context |
-| --- | --- | --- | --- |
-| `model.select` | decision | `{ model: ModelRef; }` | `ControlDecision` / D |
-| `model.request` | transformation | `ModelRequest` | `ModelRequest` / E |
-| `model.start` | notification | `{ attemptId: string; startedAt?: string; model: ModelRef; request?: ModelRequest; purpose?: "primary" \| "auxiliary"; turnId?: string; parentToolExecutionId?: string \| null; }` | `void` / H |
-| `model.end` | notification | `{ attemptId: string; response: ModelResponse; purpose?: "primary" \| "auxiliary"; startedAt?: string; endedAt?: string \| null; }` | `void` / H |
-| `model.response` | transformation | `ModelResponse` | `ModelResponse` / E |
-| `model.usage` | notification | `{ attemptId: string; usage: ModelUsage; purpose?: "primary" \| "auxiliary"; }` | `void` / H |
-| `model.error` | notification | `{ attemptId: string; error: ErrorInfo; purpose?: "primary" \| "auxiliary"; startedAt?: string; endedAt?: string \| null; }` | `void` / H |
-| `model.recover` | decision | `{ attemptId: string; error: ErrorInfo; }` | `ControlDecision` / D |
+| Map (string nếu khác) | Kind | event.payload | Return / context | Khi nào dùng? |
+| --- | --- | --- | --- | --- |
+| `model.select` | decision | `{ model: ModelRef; }` | `ControlDecision` / D | Chọn ModelRef cho lần gọi primary model tiếp theo; không thay model bằng sửa request.model. |
+| `model.request` | transformation | `ModelRequest` | `ModelRequest` / E | Áp dụng quy tắc request cuối cho cả primary và auxiliary, ví dụ options dùng chung. |
+| `model.start` | notification | `{ attemptId: string; startedAt?: string; model: ModelRef; request?: ModelRequest; purpose?: "primary" \| "auxiliary"; turnId?: string; parentToolExecutionId?: string \| null; }` | `void` / H | Đọc request thực tế của attempt để ghi trace input/model và thời điểm bắt đầu. |
+| `model.end` | notification | `{ attemptId: string; response: ModelResponse; purpose?: "primary" \| "auxiliary"; startedAt?: string; endedAt?: string \| null; }` | `void` / H | Đọc response cuối, usage và thời gian của một attempt thành công; không có nghĩa hết Stream. |
+| `model.response` | transformation | `ModelResponse` | `ModelResponse` / E | Biến đổi response primary trước khi runtime tạo các tool execution và lưu assistant message. |
+| `model.usage` | notification | `{ attemptId: string; usage: ModelUsage; purpose?: "primary" \| "auxiliary"; }` | `void` / H | Theo dõi usage do provider phát trong lúc gọi; dữ liệu cuối có thể chỉ nằm ở model.end. |
+| `model.error` | notification | `{ attemptId: string; error: ErrorInfo; purpose?: "primary" \| "auxiliary"; startedAt?: string; endedAt?: string \| null; }` | `void` / H | Ghi lỗi của một attempt; không tự retry chỉ vì handler nghe event này. |
+| `model.recover` | decision | `{ attemptId: string; error: ErrorInfo; }` | `ControlDecision` / D | Quyết định thử lại primary model sau lỗi hoặc suspend để chờ xử lý; vẫn chịu limits. |
 
 ### Message
 
-| Map (string nếu khác) | Kind | event.payload | Return / context |
-| --- | --- | --- | --- |
-| `message.prepare` | transformation | `MessageData` | `MessageData` / E |
-| `message.beforeCommit`<br>`"message.before-commit"` | barrier | `{ message: MessageData; }` | `void` / H |
-| `message.delta` | notification | `{ messageId: string; partId: string; partKind: "text" \| "reasoning"; delta: string; attemptId: string; }` | `void` / H |
-| `message.committed` | notification | `{ message: MessageData; checkpointId: string; }` | `void` / H |
+| Map (string nếu khác) | Kind | event.payload | Return / context | Khi nào dùng? |
+| --- | --- | --- | --- | --- |
+| `message.prepare` | transformation | `MessageData` | `MessageData` / E | Áp dụng quy tắc chung cho message đi qua pipeline, ví dụ thêm metadata; giữ identity/role/correlation. |
+| `message.beforeCommit`<br>`"message.before-commit"` | barrier | `{ message: MessageData; }` | `void` / H | Chờ kiểm tra hoặc audit trước khi message được đưa vào commit; không sửa message qua return. |
+| `message.delta` | notification | `{ messageId: string; partId: string; partKind: "text" \| "reasoning"; delta: string; attemptId: string; }` | `void` / H | Đọc text/reasoning tăng dần khi tự xử lý từng phần; UI snapshot không cần tự ghép từ đây. |
+| `message.committed` | notification | `{ message: MessageData; checkpointId: string; }` | `void` / H | Theo dõi message đã lưu bền vững hoặc đồng bộ index bên ngoài theo checkpoint. |
 
 ### Tool và checkpoint
 
-| Map (string nếu khác) | Kind | event.payload | Return / context |
-| --- | --- | --- | --- |
-| `tool.prepare` | transformation | `ToolPreparation` | `ToolPreparation` / E |
-| `tool.before` | decision | `ToolPreparation` | `ControlDecision` / D |
-| `tool.start` | notification | `{ toolExecutionId: string; startedAt?: string \| null; toolCallId: string; turnId?: string; name?: string; arguments?: JsonObject; }` | `void` / H |
-| `tool.update` | notification | `{ toolExecutionId: string; progress: JsonValue; }` | `void` / H |
-| `tool.end` | notification | `{ toolExecutionId: string; toolCallId: string; result: MessageData; status: string; startedAt?: string \| null; endedAt?: string \| null; }` | `void` / H |
-| `tool.error` | notification | `{ toolExecutionId: string; error: ErrorInfo; startedAt?: string \| null; endedAt?: string \| null; }` | `void` / H |
-| `tool.result` | transformation | `MessageData` | `MessageData` / E |
-| `checkpoint.committed` | notification | `{ checkpointId: string; revision: number; }` | `void` / H |
+| Map (string nếu khác) | Kind | event.payload | Return / context | Khi nào dùng? |
+| --- | --- | --- | --- | --- |
+| `tool.prepare` | transformation | `ToolPreparation` | `ToolPreparation` / E | Biến đổi arguments trước khi kiểm tra policy và thực thi tool; không thay Tool implementation bằng sửa field tool. |
+| `tool.before` | decision | `ToolPreparation` | `ControlDecision` / D | Cho phép/từ chối hoặc suspend xin approval cho một tool call cụ thể. |
+| `tool.start` | notification | `{ toolExecutionId: string; startedAt?: string \| null; toolCallId: string; turnId?: string; name?: string; arguments?: JsonObject; }` | `void` / H | Mở log/span cho tool thực sự bắt đầu, kèm arguments và execution ID. |
+| `tool.update` | notification | `{ toolExecutionId: string; progress: JsonValue; }` | `void` / H | Hiển thị tiến độ do chính tool chủ động emit, ví dụ số file đã xử lý. |
+| `tool.end` | notification | `{ toolExecutionId: string; toolCallId: string; result: MessageData; status: string; startedAt?: string \| null; endedAt?: string \| null; }` | `void` / H | Đọc kết quả và status tool khi runtime publish result; chốt log/span theo toolExecutionId. |
+| `tool.error` | notification | `{ toolExecutionId: string; error: ErrorInfo; startedAt?: string \| null; endedAt?: string \| null; }` | `void` / H | Ghi nhận lỗi tool; runtime vẫn có thể tạo ToolMessage báo lỗi cho model. |
+| `tool.result` | transformation | `MessageData` | `MessageData` / E | Biến đổi ToolMessage, ví dụ rút gọn output trước khi đi tiếp qua message pipeline. |
+| `checkpoint.committed` | notification | `{ checkpointId: string; revision: number; }` | `void` / H | Biết checkpoint đã commit để đọc/đồng bộ dữ liệu; không đồng nghĩa có một message mới. |
 
 ### Payload dùng chung
 
@@ -596,3 +688,27 @@ không phải ưu tiên đăng ký hook. Plugin sửa prepared model context kh�
 sửa lịch sử đã lưu. Metadata của message/part là dữ liệu của ứng dụng; không tự
 gửi tới provider. Các capability như memory, skill, compaction, sandbox, scheduler
 hay delegate do plugin tự kết hợp từ hooks/state/tools/Agent theo nhu cầu.
+
+## 11. Event/API nào trùng hoặc có thể gây hiểu nhầm?
+
+Đánh giá dưới đây dựa trên publisher trong source hiện tại. Không có built-in
+plugin dùng một hook chưa đủ để kết luận hook đó vô dụng cho plugin bên ngoài.
+Đây là đánh giá và hướng chọn API; mục này không xóa hoặc đổi contract hiện tại.
+
+| Cặp/nhóm | Kết luận từ code | Hướng sử dụng / đề xuất |
+| --- | --- | --- |
+| `thread.updated` / `checkpoint.committed` | **Trùng rõ:** cùng một hàm commit phát liên tiếp cả hai cho cùng checkpoint với cùng payload `checkpointId/revision`; envelope vẫn có sequence/timestamp riêng | Chọn `checkpoint.committed` khi quan sát commit. `thread.updated` là ứng viên bỏ; hiện không phải notification tổng quát cho mọi thay đổi Thread, ví dụ rename |
+| `session.threadCreated/Renamed/Forked/Deleted` / `thread.started/renamed/forked/deleted` | Thao tác qua Session tạo hai notification cho cùng công việc, ở hai bước khác nhau | Session event báo thao tác của Session đã xong; Thread event báo thao tác ở tầng Thread. Plugin audit Thread chọn nhóm Thread; UI theo Session chọn nhóm Session. Chưa tương đương hoàn toàn để xóa ngay |
+| `context.prepare` / `model.request` | Trên primary model, cả hai chạy nối tiếp và nhận `ModelRequest`; auxiliary chỉ qua `model.request` | Skill/memory/context management chọn `context.prepare`. Quy tắc request phải áp dụng cả lời gọi phụ chọn `model.request`; không đăng ký cùng phép sửa ở cả hai |
+| `model.response` / `message.prepare` / `tool.result` | Có thể cùng sửa assistant/tool message, nhưng phạm vi khác: response của primary model, message đi qua prepare, và kết quả tool | Chỉ sửa kết quả tool chọn `tool.result`; chỉ xử lý response model chọn `model.response`; quy tắc chung cho message chọn `message.prepare`. Không xóa chỉ vì payload có phần giống nhau |
+| `model.usage` / `model.end` | Usage có thể đến trong lúc stream; end chứa response cuối. Không phải mọi provider đều phát chunk usage riêng | Dùng end cho số liệu cuối; nghe usage nếu cần dữ liệu trung gian. Consumer cuối cùng cần xét `response.usage`, không cộng cùng một tổng usage hai lần |
+| `message.delta` / `state_changed` | Một bên là phần nội dung tăng thêm; bên kia là snapshot đã tổng hợp cho UI | UI dùng snapshot bắt đầu bằng `state_changed`. Giữ delta cho consumer cần xử lý từng phần và tracing; không bắt UI phải dùng cả hai |
+| Các hook `before*` dạng barrier | Có ích khi cần chờ một bước kiểm tra/đồng bộ hoàn tất; không phải transformation và không trả policy decision | Chỉ dùng khi thực sự cần chặn boundary bằng việc chờ handler. Cleanup plugin thông thường dùng `defer`; notification end không thay cho barrier |
+| `ControlDecision` dùng chung nhiều boundary | **Contract quá rộng:** TypeScript cho thấy cả `select/retry/deny/...`, nhưng từng caller chỉ xử lý một tập con ở mục 6 | Đây là phần nên thu hẹp type theo boundary để dev không return một quyết định bị bỏ qua. Không cần thêm event để giải quyết |
+| `ToolDecision` / `TurnDecision` / `InputDecision` | Helper tạo object; không mở thêm cơ chế thực thi | Tùy chọn cho autocomplete, có thể return object đúng type trực tiếp; không cần học helper như một subsystem riêng |
+
+Các khác biệt quan trọng được đối chiếu tại
+[checkpoint publisher](../packages/core/src/engine/checkpoint.ts),
+[primary loop](../packages/core/src/loop.ts),
+[auxiliary calls](../packages/core/src/engine/services.ts) và
+[Session operations](../packages/core/src/session.ts).
