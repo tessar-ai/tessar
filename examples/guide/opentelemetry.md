@@ -3,7 +3,7 @@
 [All guides](README.md)
 
 One `OpenTelemetryPlugin` records Tessar executions. Select one or more adapters
-for Langfuse, Arize AX, Traceloop or your own OTel Collector.
+for Langfuse, Laminar or your own OTel Collector.
 This package exports traces through OTLP/HTTP JSON and does not install platform
 SDKs or automatic instrumentation for unrelated application code.
 
@@ -76,7 +76,7 @@ with independent platform mappings.
 
 ```ts
 import {
-  OTLPAdapter, LangfuseAdapter, ArizeAdapter, TraceloopAdapter,
+  OTLPAdapter, LangfuseAdapter, LaminarAdapter,
 } from "@tessar/opentelemetry";
 
 // Langfuse Cloud region or self-hosted base URL; keys use LANGFUSE_* variables.
@@ -85,13 +85,8 @@ new LangfuseAdapter({
   prompt: { name: "support-system", version: 3 }, // Optional existing prompt.
 });
 
-new ArizeAdapter({
-  apiKey: process.env.ARIZE_API_KEY,
-  spaceId: process.env.ARIZE_SPACE_ID,
-  projectName: "my-app",
-});
-
-new TraceloopAdapter({ apiKey: process.env.TRACELOOP_API_KEY });
+// The project API key identifies the destination project.
+new LaminarAdapter(); // Uses LMNR_PROJECT_API_KEY.
 
 // Collector: supply its trace endpoint and authentication header if required.
 new OTLPAdapter({
@@ -100,8 +95,8 @@ new OTLPAdapter({
 });
 ```
 
-Only instantiate the selected destinations. Langfuse requires both keys; Arize
-requires key, space and project; Traceloop requires a key. Explicit
+Only instantiate the selected destinations. Langfuse requires both keys; Laminar
+requires its project API key. Explicit
 `endpoint` values include `/v1/traces`. The generic adapter can instead rely on
 the native SDK's `OTEL_EXPORTER_OTLP_*` environment settings.
 
@@ -144,7 +139,9 @@ Each Agent invocation or Session follow-up gets a new trace with an Agent root.
 Langfuse groups the traces by Tessar Thread ID using its Sessions feature; the
 Tessar Session ID remains in observation metadata. Switching Threads changes that
 group; returning continues its Turn sequence. Direct Agent calls have no Langfuse
-Session grouping. Model retries create separate generation spans within a Turn.
+Session grouping. Laminar uses the same Thread grouping in its Session association;
+the original Tessar Session ID stays in metadata. Model retries create separate
+generation spans within a Turn.
 
 ```text
 Langfuse Session: support-chat (Tessar Thread ID)
@@ -184,12 +181,12 @@ attach to the Agent root. Consumer-only Stream errors do not fail the trace.
 | Data | Shared representation |
 | --- | --- |
 | Operation, provider, requested model | `gen_ai.operation.name`, `gen_ai.provider.name`, `gen_ai.request.model` |
-| Agent and conversation | `gen_ai.agent.id`, `gen_ai.conversation.id`; `session.id` is the Tessar Session ID in shared spans and the Thread ID in Langfuse |
+| Agent and conversation | `gen_ai.agent.id`, `gen_ai.conversation.id`; Langfuse/Laminar conversation groups use the Thread ID |
 | Known token counts | `gen_ai.usage.input_tokens`, `output_tokens`, cache and reasoning details |
 | Input/output | JSON under `tessar.input` / `tessar.output`, with receiver-specific mappings |
 | Configured options and full usage provenance | JSON under `tessar.*` |
 | Names and tags | Shared plugin configuration, translated by adapters |
-| Available tools | `gen_ai.tool.definitions`; Arize also maps `llm.tools.*` |
+| Available tools | `gen_ai.tool.definitions` |
 | Executed tool | Name, call ID, description, input schema, arguments and result |
 
 GenAI attributes include `gen_ai.system_instructions`, `gen_ai.input.messages`
@@ -199,25 +196,40 @@ standard GenAI attributes; platform conversation displays prepend them as a
 System message, in section order. Media/custom parts retain their original types
 as generic parts. This is still a subset of GenAI conventions.
 
-Langfuse Additional Input no longer duplicates instructions already shown in
-Messages. Arize LLM spans carry typed OpenInference text/reasoning contents;
-Turn spans remain CHAIN and show readable conversation transcripts rather than
-serialized Tessar records. Model I/O panels also show readable transcripts with
-System instructions and full request history; structured chat messages remain
-in `llm.input_messages` / `llm.output_messages`. Arize gets this OpenInference
-conversation mapping without duplicate GenAI conversation attributes to prevent
-ingestion from merging System instructions again. Traceloop retains structured GenAI parts alongside
-legacy text fields that exclude reasoning. The platform UI determines whether
-reasoning gets a separate visual block; inspect the typed attributes if needed.
-Full original requests and responses remain in `tessar.input` / `tessar.output`.
+Langfuse Additional Input does not duplicate instructions already shown in Messages.
+Laminar maps Agent roots to EXECUTOR, Turn wrappers to DEFAULT, model attempts to
+LLM and tool executions to TOOL. Inspect the Tree view to see all Turn wrappers;
+the Transcript view can omit wrapper spans.
 
-Arize tool-call messages include function names, arguments and call IDs; tool
-results include their call ID and text or serialized JSON data. Tool spans expose
-`tool.description` and `tool.parameters` (the input schema). On Langfuse look in
-observation metadata for `toolDescription` / `toolParameters`; on Traceloop look
-in association properties. The adapters supply these fields, not custom UI tabs.
-Traceloop serializes structured tool-result values to JSON text for its message
-display while preserving the original result under `tessar.*`.
+Laminar Agent root and Turn I/O are JSON arrays of `{ role, content }`, retaining
+typed parts and optional `toolCallId`. Root input includes the first effective
+primary request's System message, then the invocation's input. Later model calls
+do not replace that instruction snapshot. Turn inputs retain their full effective
+conversation history. Record IDs and provider replay state stay out of these
+display projections; raw payloads remain in `tessar.input` / `tessar.output`.
+
+Laminar LLM I/O uses `{ role, parts }` GenAI arrays. Its parser expects `thinking`
+for reasoning and `result` for a tool response; the adapter translates those
+receiver fields without changing Tessar messages. Tool calls keep their order,
+arguments and IDs. Tool span I/O is the arguments/result value rather than an
+internal message record. Root association metadata and tags describe the trace;
+attempt/tool-specific identity stays on its own span instead of propagating globally.
+
+Tool descriptions and schemas remain in GenAI/Tessar attributes. On Langfuse,
+`toolDescription` / `toolParameters` also appear in observation metadata.
+
+For example, a Turn input includes JSON such as:
+
+```json
+[
+  { "role": "system", "content": [{ "type": "text", "text": "You are a helpful assistant." }] },
+  { "role": "user", "content": [{ "type": "text", "text": "What is the weather today?" }] }
+]
+```
+
+This also applies to Laminar root I/O. It changes the
+receiver presentation only; provider context, stored messages and the full raw
+payload under `tessar.input` / `tessar.output` are unchanged.
 
 Every request may advertise both time and weather tools from Turn 1. This list
 does not mean both ran in Turn 1. An execution that calls time first and weather
@@ -243,7 +255,7 @@ are not migrated automatically.
 
 References: [GenAI conventions](https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/),
 [Langfuse OTLP](https://langfuse.com/integrations/native/opentelemetry),
-[Arize OTel](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel),
-[Traceloop configuration](https://www.traceloop.com/docs/openllmetry/configuration).
+[Laminar OTLP](https://laminar.sh/article/opentelemetry-for-ai-agents),
+[Laminar trace views](https://laminar.sh/docs/platform/viewing-traces).
 
 

@@ -58,7 +58,7 @@ it("looks hooks up by string and isolates observer errors", async () => {
   ]);
   await expect(host.dispatch("test.notice", "x")).resolves.toBeUndefined();
   expect(diagnostics).toEqual(["plugin:test"]);
-  expect(new EventEnvelope(Notice, "hello").is(Notice)).toBe(true);
+  expect(new EventEnvelope(Notice, "hello").type).toBe(Notice);
   await host.dispose();
 });
 it("continues handlers in saved manifest order after plugin reordering", async () => {

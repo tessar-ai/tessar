@@ -13,6 +13,7 @@ export function registerModelHooks(
   tracing: TraceRuntime,
 ): void {
   const { current, parentTurn, start, end, failure } = tracing;
+  const capturedInstructions = new WeakSet<Span>();
   tessar.hook(model.start, (event) => {
     const state = current(event);
     if (!state || state.models.has(event.payload.attemptId)) return;
@@ -20,6 +21,15 @@ export function registerModelHooks(
       event.payload;
     if (turnId && purpose !== "auxiliary") state.currentTurn = turnId;
     if (purpose !== "auxiliary" && request) {
+      // Keep the first effective primary instructions for root display without
+      // replacing the invocation input or letting later Turns overwrite it.
+      if (!capturedInstructions.has(state.root)) {
+        state.root.setAttribute(
+          "tessar.instructions",
+          JSON.stringify(request.instructions),
+        );
+        capturedInstructions.add(state.root);
+      }
       update(parentTurn(state, event, turnId), "span", {
         input: request,
         metadata: { inputSource: "model.request" },

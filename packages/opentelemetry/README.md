@@ -53,14 +53,15 @@ including `/v1/traces`; `baseUrl` means a platform base URL.
 | --- | --- | --- |
 | `OTLPAdapter` | `endpoint?`, `headers?` | Native SDK `OTEL_EXPORTER_OTLP_*` environment configuration, otherwise localhost:4318. |
 | `LangfuseAdapter` | `publicKey?`, `secretKey?`, `baseUrl?`, `prompt?: { name, version }` | Langfuse EU Cloud; supports another region or self-hosting. Both keys are required via options or `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY`. `LANGFUSE_BASE_URL` selects deployment. |
-| `ArizeAdapter` | `apiKey?`, `spaceId?`, `projectName?`, `endpoint?` | Arize AX. Key, space and project are required via options or `ARIZE_API_KEY`, `ARIZE_SPACE_ID`, `ARIZE_PROJECT_NAME`. Endpoint can use `ARIZE_COLLECTOR_ENDPOINT`. |
-| `TraceloopAdapter` | `apiKey?`, `endpoint?` | Traceloop Cloud. Key is required via options or `TRACELOOP_API_KEY`. `TRACELOOP_BASE_URL` selects an alternative base URL. |
+| `LaminarAdapter` | `apiKey?`, `endpoint?` | Laminar Cloud. Project key is required via options or `LMNR_PROJECT_API_KEY`. Default is `https://api.lmnr.ai/v1/traces`; `LMNR_BASE_URL` selects a different base URL, including a self-hosted deployment. |
 
 Langfuse maps ingestion-v4 observation attributes and exclusive token buckets.
 Its optional prompt reference links primary generations to an existing Langfuse
-prompt; it does not upload instructions. Arize maps OpenInference attributes and
-project resources.
-Traceloop receives OpenLLMetry compatibility fields. No platform SDK is required.
+prompt; it does not upload instructions. Laminar maps native span types, I/O and
+trace-wide association metadata. Its Session ID is the Tessar Thread ID; the
+original Tessar Session ID remains in metadata. A project API key selects the
+destination project; no separate space/project-name configuration is needed.
+No platform SDK is required.
 
 Use `OTLPAdapter` for an OTel Collector or another compatible OTLP receiver.
 Copy the full trace endpoint and authentication header from your deployment:
@@ -100,22 +101,22 @@ and tool calls/results separately. Media/custom parts retain their original type
 as generic parts. This remains a subset of GenAI conventions, not complete
 conformance. Original requests, responses and usage stay lossless in `tessar.*`.
 Adapter display mappings include ordered instructions as a System message.
-Langfuse omits the duplicate instructions field from Additional Input; Arize
-LLM messages use typed text/reasoning contents and conventional `message.tool_calls`.
-Arize Turns remain CHAIN spans. Both Turn and model I/O panels receive readable
-transcripts including System instructions and the model request's full history.
-Arize uses OpenInference conversation fields without duplicate GenAI message or
-instruction attributes, which its ingestion would normalize a second time. The receiving UI
-decides how to render typed reasoning; Tessar does not flatten it into answer text.
-Available tool definitions are exported as `gen_ai.tool.definitions`; Arize also
-receives `llm.tools.*`, structured tool calls and tool-result correlation IDs. A tool
-span records its own description and parameter schema: Arize maps these to
-`tool.description` / `tool.parameters`, while Langfuse and Traceloop expose
-`toolDescription` / `toolParameters` in observation metadata / association properties.
-Arguments remain the tool input; the parameter schema describes allowed inputs.
-Traceloop tool results use JSON text in its message display mapping so objects
-are readable; the original structured result remains in `tessar.*`. Dashboard
-tabs and layouts are controlled by the receiving platform.
+Langfuse omits the duplicate instructions field from Additional Input.
+Laminar uses EXECUTOR for Agent roots, DEFAULT for Turns, LLM for model attempts
+and TOOL for tool executions. Root and Turn I/O are JSON `{ role, content }`
+message arrays. Root input includes the first effective primary request's System
+message and that invocation's input; Turn input includes its full effective history.
+Later Turns and auxiliary calls do not overwrite the root instruction snapshot.
+Laminar model I/O uses GenAI `{ role, parts }` arrays with its parser's `thinking`
+and tool-result `result` fields. This receiver mapping keeps visible reasoning
+separate from answer text and preserves tool-call order/correlation. Original
+Tessar requests, parts and results remain under `tessar.*`.
+Available tool definitions use `gen_ai.tool.definitions`; executed tool spans keep
+description/schema under GenAI/Tessar attributes. Langfuse also exposes
+`toolDescription` / `toolParameters` in observation metadata.
+Tool inputs are arguments and outputs are their values, not a message record.
+Laminar trace-wide association metadata is emitted on roots, so per-attempt and
+per-tool identity is not propagated across the entire trace.
 
 The request's `tools` list shows tools available to the model, not tools executed
 in that Turn. Only executed tools get child tool spans under their calling Turn.
@@ -143,6 +144,10 @@ not a durable event journal. Await Controller disposal to drain buffered spans.
 Requests and application metadata are sent to the chosen destinations.
 
 ## Migration
+
+`ArizeAdapter` and `ArizeOptions` have been removed. Replace them with
+`LaminarAdapter` / `LaminarOptions` and configure `LMNR_PROJECT_API_KEY`.
+Existing traces on other destinations are not moved or deleted.
 
 This package replaces `@tessar/langfuse` in this repository. Replace
 `new LangfusePlugin(options)` with

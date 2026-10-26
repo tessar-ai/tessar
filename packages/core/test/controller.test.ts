@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import {
   Agent,
   Controller,
@@ -6,6 +6,27 @@ import {
   type Plugin,
 } from "../src/index.js";
 import { AgentHarness } from "../src/testing/harness.js";
+import { ModelRegistry } from "../src/models/registry.js";
+
+it("refreshes the catalog for mapped providers without a metadata resolver", async () => {
+  const refresh = vi.spyOn(ModelRegistry.prototype, "refreshCatalog")
+    .mockResolvedValue(undefined);
+  try {
+    const h = await AgentHarness.create({ plugins: [{
+      id: "catalog-only",
+      setup(tessar) {
+        tessar.models.register({
+          id: "catalog-only",
+          create() { throw Error("catalog reads must not create adapters"); },
+          catalogModelRef: (ref) => ref,
+          catalogMappingVersion: 1,
+        });
+      },
+    }] });
+    try { expect(refresh).toHaveBeenCalledOnce(); }
+    finally { await h.dispose(); }
+  } finally { refresh.mockRestore(); }
+});
 
 it("closes live Session handles before disposing plugins and permits repeated Session disposal", async () => {
   const seen: string[] = [];

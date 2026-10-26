@@ -204,7 +204,7 @@ export class Controller {
           { agentId: this.agent.id },
           { controllerId: this.id, agentId: this.agent.id },
         );
-        if ([...this.providers.keys()].some((p) => p.metadata))
+        if ([...this.providers.keys()].some((p) => p.metadata || p.catalogModelRef))
           void this.modelRegistry.refreshCatalog();
       } catch (error) {
         this.report(errorInfo(error));

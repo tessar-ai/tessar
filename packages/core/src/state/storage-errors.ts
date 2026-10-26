@@ -16,13 +16,11 @@ export function guardStorage(backend: StorageBackend): StorageBackend {
       get(_facade, key) {
         const value = Reflect.get(target, key);
         if (typeof value !== "function") return value;
-        return (...args: unknown[]) => {
+        return async (...args: unknown[]) => {
           try {
-            return Promise.resolve(Reflect.apply(value, target, args)).catch(
-              failed,
-            );
+            return await Reflect.apply(value, target, args);
           } catch (error) {
-            return Promise.reject(error).catch(failed);
+            return failed(error);
           }
         };
       },

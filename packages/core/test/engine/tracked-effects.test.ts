@@ -206,6 +206,14 @@ it("commits typed effect outcomes and reuses completed results by stable key", a
     });
     await harness.collect(stream);
     expect(writes).toBe(1);
+    const effectStatuses = (await harness.backend.checkpoints.list(thread.id))
+      .flatMap((checkpoint) => checkpoint.state.pluginStates)
+      .filter((state) => state.namespace === "$effect:effect.write")
+      .flatMap((state) => Object.values(state.data as Record<string, { status: string }>))
+      .map((record) => record.status);
+    expect(effectStatuses).toContain("dispatched");
+    expect(effectStatuses).toContain("completed");
+    expect(effectStatuses).not.toContain("pending");
     expect((await harness.records(stream.id!)).tools[0]!.status).toBe(
       "succeeded",
     );

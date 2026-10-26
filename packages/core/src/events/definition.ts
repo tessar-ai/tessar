@@ -71,11 +71,6 @@ export class EventEnvelope<
         });
     Object.freeze(this);
   }
-  is<E extends AnyEvent>(
-    name: E,
-  ): this is EventEnvelope<PayloadOf<E>, E> & this {
-    return this.type === (name as string);
-  }
 }
 export type StreamEvent = {
   [N in AnyEvent]: EventEnvelope<PayloadOf<N>, N>;

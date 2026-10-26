@@ -15,8 +15,7 @@ import {
   OpenTelemetryPlugin,
   OTLPAdapter,
   LangfuseAdapter,
-  ArizeAdapter,
-  TraceloopAdapter,
+  LaminarAdapter,
   type TraceAdapter,
 } from "../src/index.js";
 
@@ -49,7 +48,7 @@ const read = (attributes: Attribute[], key: string) => {
   );
 };
 
-it("exports one shared trace through all four adapters without mixing their mappings", async () => {
+it("exports one shared trace through all three adapters without mixing their mappings", async () => {
   const received = new Map<
     string,
     {
@@ -142,15 +141,9 @@ it("exports one shared trace through all four adapters without mixing their mapp
               secretKey: "sk-test",
               prompt: { name: "weather-system", version: 2 },
             }),
-            new ArizeAdapter({
-              endpoint: base + "/arize/v1/traces",
-              apiKey: "arize-test",
-              spaceId: "test-space",
-              projectName: "test-project",
-            }),
-            new TraceloopAdapter({
-              endpoint: base + "/traceloop/v1/traces",
-              apiKey: "traceloop-test",
+            new LaminarAdapter({
+              endpoint: base + "/laminar/v1/traces",
+              apiKey: "laminar-test",
             }),
           ],
         }),
@@ -190,20 +183,17 @@ it("exports one shared trace through all four adapters without mixing their mapp
         );
     const generic = spans("/generic/v1/traces"),
       langfuse = spans("/api/public/otel/v1/traces"),
-      arize = spans("/arize/v1/traces");
-    const traceloop = spans("/traceloop/v1/traces");
+      laminar = spans("/laminar/v1/traces");
     expect(generic.length).toBeGreaterThan(0);
     const ids = (values: WireSpan[]) =>
       values.map((span) => span.traceId + ":" + span.spanId).sort();
     expect(ids(langfuse)).toEqual(ids(generic));
-    expect(ids(arize)).toEqual(ids(generic));
-    expect(ids(traceloop)).toEqual(ids(generic));
+    expect(ids(laminar)).toEqual(ids(generic));
     expect(new Set(generic.map((span) => span.traceId)).size).toBe(1);
     expect(JSON.stringify(generic)).not.toContain("langfuse.");
-    expect(JSON.stringify(generic)).not.toContain("openinference.");
-    expect(JSON.stringify(generic)).not.toContain("traceloop.");
-    expect(JSON.stringify(langfuse)).not.toContain("openinference.");
-    expect(JSON.stringify(arize)).not.toContain("langfuse.");
+    expect(JSON.stringify(generic)).not.toContain("lmnr.");
+    expect(JSON.stringify(langfuse)).not.toContain("lmnr.");
+    expect(JSON.stringify(laminar)).not.toContain("langfuse.");
 
     const generation = generic.find(
       (span) => read(span.attributes, "gen_ai.usage.input_tokens") === 100,
@@ -303,88 +293,37 @@ it("exports one shared trace through all four adapters without mixing their mapp
           "weather conversation",
       ),
     ).toBe(true);
-    const arizeGeneration = arize.find(
-      (span) => span.spanId === generation.spanId,
-    )!;
-    expect(read(arizeGeneration.attributes, "input.mime_type")).toBe("text/plain");
-    expect(read(arizeGeneration.attributes, "input.value")).toContain(
-      "SYSTEM\nYou are a weather assistant.\n\nUse Celsius.",
-    );
-    expect(read(arizeGeneration.attributes, "input.value")).toContain(
-      'TOOL\n{"condition":"sunny"}',
-    );
-    expect(read(arizeGeneration.attributes, "output.value")).toBe(
-      "ASSISTANT\n[Thinking]\nThe tool reported sunny weather.\nIt is sunny",
-    );
-    for (const key of ["gen_ai.input.messages", "gen_ai.output.messages", "gen_ai.system_instructions", "gen_ai.tool.definitions"])
-      expect(read(arizeGeneration.attributes, key)).toBeUndefined();
-    expect(read(arizeGeneration.attributes, "openinference.span.kind")).toBe(
-      "LLM",
-    );
-    expect(read(arizeGeneration.attributes, "llm.token_count.prompt")).toBe(
-      100,
-    );
-    expect(
-      read(arizeGeneration.attributes, "llm.input_messages.0.message.role"),
-    ).toBe("system");
-    expect(
-      read(arizeGeneration.attributes, "llm.input_messages.0.message.content"),
-    ).toBe("You are a weather assistant.\n\nUse Celsius.");
-    expect(
-      read(arizeGeneration.attributes, "llm.input_messages.1.message.role"),
-    ).toBe("user");
-    expect(
-      read(arizeGeneration.attributes, "llm.output_messages.0.message.content"),
-    ).toBe("It is sunny");
-    expect(
-      read(
-        arizeGeneration.attributes,
-        "llm.output_messages.0.message.contents.0.message_content.type",
-      ),
-    ).toBe("reasoning");
-    expect(
-      read(
-        arizeGeneration.attributes,
-        "llm.output_messages.0.message.contents.0.message_content.text",
-      ),
-    ).toBe("The tool reported sunny weather.");
-    expect(
-      read(
-        arizeGeneration.attributes,
-        "llm.output_messages.0.message.contents.1.message_content.type",
-      ),
-    ).toBe("text");
-    const arizeTurn = arize.find((span) => span.name === "turn 2")!;
-    expect(read(arizeTurn.attributes, "openinference.span.kind")).toBe("CHAIN");
-    expect(read(arizeTurn.attributes, "output.mime_type")).toBe("text/plain");
-    expect(read(arizeTurn.attributes, "output.value")).toBe(
-      "ASSISTANT\n[Thinking]\nThe tool reported sunny weather.\nIt is sunny",
-    );
-    expect(read(arizeTurn.attributes, "input.mime_type")).toBe("text/plain");
-    expect(read(arizeTurn.attributes, "input.value")).toContain(
-      "SYSTEM\nYou are a weather assistant.\n\nUse Celsius.",
-    );
-    expect(
-      JSON.parse(String(read(arizeTurn.attributes, "tessar.output"))),
-    ).toEqual([
-      JSON.parse(String(read(generation.attributes, "tessar.output"))),
+    const lmGeneration = laminar.find(span => span.spanId === generation.spanId)!;
+    expect(read(lmGeneration.attributes, "lmnr.span.type")).toBe("LLM");
+    expect(read(lmGeneration.attributes, "gen_ai.system")).toBe("scripted");
+    expect(read(lmGeneration.attributes, "llm.usage.total_tokens")).toBe(120);
+    expect(read(lmGeneration.attributes, "gen_ai.usage.reasoning_tokens")).toBe(5);
+    const lmInput = JSON.parse(String(read(lmGeneration.attributes, "lmnr.span.input")));
+    expect(lmInput.map((message: { role: string }) => message.role)).toEqual(["system", "user", "assistant", "tool"]);
+    expect(lmInput[0].parts[0]).toEqual({ type: "text", content: "You are a weather assistant.\n\nUse Celsius." });
+    expect(lmInput[3].parts[0]).toEqual({ type: "tool_call_response", id: "weather-call", result: { condition: "sunny" } });
+    expect(JSON.parse(String(read(lmGeneration.attributes, "lmnr.span.output")))[0].parts).toEqual([
+      { type: "thinking", content: "The tool reported sunny weather." },
+      { type: "text", content: "It is sunny" },
     ]);
-    expect(
-      arize.some(
-        (span) => read(span.attributes, "openinference.span.kind") === "TOOL",
-      ),
-    ).toBe(true);
-    const arizeResource =
-      received.get("/arize/v1/traces")!.payloads[0]!.resourceSpans[0]!.resource
-        .attributes;
-    expect(read(arizeResource, "openinference.project.name")).toBe(
-      "test-project",
-    );
-    expect(read(arizeResource, "service.name")).toBe("adapter-test");
+    const lmTurn = laminar.find(span => span.name === "turn 2")!;
+    expect(read(lmTurn.attributes, "lmnr.span.type")).toBe("DEFAULT");
+    expect(JSON.parse(String(read(lmTurn.attributes, "lmnr.span.input")))[0]).toEqual({
+      role: "system", content: [{ type: "text", text: "You are a weather assistant.\n\nUse Celsius." }],
+    });
+    expect(JSON.parse(String(read(lmTurn.attributes, "lmnr.span.output")))).toEqual([
+      { role: "assistant", content: [
+        { type: "reasoning", text: "The tool reported sunny weather." },
+        { type: "text", text: "It is sunny" },
+      ] },
+    ]);
+    expect(laminar.some(span => read(span.attributes, "lmnr.span.type") === "TOOL")).toBe(true);
+    const lmResource = received.get("/laminar/v1/traces")!.payloads[0]!.resourceSpans[0]!.resource.attributes;
+    expect(read(lmResource, "service.name")).toBe("adapter-test");
     const genericResource =
       received.get("/generic/v1/traces")!.payloads[0]!.resourceSpans[0]!
         .resource.attributes;
-    expect(read(genericResource, "openinference.project.name")).toBeUndefined();
+    expect(read(genericResource, "lmnr.association.properties.metadata.project")).toBeUndefined();
     expect(received.get("/generic/v1/traces")!.headers.authorization).toBe(
       "Bearer generic-key",
     );
@@ -396,47 +335,14 @@ it("exports one shared trace through all four adapters without mixing their mapp
         "x-langfuse-ingestion-version"
       ],
     ).toBe("4");
-    expect(received.get("/arize/v1/traces")!.headers.authorization).toBe(
-      "arize-test",
-    );
-    expect(received.get("/arize/v1/traces")!.headers["arize-space-id"]).toBe(
-      "test-space",
-    );
-    expect(received.get("/traceloop/v1/traces")!.headers.authorization).toBe(
-      "Bearer traceloop-test",
-    );
-    const tlGeneration = traceloop.find(
-      (span) => span.spanId === generation.spanId,
-    )!;
-    expect(read(tlGeneration.attributes, "llm.request.type")).toBe("chat");
-    expect(read(tlGeneration.attributes, "gen_ai.usage.prompt_tokens")).toBe(
-      100,
-    );
-    expect(read(tlGeneration.attributes, "gen_ai.prompt.0.role")).toBe(
-      "system",
-    );
-    expect(read(tlGeneration.attributes, "gen_ai.prompt.0.content")).toBe(
-      "You are a weather assistant.\n\nUse Celsius.",
-    );
-    expect(read(tlGeneration.attributes, "gen_ai.prompt.1.role")).toBe("user");
-    expect(read(tlGeneration.attributes, "gen_ai.prompt.3.tool_call_id")).toBe("weather-call");
-    expect(read(tlGeneration.attributes, "gen_ai.prompt.3.content")).toBe('{"condition":"sunny"}');
-    expect(read(tlGeneration.attributes, "gen_ai.completion.0.content")).toBe(
-      "It is sunny",
-    );
-    expect(read(tlGeneration.attributes, "gen_ai.output.messages")).toBe(
-      read(generation.attributes, "gen_ai.output.messages"),
+    expect(received.get("/laminar/v1/traces")!.headers.authorization).toBe(
+      "Bearer laminar-test",
     );
     expect(
       JSON.parse(
         String(read(lfGeneration.attributes, "langfuse.observation.output")),
       ),
     ).toEqual(JSON.parse(String(read(generation.attributes, "tessar.output"))));
-    expect(
-      traceloop.some(
-        (span) => read(span.attributes, "traceloop.span.kind") === "tool",
-      ),
-    ).toBe(true);
     expect(
       JSON.stringify([...received.values()].map((value) => value.payloads)),
     ).not.toContain("sk-test");
@@ -484,16 +390,12 @@ it("requires keys for authenticated adapters and validates OTLP endpoint schemes
   for (const name of [
     "LANGFUSE_PUBLIC_KEY",
     "LANGFUSE_SECRET_KEY",
-    "ARIZE_API_KEY",
-    "ARIZE_SPACE_ID",
-    "ARIZE_PROJECT_NAME",
-    "TRACELOOP_API_KEY",
+    "LMNR_PROJECT_API_KEY",
   ])
     vi.stubEnv(name, undefined);
   try {
     expect(() => new LangfuseAdapter()).toThrow(/requires/);
-    expect(() => new ArizeAdapter()).toThrow(/requires/);
-    expect(() => new TraceloopAdapter()).toThrow(/requires/);
+    expect(() => new LaminarAdapter()).toThrow(/requires/);
     expect(() => new OTLPAdapter({ endpoint: "file:///trace" })).toThrow(
       /HTTP/,
     );
