@@ -49,6 +49,19 @@ export class RegistryLease {
       await this.releaseSlot(slot);
     }
   }
+  /** Keep this captured handler/value set alive for an asynchronous notification. */
+  retain(): () => Promise<void> {
+    for (const slot of this.slots) slot.references++;
+    let released = false;
+    return async () => {
+      if (released) return;
+      released = true;
+      for (const slot of this.slots) {
+        slot.references--;
+        await this.releaseSlot(slot);
+      }
+    };
+  }
   find<T>(kind: string, id: string): T | undefined {
     return this.values.find((v) => v.kind === kind && v.id === id)?.value as
       | T

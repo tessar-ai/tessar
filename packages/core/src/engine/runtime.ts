@@ -3,6 +3,7 @@ import type { ValueRegistration } from "../plugins/registry.js";
 import type { ErrorInfo } from "../errors.js";
 import type { EventContext } from "../events/definition.js";
 import { createMemoryBackend } from "../state/memory-backend.js";
+import { guardStorage } from "../state/storage-errors.js";
 import { StateQueries } from "../state/queries.js";
 import type { StorageBackend } from "../state/storage-ports.js";
 import type { Tool } from "../tools/tool.js";
@@ -35,7 +36,7 @@ export function standaloneRuntime(
   agentId: string,
   tools: readonly Tool[],
 ): ExecutionRuntime {
-  const backend = createMemoryBackend();
+  const backend = guardStorage(createMemoryBackend());
   const report = () => {};
   return {
     backend,

@@ -239,6 +239,7 @@ export async function execute(
     await execution.hook(frame, streamHooks.started, {
       modelRef: request.model,
       checkpointId: frame.cp.id,
+      startedAt: stream.startedAt,
     });
     await execution.hook(frame, inputHooks.received, {
       messages: input.messages,
@@ -290,16 +291,26 @@ export async function execute(
       }
     }
     const finalError = errorInfo(error);
-    execution.runtime.report(finalError, eventContext(execution, frame));
-    sink.emit(
-      streamHooks.error,
-      {
-        error: finalError,
-        lastKnownCheckpointId: frame?.cp.id ?? null,
-        persistedStatus: frame?.stream.status ?? null,
-      },
-      eventContext(execution, frame),
-    );
+    const context = {
+      ...eventContext(execution, frame),
+      timestamp: execution.clock.now(),
+      streamId: sink.stream.id,
+      threadId: request.threadId,
+      handleId: sink.stream.handleId,
+    };
+    const payload = {
+      target: "execution" as const,
+      error: finalError,
+      lastKnownCheckpointId: frame?.cp.id ?? null,
+      persistedStatus: frame?.stream.status ?? null,
+      startedAt: frame?.stream.startedAt,
+      endedAt: frame?.stream.endedAt ?? null,
+    };
+    execution.runtime.report(finalError, context);
+    await execution.runtime.hooks
+      .dispatch(streamHooks.error, payload, context, registry)
+      .catch((cause) => execution.runtime.report(errorInfo(cause), context));
+    sink.emit(streamHooks.error, payload, context);
     sink.rejected(finalError);
     return error;
   } finally {

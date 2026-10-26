@@ -24,6 +24,7 @@ import type { Model } from "./models/profile.js";
 import type { ModelProviderRegistration } from "./models/contract.js";
 import { ModelRegistry } from "./models/registry.js";
 import { createMemoryBackend } from "./state/memory-backend.js";
+import { guardStorage } from "./state/storage-errors.js";
 import type { StorageBackend } from "./state/storage-ports.js";
 import { StateQueries } from "./state/queries.js";
 import type { PageOptions, StateQuery } from "./state/schema.js";
@@ -191,7 +192,8 @@ export class Controller {
           .registrations()
           .find((r) => r.kind === "storage");
         this.backend =
-          (selected?.value as StorageBackend) ?? createMemoryBackend();
+          (selected?.value as StorageBackend) ??
+          guardStorage(createMemoryBackend());
         this.defaultBackend = !selected;
         this.queries = new StateQueries(this.backend);
         this.syncProviders();
@@ -202,7 +204,7 @@ export class Controller {
           { agentId: this.agent.id },
           { controllerId: this.id, agentId: this.agent.id },
         );
-        if ([...this.providers.keys()].some((p) => p.metadata))
+        if ([...this.providers.keys()].some((p) => p.metadata || p.catalogModelRef))
           void this.modelRegistry.refreshCatalog();
       } catch (error) {
         this.report(errorInfo(error));
@@ -264,11 +266,13 @@ export class Controller {
   /** @internal */ sessionModel(value: ModelSelection): {
     model: Model;
     stored: StoredModelSelection;
+    adapter: import("./models/contract.js").ModelAdapter;
   } {
     const ref = "ref" in value ? value.ref : value;
     const adapter = isModelAdapter(value)
       ? value
       : this.modelRegistry.resolve(ref);
+    this.modelRegistry.retain(adapter);
     const stored = immutable({
       ref: adapter.ref,
       ...(adapter.options
@@ -276,7 +280,7 @@ export class Controller {
         : {}),
       ...(adapter.connection ? { connection: adapter.connection } : {}),
     });
-    return { model: this.resolveModel(adapter), stored };
+    return { model: this.resolveModel(adapter), stored, adapter };
   }
   async createSession(options: SessionOptions = {}): Promise<Session> {
     this.requireReady();
@@ -363,8 +367,14 @@ export class Controller {
     this.disposal = (async () => {
       if (this.initialization) await this.initialization.catch(() => {});
       this.phase = "closing";
+      const sessions = [...this.liveSessions].map((session) =>
+        session.close(true),
+      );
       try {
         await this.agent.shutdown();
+        for (const result of await Promise.allSettled(sessions))
+          if (result.status === "rejected")
+            this.report(errorInfo(result.reason));
         await this.hooks.dispatch(
           shutdownHooks,
           {},

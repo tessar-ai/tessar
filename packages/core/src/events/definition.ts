@@ -1,4 +1,4 @@
-import { immutable, type JsonObject } from "../json.js";
+import { immutable, systemClock, type JsonObject } from "../json.js";
 import type { HookContext } from "../plugins/context.js";
 export type EventKind =
   | "notification"
@@ -44,13 +44,14 @@ export class EventEnvelope<
   readonly streamId?: string | null;
   readonly handleId?: string;
   readonly sequence?: number;
-  readonly timestamp?: string;
+  readonly timestamp!: string;
   readonly checkpointRevision?: number;
   constructor(
     readonly type: N,
     readonly payload: P,
     context: EventContext = {},
   ) {
+    context = { ...context, timestamp: context.timestamp ?? systemClock.now() };
     for (const key of [
       "controllerId",
       "agentId",
@@ -69,11 +70,6 @@ export class EventEnvelope<
           enumerable: true,
         });
     Object.freeze(this);
-  }
-  is<E extends AnyEvent>(
-    name: E,
-  ): this is EventEnvelope<PayloadOf<E>, E> & this {
-    return this.type === (name as string);
   }
 }
 export type StreamEvent = {

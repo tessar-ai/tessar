@@ -1,6 +1,17 @@
 #!/usr/bin/env node
 import { tool as toolHooks, stream as streamHooks } from "@tessar/core";
-import { Agent, Controller, HumanMessage, AssistantMessage, MessageCodec, createTool, defineInterruption, ToolDecision, type Plugin, type PluginContext } from "@tessar/core";
+import {
+  Agent,
+  Controller,
+  HumanMessage,
+  AssistantMessage,
+  MessageCodec,
+  createTool,
+  defineInterruption,
+  ToolDecision,
+  type Plugin,
+  type PluginContext,
+} from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { z } from "zod";
 import { SqliteStoragePlugin } from "@tessar/sqlite";
@@ -132,9 +143,15 @@ try {
         ? { providerId: "openai", modelId: process.env.OPENAI_MODEL! }
         : { providerId: "scripted", modelId: "test" },
     });
-    controller = new Controller({ id: "cli-runtime", agent, plugins: [...plugins, ...externalPlugins] });
+    controller = new Controller({
+      id: "cli-runtime",
+      agent,
+      plugins: [...plugins, ...externalPlugins],
+    });
     await controller.initialize();
-    const session = await controller.createSession({ scope: { workspace: "demo" } });
+    const session = await controller.createSession({
+      scope: { workspace: "demo" },
+    });
     const cancel = () => {
       void session
         .abort("SIGINT")

@@ -18,7 +18,6 @@ import {
   clientKeys,
   type OpenAIOptions,
 } from "./adapter.js";
-import { metadataResolver } from "./metadata.js";
 import { OpenAIChatAdapter } from "./chat-adapter.js";
 
 export type OpenAIModelOptions = Omit<
@@ -171,7 +170,6 @@ export class OpenAIProvider<
       create: (modelId) => this.withModel(modelId),
       endpoint: clientOptions.baseURL ?? "https://api.openai.com/v1",
       metadataPartition: metadataPartition ?? selected.identity,
-      metadata: metadataResolver(selected.client),
       catalogModelRef: (ref) =>
         officialEndpoint
           ? { providerId: "openai", modelId: ref.modelId }
@@ -190,6 +188,11 @@ export class OpenAIProvider<
       } as OpenAIProviderOptions<A> & { api?: A },
       this.sharedConnection,
     );
+  }
+
+  /** @internal Shared provider registration used by the built-in plugin. */
+  providerRegistration(): ModelProviderRegistration {
+    return this.registration;
   }
 
   override validate(request: ModelRequest): void {

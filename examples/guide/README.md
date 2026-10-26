@@ -41,7 +41,7 @@ Examples perform real model requests and can incur provider charges.
 | Give the agent application functions | [Tools and messages](tools.md) |
 | Keep a conversation and queue new input | [Controller and Session](sessions.md) |
 | Add hooks and capabilities through plugins | [Plugins](plugins.md) |
-| Trace model calls, tools and execution lifecycle | [Langfuse](langfuse.md) |
+| Trace model calls, tools and execution lifecycle | [OpenTelemetry](opentelemetry.md) |
 | Keep history across application restarts | [Storage](storage.md) |
 
 `Agent` is enough for direct execution. A `Controller` adds plugin and shared

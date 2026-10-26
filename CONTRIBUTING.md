@@ -63,8 +63,8 @@ to `release`, then create a tag using the package's unscoped name and version:
 
 ```sh
 git push origin release
-git tag langfuse@0.1.0
-git push origin langfuse@0.1.0
+git tag opentelemetry@0.1.0
+git push origin opentelemetry@0.1.0
 ```
 
 Use the next unpublished version, rather than copying the example version.
@@ -81,7 +81,7 @@ packs/publishes only that package. Adding a package does not require editing a
 publish list. Legacy `v*` tags no longer trigger publication.
 Stable tags use npm `latest`; prereleases such as `plugins@0.2.0-beta.1` use `next`.
 
-Versions of other packages do not need to match. For example, Langfuse `0.1.0`
+Versions of other packages do not need to match. For example, OpenTelemetry `0.1.0`
 can depend on Core `0.1.4`. pnpm rewrites `workspace:*` to the dependency's own
 version when packing; `workspace:^` becomes a compatible range. The workflow
 checks the actual archive and rejects unresolved or incorrectly rewritten
@@ -89,8 +89,8 @@ dependencies. It also checks npm for an already published target version and
 compatible published internal dependencies before attempting publication.
 
 Publish changed dependencies first and wait for their release to succeed before
-tagging dependents. The current Langfuse implementation requires the new Core
-hook payloads, so release `core@0.1.4` before `langfuse@0.1.0`. The logger API
+tagging dependents. The tracing implementation requires the new Core
+hook payloads, so release `core@0.1.4` before `opentelemetry@0.1.0`. The logger API
 changes also require releasing `plugins@0.1.4`, after Core. OpenAI and storage
 packages do not need a new release for these changes. When releasing
 multiple versions of the same package, finish the earlier release first so
@@ -108,7 +108,7 @@ workflow does not attempt to republish an existing version.
 To inspect a release locally without publishing, use PowerShell:
 
 ```powershell
-$env:RELEASE_TAG = 'langfuse@0.1.0'
+$env:RELEASE_TAG = 'opentelemetry@0.1.0'
 $plan = node scripts/release.mjs check | ConvertFrom-Json
 pnpm build
 pnpm --filter $plan.package pack --pack-destination "$PWD/dist/release"

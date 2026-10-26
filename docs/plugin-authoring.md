@@ -1,5 +1,8 @@
 # Writing a Tessar plugin
 
+For the complete current event catalog, payloads, return types and plugin
+capabilities, see [Event hooks and Plugin API](plugin-api-and-events.md).
+
 Use public exports from `@tessar/core`. Built-in and custom plugins are classes
 instantiated with `new`. Implement `Plugin` to describe the instance's ID and setup
 method; no base class or apiVersion is required. Setup receives `tessar: PluginContext`.
@@ -34,9 +37,10 @@ metadata. ToolMessage is always the normalized execution result; runtime binds
 the provider's toolCallId. Metadata stays in local state unless a plugin explicitly
 includes it in model context. Missing returns and non-JSON data are rejected.
 
-The same Tool can be declared directly in `new Agent({ id, tools: { greetTool } })`;
+The same Tool can be declared directly in `new Agent({ id, tools: { greet: greetTool } })`;
 no plugin wrapper is required. All tools share hooks, registry snapshots and name
-conflict checks. Agent `tools.concurrency` optionally limits active executions;
+conflict checks. Agent object keys are registered tool aliases; plugin registration
+uses the Tool's own name. Agent `tools.concurrency` optionally limits active executions;
 omitting it adds no concurrency limit. Policy preparation and approvals happen
 before dispatch; executions can complete out of order, and results are published
 in call order before the next model call. Completed results are checkpointed
@@ -65,14 +69,15 @@ Error records carry an explicit source (`tessar`, `provider`, `plugin`, `tool`,
 exceptions retain their original objects in-process; JSON snapshots belong to
 trace/state. A diagnostic handler failure is isolated without emitting another
 diagnostic. `@tessar/plugins/logger` subscribes to lifecycle notifications and diagnostics;
-its default writer emits JSON to stderr, and `write(entry)` selects another sink.
+its default ConsoleTransport emits JSON to stderr. Configure `transports` with
+FileTransport or a custom LogTransport implementing `write(entry)` and optional `close()`.
 
 Custom events extend EventMap with HookSpec payload/result/context types. Their
 default runtime behavior is notification; use the optional registration options
 `{kind: "transformation" | "decision" | "barrier"}` for a custom non-notification
 contract. A host rejects conflicting kinds/versions for an existing event name.
 
-Session model changes and thread switches, and Controller/Session thread forks,
+Session model changes and thread switches, and Thread forks,
 renames and deletions have awaited policy hooks. These five operation decisions
 accept only `{ decision: "allow" | "deny", reason?: string }` or `undefined`.
 Undefined allows; a denial rejects with `OperationDenied`. Invalid decisions
@@ -87,7 +92,7 @@ tessar.hook(thread.beforeDelete, async (event, context) => {
 ```
 
 `thread.forked`, `thread.renamed` and `thread.deleted` run after successful
-persistence for both Controller calls and Session wrappers. Session notifications
+persistence through Thread operations and Session wrappers. Session notifications
 such as `session.threadRenamed` additionally describe that Session's operation.
 Denial or storage failure does not emit success. Scope and storage busy checks
 still apply when a policy allows an operation.
@@ -99,7 +104,7 @@ operations and queued follow-up input; the Thread capability exposes identity an
 read APIs. Handles are not serialized into events or checkpoints. They are typed
 capabilities for trusted plugins, not a sandbox.
 
-`await session.setModel(model)` waits for policy before changing the selection.
+`await session.model.switch(modelId, options)` waits for policy before changing the selection.
 Concurrent or reentrant Session control mutations reject with `SessionBusy`.
 Queued input retains the model/thread snapshot taken when it was accepted.
 

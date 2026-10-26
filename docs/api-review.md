@@ -1,6 +1,6 @@
 # Tessar — Danh mục API public để nghiệm thu
 
-Ngày đối chiếu: **2026-10-21**. Nguồn: code, `package.json#exports` và declaration sau build trong checkout hiện tại. Đây là **hành vi đang được triển khai**, không phải bản thiết kế đề xuất và không khẳng định bản trên npm đã có các thay đổi này.
+Ngày đối chiếu: **2026-10-25**. Nguồn: code, `package.json#exports` và declaration sau build trong checkout hiện tại. Đây là **hành vi đang được triển khai**, không phải bản thiết kế đề xuất và không khẳng định bản trên npm đã có các thay đổi này.
 
 `?` nghĩa là optional; field không có `?` là bắt buộc. `readonly` là hợp đồng TypeScript; không đồng nghĩa mọi object đều được freeze lúc chạy. Các kiểu dữ liệu đầy đủ nằm trong phụ lục cuối file, gồm cả kiểu của callback và kết quả.
 
@@ -47,7 +47,8 @@ Danh mục gồm API ứng dụng, API viết plugin/provider/storage và các s
 | `@tessar/core/testing/storage-conformance` | initialBatch, storageConformance |
 | `@tessar/openai` | OpenAIProvider, OpenAIPlugin và các type cấu hình |
 | `@tessar/plugins` | PluginManager, PluginManagerOptions |
-| `@tessar/plugins/logger` | LoggerPlugin, LoggerOptions, LogEntry; default export là một instance logger |
+| `@tessar/plugins/logger` | LoggerPlugin, FileTransport, ConsoleTransport, logGroup và các type logger; default export là một instance logger |
+| `@tessar/opentelemetry` | OpenTelemetryPlugin, OTLPAdapter, LangfuseAdapter, LaminarAdapter và các type cấu hình |
 | `@tessar/sqlite` | SqliteStoragePlugin, createSqliteBackend, SqliteStorageOptions |
 | `@tessar/postgresql` | PostgresqlStoragePlugin, createPostgresqlBackend, PostgresqlStorageOptions |
 | `@tessar/mongodb` | MongoDBStoragePlugin, createMongoDBBackend, MongoDBStorageOptions |
@@ -60,12 +61,12 @@ Danh mục gồm API ứng dụng, API viết plugin/provider/storage và các s
 | Controller | `new Controller(options)` | initialize, dispose, createSession, getSession, listSessions, plugins.attach/detach | id, agent, plugins |
 | Session | Controller tạo/khôi phục | scope, metadata, subscribe, followUp, resume, recover, abort, dispose, model manager, thread manager | id, agent, controller, model/thread namespace |
 | Thread | Session.thread tạo/lấy/fork | scope, snapshot, history/checkpoint/trace/interrupt reads, dispose | id |
-| Message / Event | Constructors và MessageCodec | normalizeContent, encode/decode, EventEnvelope.is | Các field message/event và event map |
+| Message / Event | Constructors và MessageCodec | normalizeContent, encode/decode | Các field message/event và event map |
 | Instruction / Tool | buildInstruction, normalizeInstruction, createTool/new Tool, ToolSuspension | execute/resume, emit/suspend, recovery callbacks | Sections, schema, tool definition và identity |
 | Provider / Model | OpenAIProvider, provider registration factory | profile, refreshProfile, withModel, validate, stream | ref, connection, options, api và các metadata DTO |
 | ProfileResolver | `new ProfileResolver(options?)` | current, resolve, needsRefresh, clear | Không expose cache/catalog implementation |
 | Plugin authoring | Class implements Plugin | setup, registration, hook, emit, defer, state/effect/interrupt/child/auxiliary APIs | Plugin identity, capability namespaces và context data |
-| Plugin distribution / logger | PluginManager, LoggerPlugin | discover/load/install/update/remove/dispose, setup/write | directory bất biến, plugin id, LogEntry |
+| Plugin distribution / logger | PluginManager, LoggerPlugin | discover/load/install/update/remove/dispose, setup; transports.write/close | directory bất biến, plugin id, LogEntry |
 | Storage | Ba storage plugin, ba backend factory, createMemoryBackend | setup, các StorageBackend port và close | Backend identity/capabilities, Session/checkpoint/trace DTO |
 | Foundation / testing | Error constructors, ScriptedProvider, AgentHarness factory | JSON/scope/paging/usage helpers, harness và conformance methods | Type contracts, metrics, fixture data |
 
@@ -127,12 +128,12 @@ Các codec vẫn kiểm tra loại content/tool/continuity được hỗ trợ. 
 ### OpenAIPlugin
 
 ```ts
-new OpenAIPlugin(options: OpenAIOptions)
+new OpenAIPlugin(options: OpenAIPluginOptions)
 ```
 
 `options` bắt buộc là object, có thể dùng các field client ở phụ lục cùng `providerId?`, `metadataPartition?`. `.id` là `"provider." + providerId`; `.setup(tessar: PluginContext): void` đăng ký provider.
 
-**Hiện tại plugin này dùng Responses adapter**, không nhận `model`, `api`, temperature hoặc reasoning như constructor OpenAIProvider. Đây là khác biệt thực tế cần nghiệm thu; không mô tả hai constructor là tương đương.
+Plugin dùng chung OpenAIProvider, nhận protocol, connection và native options tương ứng, bỏ field `model` vì factory chọn model theo request. Ví dụ `new OpenAIPlugin({ api: "chat-completions", connectionId: "gateway", temperature: 0.2 })`. Cùng provider ID chỉ đăng ký một lần; không gắn thêm plugin trùng provider của Agent.
 
 ## 3. Agent
 
@@ -155,7 +156,7 @@ const agent = new Agent({
 | `tools?` | `AgentTools` | Object chứa Tool; mặc định không có tool |
 | `limits?` | `Partial<StreamLimits>` | `maxTurns: 32`, `maxModelAttempts: 64`, `maxToolCalls: 128`; mỗi giá trị phải là số nguyên dương |
 
-`AgentTools` hiện có `concurrency?: number` và các key tool. Bỏ concurrency thì không giới hạn số tool chạy đồng thời; khai báo thì phải là số nguyên dương. Runtime lấy các Tool bằng `Object.values()`; **key `search` hiện chưa thay thế `searchTool.name`**. Tool name trùng bị từ chối.
+`AgentTools` hiện có `concurrency?: number` và các key tool. Bỏ concurrency thì không giới hạn số tool chạy đồng thời; khai báo thì phải là số nguyên dương. Object key là tên đăng ký: `search_web: searchTool` dùng `search_web` trong provider description, dispatch và history. Hai alias khác nhau có thể dùng cùng Tool; Tool gốc không bị đổi. Tool đăng ký qua plugin dùng tên trong Tool và cùng giữ schema identity để kiểm tra resume.
 
 ### Thành viên ứng dụng
 
@@ -511,7 +512,7 @@ Session hook handle cung cấp identity `id`, method `scope()`, namespace `model
 
 ### EventEnvelope và helper quyết định
 
-`new EventEnvelope(type, payload, context?)` với type string, payload generic và EventContext. Thuộc tính đọc gồm `type`, `payload` và identity/context. Dùng `event.type === message.delta` để narrow payload. Method `.is(name: AnyEvent)` **vẫn còn public** và trả type guard.
+`new EventEnvelope(type, payload, context?)` với type string, payload generic và EventContext. Thuộc tính đọc gồm `type`, `payload` và identity/context. Dùng `event.type === message.delta` để narrow payload. Helper `.is()` đã được xóa khỏi public API.
 
 | API | Parameter | Trả về |
 | --- | --- | --- |
@@ -584,10 +585,18 @@ Không có protocol child reservation/admission trong core. Plugin tự kết h�
 
 ### LoggerPlugin
 
-`new LoggerPlugin(options?: { write?: (entry: LogEntry) => void | Promise<void> })`.
+`new LoggerPlugin(options?: LoggerOptions)` với `{ level?: LogLevel; transports?: readonly LogTransport[] }`.
 `.id = "logger"`, `.setup(tessar: PluginContext): void`.
 
-Mặc định ghi JSON qua console.error. `write` là callback, không phải path. LogEntry có EventContext cùng `level: "info" | "warn" | "error"`, `type`, `timestamp`, `payload`. Default export ở subpath là instance đã tạo; named class dùng với new.
+Mặc định level `info`, dùng ConsoleTransport ghi JSON qua stderr. LogLevel gồm `debug`, `info`, `warn`, `error`. `LoggerOptions` không có callback `write`; destination implement `LogTransport.write(entry)` và optional `close()`. `new FileTransport({ path, groupBy? })` ghi JSON Lines, `path` là filename; `logGroup.none` mặc định dùng một file, `thread`/`session`/`stream` nhóm theo identity, thiếu identity thì fallback về path. LogEntry dùng timestamp của event. Default export ở subpath là instance đã tạo; named class dùng với new.
+
+### OpenTelemetryPlugin
+
+`new OpenTelemetryPlugin(options: OpenTelemetryOptions)`; `.id = "opentelemetry"`, `.setup(tessar): Promise<void>`. `adapters` bắt buộc là mảng không rỗng các TraceAdapter; `realtime?: boolean` mặc định false, `serviceName?`, `traceName?`, `tags?: readonly string[]`. Mỗi adapter có `createExporter(): SpanExporter`; OTLPAdapter còn có protected `mapSpan` cho lớp kế thừa.
+
+Adapter constructors nhận optional options: OTLP `{ endpoint?, headers? }`; Langfuse `{ publicKey?, secretKey?, baseUrl?, prompt?: { name, version } }`; Laminar `{ apiKey?, endpoint? }`. Laminar dùng `LMNR_PROJECT_API_KEY`, optional `LMNR_BASE_URL`; endpoint explicit là URL đầy đủ `/v1/traces`. Credentials có thể lấy từ environment; xem [guide](../examples/guide/opentelemetry.md).
+
+Mỗi invocation/followUp có trace mới với Agent root. Langfuse Session nhóm theo Thread ID; Tessar Session ID giữ trong metadata. Resume/recover tạo segment mới, không tái sử dụng span đã đóng. `realtime: true` gửi mỗi span đã hoàn thành qua native SimpleSpanProcessor; không gửi token hoặc span đang chạy. Mặc định native batching; disposal flush các export đang chờ.
 
 ## 15. Storage
 
@@ -693,13 +702,13 @@ Test target optional là `{ kind: "iterator" }` hoặc `{ kind: "observer"; obse
 
 ## 19. Điểm cần nghiệm thu
 
-Các dòng này ghi nhận code hiện tại, chưa tự sửa trong công việc viết tài liệu:
+Các dòng này ghi nhận contract hiện tại sau đợt sửa tính nhất quán ngày 2026-10-25:
 
-- **Alias tool:** object key trong option `tools` của constructor Agent chưa đổi Tool.name. Ví dụ `search_web: searchTool` vẫn dùng `searchTool.name`.
+- **Alias tool:** object key quyết định tên đăng ký, không mutate Tool gốc. Agent và plugin đều giữ schema identity khi resume.
 - **Concurrency:** field `tools.concurrency` hiện vẫn có; bỏ khai báo thì Infinity.
 - **Session input:** followUp nhận string, Message hoặc mảng Message; chưa có options per followUp. count()/isEmpty() đọc hàng đợi.
-- **Provider plugin:** OpenAIPlugin chỉ Responses và client options; OpenAIProvider hỗ trợ chọn protocol và body options.
-- **Event:** `.is()` vẫn tồn tại bên cạnh `.type`. Các group map là lowercase/camelCase và giá trị event là string.
+- **Provider plugin:** OpenAIPlugin và OpenAIProvider dùng chung protocol/native options. Session giữ executable named connection trong runtime; restart phải đăng ký lại binding có cùng ID và descriptor.
+- **Event:** mỗi envelope có timestamp phát event; lifecycle Stream/Turn/model/tool có record startedAt/endedAt. stream.error tới cả hooks và consumer, phân biệt target execution/consumer. Kiểm tra loại event qua `.type`. Các group map là lowercase/camelCase và giá trị event là string.
 - **Instructions:** Session.thread.create không nhận instructions; type CreateThreadOptions dùng trong hook/testing vẫn có field này.
 - **Suspend:** Agent.resume trả Stream; Session.resume/recover trả receipt và phát event qua subscription.
 - **Signal:** Agent.sendSignal nhận input theo streamId hoặc threadId; khác hàng đợi followUp. Metadata cấp content part đã có; core không định nghĩa visibility hoặc policy của metadata.
@@ -726,8 +735,8 @@ export declare class Agent<M extends ModelSelection = ModelSelection> {
     getModel(): M;
     getInstruction(): Instruction;
     limits(): StreamLimits;
-    stream<T extends ModelAdapter = Extract<M, ModelAdapter>>(input: AgentInput, options?: AgentStreamOptions<T>): Stream;
-    generate<T extends ModelAdapter = Extract<M, ModelAdapter>>(input: AgentInput, options?: AgentExecutionOptions<T>): Promise<GenerateOutcome>;
+    stream<T extends ModelAdapter = M extends ModelAdapter ? M : ModelAdapter>(input: AgentInput, options?: AgentStreamOptions<T>): Stream;
+    generate<T extends ModelAdapter = M extends ModelAdapter ? M : ModelAdapter>(input: AgentInput, options?: AgentExecutionOptions<T>): Promise<GenerateOutcome>;
     resume(options: AgentResumeOptions): Stream;
     sendSignal(options: SendSignalOptions): Promise<void>;
     shutdown(): Promise<void>;
@@ -936,10 +945,9 @@ export declare class EventEnvelope<P = any, N extends string = string> implement
     readonly streamId?: string | null;
     readonly handleId?: string;
     readonly sequence?: number;
-    readonly timestamp?: string;
+    readonly timestamp: string;
     readonly checkpointRevision?: number;
     constructor(type: N, payload: P, context?: EventContext);
-    is<E extends AnyEvent>(name: E): this is EventEnvelope<PayloadOf<E>, E> & this;
 }
 ```
 
@@ -982,9 +990,11 @@ export declare class OpenAIProvider<A extends OpenAIAPI = "responses"> {
 ### OpenAIPlugin
 
 ```ts
+export type OpenAIPluginOptions = Omit<OpenAIProviderOptions<"responses">, "model"> | Omit<OpenAIProviderOptions<"chat-completions">, "model">;
+
 export declare class OpenAIPlugin implements Plugin {
     readonly id: string;
-    constructor(options: OpenAIOptions);
+    constructor(options: OpenAIPluginOptions);
     setup(tessar: PluginContext): void;
 }
 ```
@@ -1585,6 +1595,9 @@ export interface ToolPreparation {
 }
 
 export interface StreamOutcome {
+    /** Logical Stream lifetime; suspension does not finish it. */
+    startedAt?: string;
+    endedAt?: string | null;
     status: string;
     reason: string | null;
     output: readonly MessageData[];
@@ -1687,6 +1700,9 @@ type Decision<P> = HookSpec<P, ControlDecision, DecisionHookContext>;
 
 declare module "./definition.js" {
     interface EventMap {
+        state_changed: HookSpec<{
+            state: RuntimeState;
+        }>;
         "session.model.before-change": HookSpec<{
             previous: ModelRef;
             model: ModelRef;
@@ -1786,13 +1802,18 @@ declare module "./definition.js" {
         "stream.started": HookSpec<{
             modelRef: ModelRef;
             checkpointId: string;
+            startedAt?: string;
         }>;
         "stream.before-end": HookSpec<StreamOutcome>;
         "stream.end": HookSpec<StreamOutcome>;
         "stream.error": HookSpec<{
+            /** Consumer errors detach delivery without failing the execution. Defaults to execution. */
+            target?: "execution" | "consumer";
             error: ErrorInfo;
             lastKnownCheckpointId: string | null;
             persistedStatus: string | null;
+            startedAt?: string;
+            endedAt?: string | null;
         }>;
         "stream.suspended": HookSpec<{
             checkpointId: string;
@@ -1806,10 +1827,13 @@ declare module "./definition.js" {
         "turn.start": HookSpec<{
             turnId: string;
             index: number;
+            startedAt?: string;
         }>;
         "turn.end": HookSpec<{
             turnId: string;
             usage: UsageSummary;
+            startedAt?: string;
+            endedAt?: string | null;
         }>;
         "turn.decision": Decision<{
             turnId: string;
@@ -1823,20 +1847,32 @@ declare module "./definition.js" {
         "model.request": Transform<ModelRequest>;
         "model.start": HookSpec<{
             attemptId: string;
+            startedAt?: string;
             model: ModelRef;
+            request?: ModelRequest;
+            purpose?: "primary" | "auxiliary";
+            turnId?: string;
+            parentToolExecutionId?: string | null;
         }>;
         "model.end": HookSpec<{
             attemptId: string;
             response: ModelResponse;
+            purpose?: "primary" | "auxiliary";
+            startedAt?: string;
+            endedAt?: string | null;
         }>;
         "model.response": Transform<ModelResponse>;
         "model.usage": HookSpec<{
             attemptId: string;
             usage: ModelUsage;
+            purpose?: "primary" | "auxiliary";
         }>;
         "model.error": HookSpec<{
             attemptId: string;
             error: ErrorInfo;
+            purpose?: "primary" | "auxiliary";
+            startedAt?: string;
+            endedAt?: string | null;
         }>;
         "model.recover": Decision<{
             attemptId: string;
@@ -1861,7 +1897,11 @@ declare module "./definition.js" {
         "tool.before": Decision<ToolPreparation>;
         "tool.start": HookSpec<{
             toolExecutionId: string;
+            startedAt?: string | null;
             toolCallId: string;
+            turnId?: string;
+            name?: string;
+            arguments?: JsonObject;
         }>;
         "tool.update": HookSpec<{
             toolExecutionId: string;
@@ -1872,10 +1912,15 @@ declare module "./definition.js" {
             toolCallId: string;
             result: MessageData;
             status: string;
+            /** Execution times; notification may follow ordered result publication. */
+            startedAt?: string | null;
+            endedAt?: string | null;
         }>;
         "tool.error": HookSpec<{
             toolExecutionId: string;
             error: ErrorInfo;
+            startedAt?: string | null;
+            endedAt?: string | null;
         }>;
         "tool.result": Transform<MessageData>;
         "stream.cancel": HookSpec<{
@@ -2817,18 +2862,54 @@ export interface PluginManagerOptions {
 
 ### Logger types
 
-Nguồn: [packages/plugins/src/logger.ts](packages/plugins/src/logger.ts).
+Nguồn: `packages/plugins/src/build-in/logger.ts` và `logger-transports.ts`.
 
 ```ts
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
 export interface LogEntry extends EventContext {
-    level: "info" | "warn" | "error";
+    level: LogLevel;
     type: string;
     timestamp: string;
     payload: unknown;
 }
 
 export interface LoggerOptions {
-    write?: (entry: LogEntry) => void | Promise<void>;
+    /** Minimum level sent to transports. Defaults to info. */
+    level?: LogLevel;
+    /** Defaults to a ConsoleTransport writing JSON to stderr. */
+    transports?: readonly LogTransport[];
+}
+
+export interface LogTransport {
+    write(entry: LogEntry): void | Promise<void>;
+    close?(): void | Promise<void>;
+}
+
+export declare const logGroup: {
+    readonly none: "none";
+    readonly thread: "thread";
+    readonly session: "session";
+    readonly stream: "stream";
+};
+
+export type LogGroup = (typeof logGroup)[keyof typeof logGroup];
+
+export interface FileTransportOptions {
+    /** Full filename; its parent directory and extension are reused for groups. */
+    path: string;
+    /** Missing grouping IDs fall back to path. Defaults to logGroup.none. */
+    groupBy?: LogGroup;
+}
+
+export declare class ConsoleTransport implements LogTransport {
+    write(entry: LogEntry): void;
+}
+
+export declare class FileTransport implements LogTransport {
+    constructor(options: FileTransportOptions);
+    write(entry: LogEntry): Promise<void>;
+    close(): Promise<void>;
 }
 ```
 
@@ -3221,3 +3302,59 @@ export interface RuntimeState {
     readonly error: ErrorInfo | null;
 }
 ```
+
+## OpenTelemetry tracing (`@tessar/opentelemetry`)
+
+```ts
+interface TraceAdapter {
+  createExporter(): SpanExporter; // OpenTelemetry SDK exporter contract.
+}
+interface OpenTelemetryOptions {
+  adapters: readonly TraceAdapter[]; // Required, nonempty.
+  realtime?: boolean; // Default false; true exports each completed span immediately.
+  serviceName?: string;
+  traceName?: string;
+  tags?: readonly string[];
+}
+class OpenTelemetryPlugin implements Plugin {
+  readonly id = "opentelemetry";
+  constructor(options: OpenTelemetryOptions);
+  setup(tessar: PluginContext): Promise<void>;
+}
+interface OTLPOptions {
+  endpoint?: string; // Complete OTLP/HTTP trace URL, including /v1/traces.
+  headers?: Readonly<Record<string, string>>;
+}
+class OTLPAdapter implements TraceAdapter {
+  constructor(options?: OTLPOptions);
+  createExporter(): SpanExporter;
+  protected mapSpan(span: ReadableSpan): ReadableSpan; // Override when extending.
+}
+interface LangfuseOptions {
+  publicKey?: string;
+  secretKey?: string;
+  baseUrl?: string;
+  prompt?: { name: string; version: number };
+}
+class LangfuseAdapter extends OTLPAdapter {
+  constructor(options?: LangfuseOptions);
+}
+interface LaminarOptions {
+  apiKey?: string;
+  endpoint?: string;
+}
+class LaminarAdapter extends OTLPAdapter {
+  constructor(options?: LaminarOptions);
+}
+```
+
+`SpanExporter` and `ReadableSpan` above are external OTel SDK contracts, not
+Tessar root exports. Platform options use environment fallbacks as documented in
+the [package README](../packages/opentelemetry/README.md). Shared GenAI fields
+cover identity, operations, usage, system instructions and typed input/output message parts. See the [guide](../examples/guide/opentelemetry.md)
+for Agent/Session flows, destination setup and migration from `@tessar/langfuse`.
+
+Each invocation has an Agent-rooted trace. Langfuse Sessions group traces by Tessar
+Thread ID; the Tessar Session ID stays in observation metadata. Turn counters
+persist per Thread. Resume/recovery gets a fresh trace segment and observations,
+retaining logical Stream/Turn IDs rather than reusing ended parents.

@@ -218,6 +218,8 @@ export async function finish(
   frame.stream.endedAt = execution.clock.now();
   await execution.updateUsage(frame);
   let outcome: StreamOutcome = {
+    startedAt: frame.stream.startedAt,
+    endedAt: frame.stream.endedAt,
     status,
     reason,
     output: frame.cp.state.messages.filter((m) =>
@@ -262,6 +264,8 @@ export async function finish(
     await execution.hook(frame, turnHooks.end, {
       turnId: turn.id,
       usage: turn.usage,
+      startedAt: turn.startedAt,
+      endedAt: turn.endedAt,
     });
   await execution.hook(frame, streamHooks.end, immutable(outcome));
 }

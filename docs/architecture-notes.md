@@ -1,7 +1,10 @@
 # Ghi chú định hướng Tessar
 
-Current authority: [English spec](superpowers/specs/2026-10-15-tessar-minimal-core-design.md)
-and [English plan with verification results](superpowers/plans/2026-10-15-tessar-minimal-core-plan.md).
+Current public contract: [API reference](api-review.md) and
+[developer guides](../examples/guide/README.md), checked against public declarations
+and regression tests. The [initial English spec](superpowers/specs/2026-10-15-tessar-minimal-core-design.md)
+and [initial plan](superpowers/plans/2026-10-15-tessar-minimal-core-plan.md) record earlier decisions;
+historical notes below do not override the current API.
 TD-001 is now addressed for Node/npm hosts by
 [the distribution spec](superpowers/specs/2026-10-15-plugin-distribution-design.md)
 and [plan](superpowers/plans/2026-10-15-plugin-distribution-plan.md).

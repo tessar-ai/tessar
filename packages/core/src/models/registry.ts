@@ -1,13 +1,19 @@
 import { fail } from "../errors.js";
 import { immutable, type Clock } from "../json.js";
 import type { Model } from "./profile.js";
-import type { ModelProviderRegistration, ModelRef } from "./contract.js";
+import type {
+  ModelAdapter,
+  ModelProviderRegistration,
+  ModelRef,
+} from "./contract.js";
 import { ProfileResolver } from "./resolver.js";
 import type { CatalogSnapshot } from "./catalog.js";
 import { normalizeCatalog } from "./normalize-catalog.js";
+import { canonicalJson } from "../state/commit.js";
 export class ModelRegistry {
   private readonly providers = new Map<string, ModelProviderRegistration>();
   private readonly handles = new Map<string, Model>();
+  private readonly connections = new Map<string, ModelAdapter>();
   private readonly shutdown = new AbortController();
   readonly resolver: ProfileResolver;
   constructor(options: { catalog?: CatalogSnapshot; clock?: Clock } = {}) {
@@ -38,6 +44,9 @@ export class ModelRegistry {
       this.providers.delete(provider.id);
       for (const [key, handle] of this.handles)
         if (handle.ref.providerId === provider.id) this.handles.delete(key);
+      for (const [key, adapter] of this.connections)
+        if (adapter.ref.providerId === provider.id)
+          this.connections.delete(key);
     };
   }
   private schedule(model: Model): void {
@@ -51,11 +60,43 @@ export class ModelRegistry {
   get(ref: ModelRef): Model {
     return this.obtain(ref, true);
   }
+  retain(adapter: ModelAdapter): void {
+    if (adapter.ref.connectionId === undefined) return;
+    const key = JSON.stringify([
+      adapter.ref.providerId,
+      adapter.ref.connectionId,
+    ]);
+    const existing = this.connections.get(key);
+    if (
+      existing &&
+      canonicalJson(existing.connection ?? null) !==
+        canonicalJson(adapter.connection ?? null)
+    )
+      fail(
+        "ModelContextIncompatible",
+        "Connection ID already identifies a different endpoint or protocol",
+      );
+    this.connections.set(key, adapter);
+  }
   /** Resolve executable code only for execution/selection, never catalog reads. */
   resolve(ref: ModelRef) {
+    if (this.shutdown.signal.aborted) fail("Disposed", "Model registry closed");
+    const retained = this.connections.get(
+      JSON.stringify([ref.providerId, ref.connectionId]),
+    );
     const provider = this.providers.get(ref.providerId);
-    if (!provider) fail("MissingProvider", "Provider is not registered");
-    const adapter = provider.create(ref.modelId);
+    if (!retained && !provider)
+      fail("MissingProvider", "Provider is not registered");
+    const adapter = retained
+      ? retained.ref.modelId === ref.modelId
+        ? retained
+        : (retained.withModel?.(ref.modelId) ?? provider?.create(ref.modelId))
+      : provider!.create(ref.modelId);
+    if (!adapter)
+      fail(
+        "UnsupportedModelSelection",
+        "This adapter cannot select another model ID",
+      );
     if (
       adapter.ref.providerId !== ref.providerId ||
       adapter.ref.modelId !== ref.modelId ||
@@ -152,6 +193,7 @@ export class ModelRegistry {
   }
   dispose(): void {
     this.shutdown.abort();
+    this.connections.clear();
     this.resolver.clear();
   }
 }

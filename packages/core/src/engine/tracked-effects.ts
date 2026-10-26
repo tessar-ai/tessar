@@ -185,12 +185,6 @@ export class EffectService {
     }
     await save({
       digest,
-      status: "pending",
-      input: input as JsonValue,
-      operationId,
-    });
-    await save({
-      digest,
       status: "dispatched",
       input: input as JsonValue,
       operationId,

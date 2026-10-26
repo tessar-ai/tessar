@@ -240,6 +240,13 @@ shallow overrides. Nested objects replace whole objects; previous Session
 overrides are discarded. Omitting options restores destination defaults.
 Keys, base URLs, headers, timeouts and retries belong to provider configuration.
 
+An executable model passed to Session creation is retained by its named connection
+in the current Controller runtime, including when reopening the Session handle.
+After process restart, recreate/register that connection with a stable
+`connectionId` and the same endpoint/protocol. Saved state contains references,
+not credentials or executable clients. Native opaque provider history may require
+the original model; use a new Thread when changing to an incompatible model.
+
 Accepted input retains its model/options snapshot, even while queued. Switches
 affect later accepted input; resume/recover use the saved execution selection.
 Policies use `session.model.beforeChange`; successful persisted changes emit
@@ -252,6 +259,11 @@ Scope filters state; your backend still owns user authentication and authorizati
 
 The default backend is in memory. See [Storage](storage.md) to restore history
 and Session selection after an application restart.
+
+`await controller.dispose()` also closes its Session handles, discards queued
+input and publishes `session.closed` before plugin cleanup. Repeated Session
+disposal is safe. A public Session close can be refused by its before-close
+barrier; parent shutdown reports a barrier failure and still releases the handle.
 
 ## Resume a tool question
 

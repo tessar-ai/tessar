@@ -1,16 +1,19 @@
 import { expect, it } from "vitest";
 import { OpenAIPlugin } from "../src/plugin.js";
 import { PluginHost } from "../../core/src/plugins/host.js";
-it("registers an explicit provider and retrieves only metadata actually supplied by the API", async () => {
+it("uses catalog profiles without issuing empty provider metadata requests", async () => {
+  let calls = 0;
   const plugin = new OpenAIPlugin({
     apiKey: "fixture",
-    fetch: async () =>
-      Response.json({
+    fetch: async () => {
+      calls++;
+      return Response.json({
         id: "x",
         object: "model",
         created: 1,
         owned_by: "fixture",
-      }),
+      });
+    },
   });
   expect(plugin).toBeInstanceOf(OpenAIPlugin);
   const host = new PluginHost();
@@ -19,9 +22,9 @@ it("registers an explicit provider and retrieves only metadata actually supplied
     .registrations()
     .find((r) => r.kind === "provider")!.value;
   expect(provider.id).toBe("openai");
-  expect(
-    await provider.metadata.resolve({ providerId: "openai", modelId: "x" }, {}),
-  ).toEqual({});
+  const model = provider.create("x");
+  expect((await model.refreshProfile()).modelId).toBe("x");
+  expect(calls).toBe(0);
   expect(
     provider.catalogModelRef({ providerId: "openai", modelId: "x" }),
   ).toEqual({ providerId: "openai", modelId: "x" });
