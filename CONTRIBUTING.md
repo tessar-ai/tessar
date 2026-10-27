@@ -113,17 +113,17 @@ permission to run `npm publish`. The workflow uses OIDC rather than `NPM_TOKEN`.
 See [npm's setup instructions](https://docs.npmjs.com/trusted-publishers/).
 
 New packages need an initial authenticated publish before configuring their
-package settings. OpenTelemetry's first release is published manually after
-Core succeeds:
+package settings. OpenTelemetry `0.1.0` has already been published manually and
+Trusted Publishing configured. Publish its next version through Actions:
 
 ```sh
-pnpm build:release
-npm publish ./dist/release/tessar-opentelemetry-0.1.0.tgz --access public --tag latest
+git tag opentelemetry@0.1.1
+git push origin opentelemetry@0.1.1
 ```
 
-Then configure Trusted Publishing on npm for `@tessar/opentelemetry`. Its next
-version can use the workflow. Do not push `opentelemetry@0.1.0` to trigger another
-publish of the version that was just published manually.
+First commit/push the version change to `release` and wait for that exact commit's
+CI to pass, as for other packages. Do not push `opentelemetry@0.1.0` to trigger
+another publish of the version that was already published manually.
 
 To inspect a release locally without publishing, use PowerShell:
 
