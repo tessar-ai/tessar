@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { AgentHarness } from "../../src/testing/harness.js";
 import { HumanMessage } from "../../src/messages/message.js";
 import { MessageCodec } from "../../src/messages/codec.js";
-import { context, model, type Plugin } from "../../src/index.js";
+import { context, type Plugin } from "../../src/index.js";
 it("assembles the complete canonical history and ordered instruction sources", async () => {
   const harness = await AgentHarness.create({
     instructions: "agent rules",
@@ -60,7 +60,7 @@ it("orders late plugin instruction contributions independently of registration o
         {
           id: "late",
           setup(tessar) {
-            tessar.hook(model.request, (event) => ({
+            tessar.hook(context.prepare, (event) => ({
               ...event.payload,
               instructions: {
                 sections: [

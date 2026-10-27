@@ -150,7 +150,7 @@ it("exports one shared trace through all three adapters without mixing their map
         {
           id: "dynamic-instructions",
           setup(tessar) {
-            tessar.hook("model.request", (event) => ({
+            tessar.hook("context.prepare", (event) => ({
               ...event.payload,
               instructions: buildInstruction([
                 { id: "memory", content: "Use Celsius.", order: 10 },

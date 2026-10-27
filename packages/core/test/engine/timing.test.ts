@@ -1,3 +1,4 @@
+import { start, delta, end } from "../part-fixture.js";
 import { z } from "zod";
 import { expect, it, vi } from "vitest";
 import { AgentHarness } from "../../src/testing/harness.js";
@@ -65,17 +66,13 @@ it("measures monotonic attempt duration and first output", async () => {
   const h = await AgentHarness.create();
   h.provider.stream = async function* () {
     now += 10;
-    yield {
-      type: "message-delta",
-      messageId: "answer",
-      partId: "text",
-      partKind: "text",
-      delta: "ok",
-    };
+    yield start("answer");
+    yield delta("answer", "ok", "text", "text");
+    yield end("answer", "ok");
     now += 30;
     yield {
       type: "response",
-      response: { message: MessageCodec.encode(new AssistantMessage("ok")) },
+      response: { message: MessageCodec.encode(new AssistantMessage("ok", { id: "answer" })) },
     };
   };
   try {
@@ -179,15 +176,11 @@ it("measures auxiliary calls and leaves uncommitted responseMessageId null", asy
     schema: z.object({}),
     execute: async (_input, context) => {
       for await (const _ of context.models.stream({
-        model,
-        purpose: "auxiliary",
-        request: {
           model,
           instructions: normalizeInstruction(""),
           messages: [],
           tools: [],
-        },
-      })) {
+        })) {
       }
       return "done";
     },
@@ -211,13 +204,9 @@ it("measures auxiliary calls and leaves uncommitted responseMessageId null", asy
     );
     if (call === 2) {
       now += 10;
-      yield {
-        type: "message-delta",
-        messageId: message.id,
-        partId: "text",
-        partKind: "text",
-        delta: "answer",
-      };
+      yield start(message.id);
+      yield delta(message.id, "answer", "text", "text");
+      yield end(message.id, "answer");
       now += 30;
     }
     yield { type: "response", response: { message } };

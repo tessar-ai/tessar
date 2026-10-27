@@ -20,6 +20,7 @@ import type { StorageBackend } from "../state/storage-ports.js";
 import type { RegistryLease } from "../plugins/registry.js";
 import type { InterruptionDefinition } from "./interrupt.js";
 import type { ControlDecision } from "../events/type.js";
+import { validateDecision } from "../events/decision.js";
 import type { ExecutionPhase, InterruptRecord } from "../state/schema.js";
 export function phaseForEvent(id: string): ExecutionPhase {
   const phases: Record<string, ExecutionPhase> = {
@@ -144,7 +145,7 @@ export async function validateResume(
       "Response does not satisfy interruption contract",
     );
   }
-  if (decision.decision === "suspend")
+  if ((decision as ControlDecision).decision === "suspend")
     fail("InvalidResumeResponse", "Resolver must return a resolved decision");
   return { interrupt, decision: immutable(decision) };
 }
@@ -321,6 +322,18 @@ async function prepareResumeFrame(
     );
     const cp = structuredClone(stored),
       records = await loadRecords(execution, request.threadId);
+    if (interrupt.kind !== "tool-result") {
+      const eventId = cp.execution?.handlerCursor?.eventId;
+      if (!eventId) fail("ResumeIncompatible", "Missing continuation cursor");
+      try {
+        validateDecision(eventId, decision);
+      } catch {
+        fail(
+          "InvalidResumeResponse",
+          "Resolved decision is invalid for " + eventId,
+        );
+      }
+    }
     const stream = (
       records.get("streams:" + interrupt.streamId) as { data: StreamRecord }
     ).data;

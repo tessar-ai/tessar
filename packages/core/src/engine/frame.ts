@@ -77,7 +77,6 @@ export type ExecutionContext = Omit<LoopContext, "finish"> & {
   prepareMessage(
     frame: ExecutionFrame,
     message: MessageData,
-    persisted?: boolean,
   ): Promise<MessageData>;
   finish(
     frame: ExecutionFrame,

@@ -1,7 +1,11 @@
 import { stream as streamHooks } from "../events/type.js";
 import { fail } from "../errors.js";
 import { immutable, type JsonValue } from "../json.js";
-import { type ControlDecision } from "../events/type.js";
+import {
+  type ControlDecision,
+  type ResolvedDecision,
+  type SuspendDecision,
+} from "../events/type.js";
 import type {
   AnyEvent,
   EventContext,
@@ -59,6 +63,7 @@ export async function hook<D extends AnyEvent>(
     ...eventContext(execution, frame),
     ...(frame.request.session ? { session: frame.request.session } : {}),
     ...(frame.request.thread ? { thread: frame.request.thread } : {}),
+    ...(definition === "turn.start" ? { state: frame.state } : {}),
     ...(mutable
       ? {
           ...execution.services(frame, toolExecutionId),
@@ -78,9 +83,9 @@ export async function hook<D extends AnyEvent>(
     suspend:
       kind === "decision"
         ? <R, P extends JsonValue>(
-            def: InterruptionDefinition<R, ControlDecision, P>,
+            def: InterruptionDefinition<R, ResolvedDecision, P>,
             data: P,
-          ): ControlDecision => {
+          ): SuspendDecision => {
             phaseForEvent(definition);
             const binding = frame.registry.find<{
               definition: InterruptionDefinition;

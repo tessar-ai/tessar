@@ -13,12 +13,13 @@ import {
   type JsonObject,
 } from "../json.js";
 import type { InputDefinition } from "../tools/input-definition.js";
-import type { ModelChunk, ModelRef, ModelRequest } from "../models/contract.js";
+import type { ModelChunk, ModelRequest } from "../models/contract.js";
 import type { AnyEvent, PayloadOf } from "../events/definition.js";
 import type { HookContext } from "../plugins/context.js";
 import {
   PluginStateAccess,
   type PluginStateDefinition,
+  type PluginStateContext,
 } from "../state/plugin-state.js";
 import { canonicalJson } from "../state/commit.js";
 import { abortable } from "./abort.js";
@@ -62,11 +63,7 @@ export interface EffectBinding {
 }
 export interface TrackedServices {
   models: {
-    stream(options: {
-      model: ModelRef;
-      request: ModelRequest;
-      purpose: "auxiliary";
-    }): AsyncIterable<ModelChunk>;
+    stream(request: ModelRequest): AsyncIterable<ModelChunk>;
   };
   effects: {
     execute<I, O>(
@@ -83,7 +80,7 @@ export interface TrackedServices {
   };
 }
 export interface ExecutionHookContext extends HookContext, TrackedServices {
-  readonly state: PluginStateAccess;
+  readonly state: PluginStateContext;
   readonly signal: AbortSignal;
   readonly threadId: string;
   readonly streamId: string;

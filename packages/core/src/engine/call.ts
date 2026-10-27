@@ -10,7 +10,7 @@ import { HumanMessage } from "../messages/message.js";
 import { inputMessages } from "../messages/codec.js";
 import { fail, requireId, errorInfo } from "../errors.js";
 import { immutable } from "../json.js";
-import { isModelAdapter } from "../models/stream.js";
+import { isModelAdapter, matchingAdapter } from "../models/stream.js";
 import {
   snapshotModelOptions,
   validateModelOptions,
@@ -41,7 +41,10 @@ function chooseModel(
           "UnsupportedModelSelection",
           "This adapter does not support changing the model ID",
         );
-      const adapter = model.withModel(selection);
+      const adapter = matchingAdapter(model.withModel(selection), {
+        ...model.ref,
+        modelId: selection,
+      });
       return { ref: adapter.ref, adapter };
     }
     return { ref: { ...modelRef(model), modelId: selection } };
@@ -55,7 +58,11 @@ function chooseModel(
     model.ref.connectionId === ref.connectionId
   ) {
     if (model.ref.modelId === ref.modelId) return { ref, adapter: model };
-    if (model.withModel) return { ref, adapter: model.withModel(ref.modelId) };
+    if (model.withModel)
+      return {
+        ref,
+        adapter: matchingAdapter(model.withModel(ref.modelId), ref),
+      };
   }
   return { ref };
 }

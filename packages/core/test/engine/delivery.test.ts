@@ -1,3 +1,5 @@
+import { start, delta, end } from "../part-fixture.js";
+import { text } from "../../src/events/type.js";
 import {
   message as messageHooks,
   stream as streamHooks,
@@ -24,8 +26,10 @@ it("retains a detached plugin until its asynchronous consumer-error hook settles
     tessar.defer(() => { disposed = true; });
   } }] });
   h.provider.stream = async function* () {
-    for (let index = 0; index < 600; index++) yield { type: "message-delta", messageId: "answer", partId: "text", partKind: "text", delta: "x" };
-    yield { type: "response", response: { message: MessageCodec.encode(new AssistantMessage("answer")) } };
+    yield start("answer");
+    for (let index = 0; index < 600; index++) yield delta("answer", "x" , "text", "text");
+    yield end("answer", "x".repeat(600));
+    yield { type: "response", response: { message: MessageCodec.encode(new AssistantMessage("answer", { id: "answer" })) } };
   };
   try {
     h.agent.stream("hello");
@@ -46,8 +50,10 @@ it("publishes consumer overflow to hooks without cancelling its execution", asyn
     tessar.hook("stream.end", () => ended());
   } }] });
   h.provider.stream = async function* () {
-    for (let index = 0; index < 600; index++) yield { type: "message-delta", messageId: "answer", partId: "text", partKind: "text", delta: "x" };
-    yield { type: "response", response: { message: MessageCodec.encode(new AssistantMessage("answer")) } };
+    yield start("answer");
+    for (let index = 0; index < 600; index++) yield delta("answer", "x" , "text", "text");
+    yield end("answer", "x".repeat(600));
+    yield { type: "response", response: { message: MessageCodec.encode(new AssistantMessage("answer", { id: "answer" })) } };
   };
   try {
     const stream = h.agent.stream("hello");
@@ -65,11 +71,13 @@ it("detaches overflowing consumers at 512 events without cancelling execution", 
   delivery.setId("s");
   for (let i = 0; i < 513; i++)
     delivery.emit(
-      messageHooks.delta,
+      text.delta,
       {
         messageId: "m",
         partId: "p",
-        partKind: "text",
+        partIndex: 0,
+        purpose: "primary",
+        parentToolExecutionId: null,
         delta: "x",
         attemptId: "a",
       },
@@ -210,11 +218,13 @@ it("keeps an abort-ignoring in-flight tool interrupted instead of unlocking the 
 it("enforces the byte limit and detaches return without abortion", async () => {
   const delivery = createDelivery("t", randomIds, { kind: "iterator" });
   delivery.emit(
-    messageHooks.delta,
+    text.delta,
     {
       messageId: "m",
       partId: "p",
-      partKind: "text",
+      partIndex: 0,
+      purpose: "primary",
+      parentToolExecutionId: null,
       delta: "x".repeat(4 * 1024 * 1024),
       attemptId: "a",
     },

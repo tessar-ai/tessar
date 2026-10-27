@@ -3,16 +3,18 @@ import {
   fail,
   MessageCodec,
   normalizeUsage,
-  TessarError,
   type ModelCallContext,
   type ModelChunk,
   type ModelRequest,
 } from "@tessar/core";
 import type { CompletionUsage } from "openai/resources/completions";
 import type { ChatCompletionCreateParamsStreaming } from "openai/resources/chat/completions/completions";
+import { OpenAIError } from "openai";
 import { OpenAIAdapter, validateRequest } from "./adapter.js";
+import { Parts } from "./parts.js";
+import { functionArguments } from "./response-error.js";
+import { responseError } from "./response-error.js";
 import {
-  chatResponseError,
   decodeChatMessage,
   encodeChatMessages,
   type ChatAssistant,
@@ -41,8 +43,6 @@ function usage(value?: CompletionUsage | null) {
 export class OpenAIChatAdapter extends OpenAIAdapter {
   override validate(request: ModelRequest): void {
     validateRequest(request, this.ref, "chat-completions");
-    if (request.options?.n != null && request.options.n !== 1)
-      fail("UnsupportedOption", "An Agent consumes one Chat completion choice");
     encodeChatMessages(request, this.connection);
   }
 
@@ -53,7 +53,7 @@ export class OpenAIChatAdapter extends OpenAIAdapter {
     this.validate(request);
     context.signal.throwIfAborted();
     try {
-      const stream = await this.client.chat.completions.create(
+      const body = await this.prepareBody(
         {
           ...request.options,
           model: this.ref.modelId,
@@ -71,9 +71,15 @@ export class OpenAIChatAdapter extends OpenAIAdapter {
               }
             : {}),
           stream: true,
-        } as ChatCompletionCreateParamsStreaming,
+        },
+        "chat-completions",
+        context,
+      );
+      const stream = await this.client.chat.completions.create(
+        body as unknown as ChatCompletionCreateParamsStreaming,
         { signal: context.signal },
       );
+      const parts = new Parts(this.ref, context);
       let responseId = "",
         finishReason: string | null = null,
         text = "",
@@ -86,11 +92,15 @@ export class OpenAIChatAdapter extends OpenAIAdapter {
       >();
       for await (const chunk of stream) {
         context.signal.throwIfAborted();
-        if (chunk.id) responseId = chunk.id;
+        if (chunk.id) {
+          responseId = chunk.id;
+          parts.identify(chunk.id);
+        }
         if (chunk.usage) counts = chunk.usage;
         for (const choice of chunk.choices) {
           if (choice.index !== 0)
-            throw chatResponseError(
+            throw responseError(
+              this.ref,
               "Unexpected multiple Chat completion choices",
             );
           const delta = choice.delta as typeof choice.delta & {
@@ -104,40 +114,20 @@ export class OpenAIChatAdapter extends OpenAIAdapter {
             );
           if (delta.content != null) {
             if (typeof delta.content !== "string")
-              throw chatResponseError("Chat content must be text");
+              throw responseError(this.ref, "Chat content must be text");
             text += delta.content;
-            if (delta.content)
-              yield {
-                type: "message-delta",
-                messageId: responseId,
-                partId: "text-0",
-                partKind: "text",
-                delta: delta.content,
-              };
+            yield* parts.delta("text", "text-0", delta.content);
           }
           if (delta.refusal) {
             refusal += delta.refusal;
-            yield {
-              type: "message-delta",
-              messageId: responseId,
-              partId: "refusal",
-              partKind: "text",
-              delta: delta.refusal,
-            };
+            yield* parts.delta("text", "refusal", delta.refusal);
           }
           for (const key of ["reasoning_content", "reasoning"] as const) {
             if (delta[key] === undefined || delta[key] === null) continue;
             if (typeof delta[key] !== "string")
-              throw chatResponseError("Chat reasoning must be text");
+              throw responseError(this.ref, "Chat reasoning must be text");
             thinking[key] = (thinking[key] ?? "") + delta[key];
-            if (delta[key])
-              yield {
-                type: "message-delta",
-                messageId: responseId,
-                partId: key,
-                partKind: "reasoning",
-                delta: delta[key],
-              };
+            yield* parts.delta("reasoning", key, delta[key]);
           }
           for (const call of delta.tool_calls ?? []) {
             if (
@@ -145,7 +135,8 @@ export class OpenAIChatAdapter extends OpenAIAdapter {
               call.index < 0 ||
               (call.type && call.type !== "function")
             )
-              throw chatResponseError("Invalid Chat function-call chunk");
+              throw responseError(this.ref, "Invalid Chat function-call chunk");
+            yield* parts.start("tool.call", "call-" + call.index);
             const saved = calls.get(call.index) ?? {
               id: "",
               type: "function",
@@ -160,12 +151,14 @@ export class OpenAIChatAdapter extends OpenAIAdapter {
         }
       }
       if (!responseId || !finishReason)
-        throw chatResponseError(
+        throw responseError(
+          this.ref,
           "Chat stream ended before completion",
           "ProviderIncomplete",
         );
       if (finishReason === "tool_calls" && !calls.size)
-        throw chatResponseError(
+        throw responseError(
+          this.ref,
           "Chat completion ended with missing function calls",
         );
       const message: ChatAssistant = {
@@ -188,11 +181,23 @@ export class OpenAIChatAdapter extends OpenAIAdapter {
         responseId,
         this.connection,
       );
+      yield* parts.closeText();
+      for (const [index, call] of calls)
+        yield* parts.end(
+          "tool.call",
+          "call-" + index,
+          {
+            toolCallId: call.id,
+            name: call.function.name,
+            arguments: functionArguments(call.function.arguments, this.ref),
+          },
+          "observed",
+        );
       yield { type: "usage", usage: normalized };
       yield {
         type: "response",
         response: {
-          message: MessageCodec.encode(decoded),
+          message: { ...MessageCodec.encode(decoded), id: parts.messageId },
           usage: normalized,
           finishReason,
           providerRequestId: responseId,
@@ -201,7 +206,7 @@ export class OpenAIChatAdapter extends OpenAIAdapter {
     } catch (error) {
       if (context.signal.aborted) throw context.signal.reason;
       errorInfo(error, {
-        source: error instanceof TessarError ? "tessar" : "provider",
+        source: error instanceof OpenAIError ? "provider" : "tessar",
         ...this.ref,
       });
       throw error;

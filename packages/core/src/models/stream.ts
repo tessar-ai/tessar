@@ -9,7 +9,10 @@ import type {
   ModelRef,
   ModelRequest,
   ModelProviderRegistration,
+  ModelPartChunk,
 } from "./contract.js";
+import { PartLifecycle } from "./parts.js";
+import { immutable } from "../json.js";
 
 export function isModelAdapter(value: unknown): value is ModelAdapter {
   return (
@@ -18,6 +21,23 @@ export function isModelAdapter(value: unknown): value is ModelAdapter {
     typeof (value as ModelAdapter).stream === "function" &&
     typeof (value as ModelAdapter).validate === "function"
   );
+}
+
+export function matchingAdapter(
+  adapter: ModelAdapter,
+  ref: ModelRef,
+): ModelAdapter {
+  if (
+    adapter.ref.providerId !== ref.providerId ||
+    adapter.ref.modelId !== ref.modelId ||
+    (ref.connectionId !== undefined &&
+      adapter.ref.connectionId !== ref.connectionId)
+  )
+    fail(
+      "ModelContextIncompatible",
+      "The selected connection is no longer available",
+    );
+  return adapter;
 }
 
 export function selectAdapter(
@@ -32,23 +52,20 @@ export function selectAdapter(
   ) {
     if (direct.ref.modelId === ref.modelId) return direct;
     if (direct.withModel)
-      return providerCall(ref, () => direct.withModel!(ref.modelId));
+      return matchingAdapter(
+        providerCall(ref, () => direct.withModel!(ref.modelId)),
+        ref,
+      );
   }
   const provider = registry.find<ModelProviderRegistration>(
     "provider",
     ref.providerId,
   );
   if (!provider) fail("MissingProvider", "Model provider is not registered");
-  const adapter = providerCall(ref, () => provider.create(ref.modelId));
-  if (
-    ref.connectionId !== undefined &&
-    adapter.ref.connectionId !== ref.connectionId
-  )
-    fail(
-      "ModelContextIncompatible",
-      "The selected connection is no longer available",
-    );
-  return adapter;
+  return matchingAdapter(
+    providerCall(ref, () => provider.create(ref.modelId)),
+    ref,
+  );
 }
 
 /** Bind before continuation effects, including when no assistant history exists yet. */
@@ -102,15 +119,28 @@ export async function* streamModel(
   adapter: ModelAdapter,
   request: ModelRequest,
   context: ModelCallContext,
+  observe?: (chunk: ModelPartChunk) => void | Promise<void>,
 ) {
   request = {
     ...request,
     instructions: normalizeInstruction(request.instructions),
   };
+  const parts = new PartLifecycle(context.now);
+  let responded = false;
   try {
-    yield* adapter.stream(request, context);
+    for await (const chunk of adapter.stream(request, context)) {
+      context.signal.throwIfAborted();
+      parts.accept(chunk);
+      if (chunk.type === "response") responded = true;
+      if (chunk.type !== "usage" && chunk.type !== "response")
+        await observe?.(immutable(chunk));
+      yield chunk;
+    }
+    if (!responded) context.signal.throwIfAborted();
   } catch (error) {
     record(error, request.model);
     throw error;
+  } finally {
+    for (const end of parts.interrupted()) await observe?.(end);
   }
 }

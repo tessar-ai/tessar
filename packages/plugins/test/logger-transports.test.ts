@@ -222,13 +222,13 @@ it.each(["debug", "info", "warn", "error"] as const)(
       if (level === "debug") {
         expect(entries).toEqual(
           expect.arrayContaining([
-            expect.objectContaining({ type: "message.delta", level: "debug" }),
+            expect.objectContaining({ type: "text.delta", level: "debug" }),
             expect.objectContaining({ type: "stream.end", level: "info" }),
           ]),
         );
       } else if (level === "info") {
         expect(entries.some((value) => value.type === "stream.end")).toBe(true);
-        expect(entries.some((value) => value.type === "message.delta")).toBe(
+        expect(entries.some((value) => value.type === "text.delta")).toBe(
           false,
         );
       } else {

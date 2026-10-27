@@ -12,6 +12,7 @@ import type { Tool } from "../tools/tool.js";
 import type { ModelProviderRegistration } from "../models/contract.js";
 import type { StorageBackend } from "../state/storage-ports.js";
 import type { PluginStateDefinition } from "../state/plugin-state.js";
+import type { PluginStateContext } from "../state/plugin-state.js";
 import type { JsonValue } from "../json.js";
 import type { Session } from "../session.js";
 import type { Thread } from "../thread.js";
@@ -57,6 +58,10 @@ export interface SessionHookContext extends HookContext {
 }
 export interface ThreadHookContext extends HookContext {
   readonly thread: ThreadHookHandle;
+}
+/** Durable execution state available at lifecycle observations, without control services. */
+export interface StateHookContext extends HookContext {
+  readonly state: PluginStateContext;
 }
 export type EventHandler<D extends AnyEvent> = (
   event: EventEnvelope<PayloadOf<D>, D>,

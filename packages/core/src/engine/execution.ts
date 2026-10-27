@@ -213,7 +213,7 @@ export async function execute(
       frame.signals!.transientInput = immutable(input.messages);
     for (const message of input.messages) {
       if (transientInput) {
-        const value = await execution.prepareMessage(frame, message, false);
+        const value = await execution.prepareMessage(frame, message);
         frame.signals!.applied.push({
           after: cp.state.messages.at(-1)?.id ?? null,
           message: value,

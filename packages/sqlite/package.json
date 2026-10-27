@@ -1,6 +1,6 @@
 {
   "name": "@tessar/sqlite",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "license": "Apache-2.0",
   "description": "SQLite persistence for Tessar state and checkpoints using Node's built-in SQLite API.",
   "keywords": ["tessar","ai-agent","sqlite","storage","persistence","checkpoints","typescript"],

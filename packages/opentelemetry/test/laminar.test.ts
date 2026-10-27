@@ -34,7 +34,7 @@ it("maps Laminar conversations with effective System instructions, typed thinkin
     plugins: [new OpenTelemetryPlugin({ realtime: true, tags: ["laminar-test"], adapters: [adapter] }), {
       id: "prepared-instructions",
       setup(tessar) {
-        tessar.hook("model.request", event => ({ ...event.payload,
+        tessar.hook("context.prepare", event => ({ ...event.payload,
           instructions: buildInstruction([{ id: "prepared", content: `Prepared request ${++requestNumber}` }]),
         }));
       },

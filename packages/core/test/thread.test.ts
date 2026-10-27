@@ -61,12 +61,6 @@ it("runs Thread lifecycle hooks and prevents execution from disposed handles", a
           tessar.hook(threadHooks.started, () => {
             seen.push("started");
           });
-          tessar.hook(threadHooks.beforeShutdown, () => {
-            seen.push("before");
-          });
-          tessar.hook(threadHooks.shutdown, () => {
-            seen.push("closed");
-          });
         },
       },
     ],
@@ -75,7 +69,8 @@ it("runs Thread lifecycle hooks and prevents execution from disposed handles", a
     const thread = await createThread(controller);
     expect((await thread.snapshot()).state.metadata.title).toBe("prepared");
     await thread.dispose();
-    expect(seen).toEqual(["started", "before", "closed"]);
+    expect(seen).toEqual(["started"]);
+    expect(await controller.queries.getThread(thread.id)).not.toBeNull();
     expect(() =>
       thread.stream({ input: new HumanMessage("ask"), model: fixtureRef }),
     ).toThrow();

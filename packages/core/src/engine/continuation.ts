@@ -90,10 +90,10 @@ export function retainStandalone(
   if (!entry) entries.set(threadId, (entry = { runtime }));
   const retained = entry;
   const ready = entry.current?.done ?? Promise.resolve();
-  let finish!: () => void;
+  const { promise: done, resolve: finish } = Promise.withResolvers<void>();
   const state: AttachmentState = {
-    done: new Promise((resolve) => (finish = resolve)),
-    finish: () => finish(),
+    done,
+    finish,
     closed: false,
     admitted: false,
   };

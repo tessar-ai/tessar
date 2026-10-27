@@ -1,6 +1,5 @@
 import {
   AssistantMessage,
-  TessarError,
   fail,
   assertJson,
   type ContentPart,
@@ -9,6 +8,11 @@ import {
   type ModelRequest,
   type ModelConnectionDescriptor,
 } from "@tessar/core";
+import {
+  functionArguments,
+  functionIdentity,
+  responseError,
+} from "./response-error.js";
 import type {
   ResponseInput,
   ResponseOutputItem,
@@ -149,6 +153,7 @@ export function decodeOutput(
 ): AssistantMessage {
   assertJson(items);
   const parts: ContentPart[] = [];
+  const callIds = new Set<string>();
   for (const raw of items) {
     const item = raw as unknown as ResponseOutputItem;
     switch (item.type) {
@@ -166,21 +171,14 @@ export function decodeOutput(
           parts.push({ type: "reasoning", text: summary.text });
         break;
       case "function_call": {
-        let args;
-        try {
-          args = JSON.parse(item.arguments);
-        } catch {
-          throw new TessarError(
-            "ProviderResponse",
-            "Invalid OpenAI function arguments",
-          );
-        }
-        if (!args || typeof args !== "object" || Array.isArray(args))
-          fail("ProviderResponse", "Function arguments must be an object");
+        const identity = functionIdentity(ref, item.call_id, item.name);
+        if (callIds.has(identity.toolCallId))
+          throw responseError(ref, "Duplicate function identity");
+        callIds.add(identity.toolCallId);
+        const args = functionArguments(item.arguments, ref);
         parts.push({
           type: "tool-call",
-          toolCallId: item.call_id,
-          name: item.name,
+          ...identity,
           arguments: args,
         });
         break;

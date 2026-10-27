@@ -66,14 +66,45 @@ export class ScriptedProvider implements ModelAdapter {
       usage,
       finishReason: "stop",
     };
-    if (!script.chunks && script.text)
-      yield {
-        type: "message-delta",
-        messageId: response.message.id,
-        partId: "text-0",
-        partKind: "text",
-        delta: script.text,
-      };
+    if (!script.chunks)
+      for (const [partIndex, part] of response.message.content.entries()) {
+        if (
+          part.type !== "text" &&
+          part.type !== "reasoning" &&
+          part.type !== "tool-call"
+        )
+          continue;
+        const kind = part.type === "tool-call" ? "tool.call" : part.type;
+        const identity = {
+          messageId: response.message.id,
+          partId: "part-" + partIndex,
+          partIndex,
+        };
+        const startedAt = context.now?.() ?? new Date().toISOString();
+        yield {
+          type: `${kind}.start`,
+          ...identity,
+          startedAt,
+          boundary: "observed",
+        } as ModelChunk;
+        if (script.text && part.type === "text")
+          yield { type: "text.delta", ...identity, delta: part.text };
+        yield {
+          type: `${kind}.end`,
+          ...identity,
+          startedAt,
+          endedAt: context.now?.() ?? new Date().toISOString(),
+          boundary: "observed",
+          status: "completed",
+          ...(part.type === "tool-call"
+            ? {
+                toolCallId: part.toolCallId,
+                name: part.name,
+                arguments: part.arguments,
+              }
+            : { text: part.text }),
+        } as ModelChunk;
+      }
     yield { type: "usage", usage: response.usage ?? usage };
     yield { type: "response", response };
   }

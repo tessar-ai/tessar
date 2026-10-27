@@ -11,6 +11,7 @@ import {
   type ModelRequest,
   type ModelCallContext,
   type ModelChunk,
+  type JsonObject,
 } from "@tessar/core";
 import {
   OpenAIAdapter,
@@ -188,6 +189,37 @@ export class OpenAIProvider<
       } as OpenAIProviderOptions<A> & { api?: A },
       this.sharedConnection,
     );
+  }
+
+  effortOptions(level: string, options: JsonObject): JsonObject {
+    const levels = [
+      "none",
+      "minimal",
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+    ] as const satisfies readonly Exclude<
+      import("openai/resources/shared").ReasoningEffort,
+      null
+    >[];
+    if (!(levels as readonly string[]).includes(level))
+      fail("UnsupportedOption", "Unsupported OpenAI effort level: " + level);
+    if (this.api === "chat-completions")
+      return { ...options, reasoning_effort: level };
+    const reasoning = options.reasoning;
+    return {
+      ...options,
+      reasoning: {
+        ...(reasoning &&
+        typeof reasoning === "object" &&
+        !Array.isArray(reasoning)
+          ? reasoning
+          : {}),
+        effort: level,
+      },
+    };
   }
 
   /** @internal Shared provider registration used by the built-in plugin. */

@@ -35,7 +35,7 @@ it("exports prefix-free event groups with camelCase keys for hyphenated strings"
     "stream",
     "turn",
     "context",
-    "tools",
+    "provider",
     "model",
     "message",
     "tool",

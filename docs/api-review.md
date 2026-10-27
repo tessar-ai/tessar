@@ -234,7 +234,7 @@ for await (const event of agent.stream([
   model: "gpt-6-astra",
   modelOptions: { reasoning: { effort: "high" } },
 })) {
-  if (event.type === message.delta) console.log(event.payload.delta);
+  if (event.type === text.delta) console.log(event.payload.delta);
 }
 ```
 
@@ -301,7 +301,7 @@ Nhận Session từ `controller.createSession()` hoặc `controller.getSession()
 | `.followUp.count()` | Không có | `number`; input đang chờ, không tính execution hiện tại |
 | `.followUp.isEmpty()` | Không có | `boolean`; hàng đợi trống |
 | `.state.get()` | Không có | `RuntimeState`; snapshot render bất biến trong RAM |
-| `.isIdle()` | Không có | `boolean`; không có execution đang chạy, suspended cũng idle |
+| `.isIdle()` | Không có | `boolean`; không có execution đang chạy hoặc input đang xếp hàng; suspended không có queue cũng idle |
 | `.isDisposed()` | Không có | `boolean`; handle đã đóng |
 | `.resume(options)` | `{ interruptId: string; value: JsonValue; model?: Model \| ModelRef }` | `Promise<ExecutionReceipt>`; admission của phần tiếp tục |
 | `.recover(options)` | `{ streamId: string; model?: Model \| ModelRef }` | `Promise<ExecutionReceipt>`; tiếp quản execution đã lưu |
@@ -334,6 +334,8 @@ Client SDK application được hoãn tại [TD-002](docs/technical-debt.md).
 | --- | --- | --- |
 | `.get()` | Không có | `string`: ID đầy đủ `providerId/modelId` |
 | `.name()` | Không có | `string`: native model ID, có thể chứa slash |
+| `.info()` | Không có | Snapshot immutable `{ id, name, profile, options? }` của model đang chọn |
+| `.setEffort(level)` | `level: string` | `Promise<void>`; adapter ánh xạ sang native options và giữ các options khác |
 | `.list()` | Không có | `readonly SessionModelInfo[]`: `{ id, name, profile }` từ catalog của provider đã đăng ký, gồm model đang chọn |
 | `.switch(modelId, options?)` | `modelId: string`, `options?: JsonObject` | `Promise<void>` |
 
@@ -341,7 +343,7 @@ ID đầy đủ chọn provider đã đăng ký; bare ID không có slash giữ 
 
 Mỗi switch dùng defaults của adapter đích cộng shallow override lần gọi này; bỏ overrides Session trước đó. Không truyền options thì trở về defaults đích. Cấm transport/runtime-owned fields như apiKey/baseURL/defaultHeaders/maxRetries/timeout/model/input/tools/stream trong options.
 
-Đổi model ảnh hưởng input được nhận sau switch. Input đã nhận/xếp hàng giữ snapshot model/options riêng. Trước đổi có `session.model.beforeChange`, sau khi lưu thành công có `session.modelChanged`; payload gồm `previous`, `model`, `previousOptions?`, `options?`.
+Đổi model ảnh hưởng input được nhận sau switch. Input đã nhận/xếp hàng giữ snapshot model/options riêng. Trước đổi có `session.model.beforeChange`, sau khi lưu thành công có `session.modelChanged` khi đổi model/connection và `session.model.optionsChanged` khi options thay đổi. Options event chứa `model`, `previousOptions?`, `options?`; no-op không phát event. `setEffort(level)` giữ các options hiện tại; provider không hỗ trợ sẽ báo `UnsupportedOption`.
 
 Không có `.set()` hoặc `session.setModel()`.
 
@@ -420,7 +422,7 @@ ToolMessage trả từ tool có thể bỏ toolCallId; loop gắn ID tương ứ
 `InstructionSection = { readonly id: string; readonly content: string; readonly order?: number }`.
 `Instruction = { readonly sections: readonly InstructionSection[] }`.
 
-Order tăng dần, bỏ order so sánh như 0; bằng order thì so ID ordinal. ID section phải duy nhất, content phải là text, order hữu hạn. Plugin có thể thêm section ở `context.prepare`/`model.request`. Cách serialize system/instructions phụ thuộc provider.
+Order tăng dần, bỏ order so sánh như 0; bằng order thì so ID ordinal. ID section phải duy nhất, content phải là text, order hữu hạn. Plugin thêm section ở `context.prepare`; `provider.request` xử lý body sau adapter encode. Cách serialize system/instructions phụ thuộc provider.
 
 ## 11. Tool
 
@@ -512,14 +514,14 @@ Session hook handle cung cấp identity `id`, method `scope()`, namespace `model
 
 ### EventEnvelope và helper quyết định
 
-`new EventEnvelope(type, payload, context?)` với type string, payload generic và EventContext. Thuộc tính đọc gồm `type`, `payload` và identity/context. Dùng `event.type === message.delta` để narrow payload. Helper `.is()` đã được xóa khỏi public API.
+`new EventEnvelope(type, payload, context?)` với type string, payload generic và EventContext. Thuộc tính đọc gồm `type`, `payload` và identity/context. Dùng `event.type === text.delta` để narrow payload. Helper `.is()` đã được xóa khỏi public API.
 
 | API | Parameter | Trả về |
 | --- | --- | --- |
-| `ToolDecision.allow()` | Không có | `ControlDecision` |
-| `ToolDecision.deny(reason)` | `string` | `ControlDecision` |
-| `TurnDecision.continue()` | Không có | `ControlDecision` |
-| `TurnDecision.stop(reason)` | `string` | `ControlDecision` |
+| `ToolDecision.allow()` | Không có | `OperationDecision` |
+| `ToolDecision.deny(reason)` | `string` | `OperationDecision` |
+| `TurnDecision.continue()` | Không có | `{ decision: "continue" }` |
+| `TurnDecision.stop(reason)` | `string` | `{ decision: "stop"; reason: string }` |
 | `InputDecision.continue(messages)` | `readonly MessageData[]` | `InputPreparation` |
 | `InputDecision.handled(outcome)` | `{ output: readonly MessageData[] }` | `InputPreparation` |
 | `InputDecision.reject(error)` | `ErrorInfo` | `InputPreparation` |
@@ -542,7 +544,7 @@ Tên map, tên string, kind, payload và result của **tất cả hook built-in
 
 | API | Parameter | Trả về |
 | --- | --- | --- |
-| `models.stream(options)` | `{ model: ModelRef; request: ModelRequest; purpose: "auxiliary" }` | `AsyncIterable<ModelChunk>` |
+| `models.stream(request)` | `ModelRequest` | `AsyncIterable<ModelChunk>` |
 | `effects.execute(definition, input, options)` | `EffectDefinition<I,O>`, `input: I`, `{ key: string }` | `Promise<O>` |
 | `events.emit(name, payload)` | Tên notification event và payload | `Promise<void>` |
 
@@ -557,13 +559,12 @@ Không có protocol child reservation/admission trong core. Plugin tự kết h�
 | `.get(definition)` | `PluginStateDefinition<T>` | `T` |
 | `.update(definition, value)` | Definition và `T \| ((previous: T) => T)` | `void` |
 | `.commit()` | Không có | `Promise<string>` checkpoint ID |
-| `.snapshots()` | Không có | `readonly PluginStateSnapshot[]` |
 | `.withOwner(owner)` | `{ type: "thread" \| "stream" \| "turn" \| "agent" \| "session"; id: string }` | State handle theo owner |
 | `.owned(owner)` | `{ type: "agent" \| "session"; id: string }` | Handle persistent CAS bên dưới |
 | `.owned(owner).read(definition)` | Definition | `Promise<{ value: T; revision: number; schemaVersion: number }>` |
 | `.owned(owner).update(definition, expectedRevision, value)` | Definition, `number`, `T` | `Promise<{ value: T; revision: number }>` |
 
-`DecisionHookContext.suspend(definition, payload): ControlDecision` là cơ chế trả quyết định suspend trong decision hook. `definition` phải được đăng ký tương thích. Khác `ToolExecutionContext.suspend(payload)` trả ToolSuspension từ execute/resume của tool.
+`DecisionHookContext<D>.suspend(definition, payload): SuspendDecision` là cơ chế trả quyết định suspend trong decision hook. `definition` phải được đăng ký tương thích. Khác `ToolExecutionContext.suspend(payload)` trả ToolSuspension từ execute/resume của tool.
 
 ## 14. PluginManager và logger
 
@@ -781,12 +782,15 @@ export declare class Session {
     readonly id: string;
     metadata(): JsonObject;
     scope(): Scope;
-    private constructor();
     readonly model: Readonly<{
         get: () => string;
         name: () => string;
+        info: () => SessionModelInfo & {
+            readonly options?: JsonObject;
+        };
         list: () => readonly SessionModelInfo[];
         switch: (modelId: string, options?: JsonObject) => Promise<void>;
+        setEffort: (level: string) => Promise<void>;
     }>;
     subscribe(observer: Observer): () => void;
     subscribe<N extends AnyEvent>(name: N, observer: (event: EventEnvelope<PayloadOf<N>, N>) => unknown): () => void;
@@ -969,15 +973,14 @@ export declare class ProfileResolver {
 ### OpenAIProvider
 
 ```ts
-export declare class OpenAIProvider<A extends OpenAIAPI = "responses"> {
-    readonly ref: ModelRef;
-    readonly connection?: ModelConnectionDescriptor;
+export declare class OpenAIProvider<A extends OpenAIAPI = "responses"> extends OpenAIAdapter {
     readonly options: Readonly<OptionsFor<A>>;
     readonly api: A;
     constructor(configuration: OpenAIProviderOptions<A> & {
         api?: A;
     });
     withModel(modelId: string): OpenAIProvider<A>;
+    effortOptions(level: string, options: JsonObject): JsonObject;
     validate(request: ModelRequest): void;
     stream(request: ModelRequest, context: ModelCallContext): AsyncIterable<ModelChunk>;
     profile(): Readonly<ModelProfile>;
@@ -1476,16 +1479,14 @@ Nguồn: [packages/core/src/plugins/context.ts](packages/core/src/plugins/contex
 
 ```ts
 export type Disposer = () => void | Promise<void>;
-
+/** Read access to capabilities captured for the current hook execution. */
 export interface CapabilityRegistry {
     get<T = unknown>(kind: string, id: string): T | undefined;
     list<T = unknown>(kind: string): readonly T[];
 }
-
-export type SessionHookHandle = Pick<Session, "id" | "scope" | "model" | "thread" | "followUp">;
-
+/** Controls that do not wait for completion of the active execution. */
+export type SessionHookHandle = Pick<Session, "id" | "scope" | "model" | "thread" | "followUp" | "state" | "isIdle" | "isDisposed">;
 export type ThreadHookHandle = Pick<Thread, "id" | "scope" | "snapshot" | "getHistory" | "getCheckpoint" | "listCheckpoints" | "listInterrupts">;
-
 export interface HookContext {
     readonly registry: CapabilityRegistry;
     readonly sessionId?: string;
@@ -1494,18 +1495,19 @@ export interface HookContext {
     readonly thread?: ThreadHookHandle;
     readonly [key: string]: unknown;
 }
-
 export interface SessionHookContext extends HookContext {
     readonly session: SessionHookHandle;
 }
-
 export interface ThreadHookContext extends HookContext {
     readonly thread: ThreadHookHandle;
 }
-
+/** Durable execution state available at lifecycle observations, without control services. */
+export interface StateHookContext extends HookContext {
+    readonly state: PluginStateContext;
+}
 export type EventHandler<D extends AnyEvent> = (event: EventEnvelope<PayloadOf<D>, D>, context: ContextOf<D>) => ResultOf<D> | void | Promise<ResultOf<D> | void>;
-
 export interface PluginContext {
+    /** Registers an Agent owned by this plugin; shutdown follows plugin disposal. */
     readonly agent: {
         register(agent: Agent): void;
     };
@@ -1534,7 +1536,7 @@ export interface PluginContext {
         register(kind: string, id: string, value: unknown, version?: number): void;
     };
 }
-
+/** Instance contract implemented by built-in and user-defined plugin classes. */
 export interface Plugin {
     readonly id: string;
     readonly version?: number;
@@ -1543,42 +1545,52 @@ export interface Plugin {
 }
 ```
 
-### Payload dùng chung và helper quyết định
+### Event maps, payloads và quyết định theo boundary
 
-Nguồn: [packages/core/src/events/type.ts](packages/core/src/events/type.ts).
+Nguồn: `packages/core/dist/events/type.d.ts`. `PartEvent<N>` nằm trong model contract bên dưới. Các alias `Transform`, `Decision`, `PartHooks` chỉ giúp đọc hình dạng EventMap, không phải root exports.
 
 ```ts
 export type OperationDecision = {
     decision: "allow" | "deny";
     reason?: string;
 };
-
 export type OperationEvent = "session.model.before-change" | "session.thread.before-switch" | "thread.before-fork" | "thread.before-rename" | "thread.before-delete";
-
 export interface QueuedInputReceipt {
     id: string;
     threadId: string;
 }
-
 export interface ExecutionReceipt {
     streamId: string;
     threadId: string;
 }
-
-export type ControlDecision = {
-    decision: "allow" | "deny" | "continue" | "stop" | "retry" | "fail";
-    reason?: string;
-} | {
-    decision: "select";
-    model: ModelRef;
-} | {
+export type SuspendDecision = {
     decision: "suspend";
     definitionId: string;
     payload: JsonValue;
     pluginId: string;
     definitionVersion: number;
 };
-
+export type StreamDecision = {
+    decision: "allow" | "deny" | "stop";
+    reason?: string;
+} | SuspendDecision;
+export type ToolDecision = StreamDecision;
+export type TurnDecision = {
+    decision: "allow" | "continue" | "deny" | "stop";
+    reason?: string;
+} | SuspendDecision;
+export type ModelSelectionDecision = {
+    decision: "allow";
+} | {
+    decision: "select";
+    model: ModelRef;
+} | SuspendDecision;
+export type ModelRecoveryDecision = {
+    decision: "deny" | "retry";
+    reason?: string;
+} | SuspendDecision;
+export type ControlDecision = StreamDecision | TurnDecision | ModelSelectionDecision | ModelRecoveryDecision;
+export type ResolvedDecision = Exclude<ControlDecision, SuspendDecision>;
 export interface InputPreparation {
     messages: readonly MessageData[];
     handled?: {
@@ -1586,14 +1598,12 @@ export interface InputPreparation {
     };
     rejected?: ErrorInfo;
 }
-
 export interface ToolPreparation {
     tool: ToolDescription;
     toolCallId: string;
     toolExecutionId: string;
     arguments: JsonObject;
 }
-
 export interface StreamOutcome {
     /** Logical Stream lifetime; suspension does not finish it. */
     startedAt?: string;
@@ -1605,101 +1615,105 @@ export interface StreamOutcome {
     error: ErrorInfo | null;
     interrupt: InterruptRecord | null;
 }
-
-export declare const ToolDecision: {
-    allow: () => ControlDecision;
-    deny: (reason: string) => ControlDecision;
+export declare const ready = "ready";
+export declare const shutdown = "shutdown";
+export declare const diagnostic = "diagnostic";
+export declare const stateChanged = "state_changed";
+export declare const thread: {
+    readonly prepare: "thread.prepare";
+    readonly started: "thread.started";
+    readonly beforeFork: "thread.before-fork";
+    readonly forked: "thread.forked";
+    readonly beforeRename: "thread.before-rename";
+    readonly renamed: "thread.renamed";
+    readonly beforeDelete: "thread.before-delete";
+    readonly deleted: "thread.deleted";
 };
-
-export declare const TurnDecision: {
-    continue: () => ControlDecision;
-    stop: (reason: string) => ControlDecision;
+export declare const session: {
+    readonly created: "session.created";
+    readonly modelChanged: "session.model-changed";
+    readonly threadSwitched: "session.thread-switched";
+    readonly inputQueued: "session.input-queued";
+    readonly inputDiscarded: "session.input-discarded";
+    readonly closed: "session.closed";
+    readonly model: {
+        readonly beforeChange: "session.model.before-change";
+        readonly optionsChanged: "session.model.options-changed";
+    };
+    readonly thread: {
+        readonly beforeSwitch: "session.thread.before-switch";
+    };
 };
-
-export declare const InputDecision: {
-    continue: (messages: readonly MessageData[]) => InputPreparation;
-    handled: (outcome: {
-        output: readonly MessageData[];
-    }) => InputPreparation;
-    reject: (error: ErrorInfo) => InputPreparation;
+export declare const input: {
+    readonly prepare: "input.prepare";
+    readonly received: "input.received";
 };
-```
-
-### Tất cả hook built-in: map, string và kind
-
-| Map import | Event string | Kind |
-| --- | --- | --- |
-| `ready` | `ready` | notification |
-| `shutdown` | `shutdown` | barrier |
-| `diagnostic` | `diagnostic` | notification |
-| `thread.prepare` | `thread.prepare` | transformation |
-| `thread.started` | `thread.started` | notification |
-| `thread.beforeShutdown` | `thread.before-shutdown` | barrier |
-| `thread.shutdown` | `thread.shutdown` | notification |
-| `thread.updated` | `thread.updated` | notification |
-| `thread.beforeFork` | `thread.before-fork` | decision |
-| `thread.forked` | `thread.forked` | notification |
-| `thread.beforeRename` | `thread.before-rename` | decision |
-| `thread.renamed` | `thread.renamed` | notification |
-| `thread.beforeDelete` | `thread.before-delete` | decision |
-| `thread.deleted` | `thread.deleted` | notification |
-| `session.created` | `session.created` | notification |
-| `session.modelChanged` | `session.model-changed` | notification |
-| `session.threadCreated` | `session.thread-created` | notification |
-| `session.threadSwitched` | `session.thread-switched` | notification |
-| `session.threadRenamed` | `session.thread-renamed` | notification |
-| `session.threadForked` | `session.thread-forked` | notification |
-| `session.threadDeleted` | `session.thread-deleted` | notification |
-| `session.inputQueued` | `session.input-queued` | notification |
-| `session.inputDiscarded` | `session.input-discarded` | notification |
-| `session.beforeClose` | `session.before-close` | barrier |
-| `session.closed` | `session.closed` | notification |
-| `session.model.beforeChange` | `session.model.before-change` | decision |
-| `session.thread.beforeSwitch` | `session.thread.before-switch` | decision |
-| `input.prepare` | `input.prepare` | transformation |
-| `input.received` | `input.received` | notification |
-| `stream.before` | `stream.before` | decision |
-| `stream.started` | `stream.started` | notification |
-| `stream.beforeEnd` | `stream.before-end` | barrier |
-| `stream.end` | `stream.end` | notification |
-| `stream.error` | `stream.error` | notification |
-| `stream.suspended` | `stream.suspended` | notification |
-| `stream.resumed` | `stream.resumed` | notification |
-| `stream.cancel` | `stream.cancel` | notification |
-| `turn.start` | `turn.start` | notification |
-| `turn.end` | `turn.end` | notification |
-| `turn.decision` | `turn.decision` | decision |
-| `context.prepare` | `context.prepare` | transformation |
-| `tools.select` | `tools.select` | transformation |
-| `model.select` | `model.select` | decision |
-| `model.request` | `model.request` | transformation |
-| `model.start` | `model.start` | notification |
-| `model.end` | `model.end` | notification |
-| `model.response` | `model.response` | transformation |
-| `model.usage` | `model.usage` | notification |
-| `model.error` | `model.error` | notification |
-| `model.recover` | `model.recover` | decision |
-| `message.prepare` | `message.prepare` | transformation |
-| `message.beforeCommit` | `message.before-commit` | barrier |
-| `message.delta` | `message.delta` | notification |
-| `message.committed` | `message.committed` | notification |
-| `tool.prepare` | `tool.prepare` | transformation |
-| `tool.before` | `tool.before` | decision |
-| `tool.start` | `tool.start` | notification |
-| `tool.update` | `tool.update` | notification |
-| `tool.end` | `tool.end` | notification |
-| `tool.error` | `tool.error` | notification |
-| `tool.result` | `tool.result` | transformation |
-| `checkpoint.committed` | `checkpoint.committed` | notification |
-
-Payload và result chính xác của từng event:
-
-```ts
+export declare const stream: {
+    readonly before: "stream.before";
+    readonly started: "stream.started";
+    readonly end: "stream.end";
+    readonly error: "stream.error";
+    readonly suspended: "stream.suspended";
+    readonly resumed: "stream.resumed";
+    readonly cancel: "stream.cancel";
+};
+export declare const turn: {
+    readonly start: "turn.start";
+    readonly end: "turn.end";
+    readonly decision: "turn.decision";
+};
+export declare const context: {
+    readonly prepare: "context.prepare";
+};
+export declare const model: {
+    readonly select: "model.select";
+    readonly start: "model.start";
+    readonly end: "model.end";
+    readonly response: "model.response";
+    readonly usage: "model.usage";
+    readonly error: "model.error";
+    readonly recover: "model.recover";
+};
+export declare const provider: {
+    readonly request: "provider.request";
+};
+export declare const message: {
+    readonly prepare: "message.prepare";
+    readonly committed: "message.committed";
+};
+export declare const text: {
+    readonly start: "text.start";
+    readonly delta: "text.delta";
+    readonly end: "text.end";
+};
+export declare const reasoning: {
+    readonly start: "reasoning.start";
+    readonly delta: "reasoning.delta";
+    readonly end: "reasoning.end";
+};
+export declare const tool: {
+    readonly call: {
+        readonly start: "tool.call.start";
+        readonly end: "tool.call.end";
+    };
+    readonly prepare: "tool.prepare";
+    readonly before: "tool.before";
+    readonly start: "tool.start";
+    readonly update: "tool.update";
+    readonly end: "tool.end";
+    readonly error: "tool.error";
+    readonly result: "tool.result";
+};
+export declare const checkpoint: {
+    readonly committed: "checkpoint.committed";
+};
 type Transform<P> = HookSpec<P, P, ExecutionHookContext>;
-type Decision<P> = HookSpec<P, ControlDecision, DecisionHookContext>;
-
+type Decision<P, D extends ControlDecision> = HookSpec<P, D, DecisionHookContext<D>>;
+type PartHooks = {
+    [N in import("../models/contract.js").ModelPartChunk["type"]]: HookSpec<import("../models/contract.js").PartEvent<N>>;
+};
 declare module "./definition.js" {
-    interface EventMap {
+    interface EventMap extends PartHooks {
         state_changed: HookSpec<{
             state: RuntimeState;
         }>;
@@ -1746,22 +1760,13 @@ declare module "./definition.js" {
             previousOptions?: JsonObject;
             options?: JsonObject;
         }, void, SessionHookContext>;
-        "session.thread-created": HookSpec<{
-            threadId: string;
+        "session.model.options-changed": HookSpec<{
+            model: ModelRef;
+            previousOptions?: JsonObject;
+            options?: JsonObject;
         }, void, SessionHookContext>;
         "session.thread-switched": HookSpec<{
             previousThreadId: string | null;
-            threadId: string;
-        }, void, SessionHookContext>;
-        "session.thread-renamed": HookSpec<{
-            threadId: string;
-            title: string;
-        }, void, SessionHookContext>;
-        "session.thread-forked": HookSpec<{
-            sourceThreadId: string;
-            threadId: string;
-        }, void, SessionHookContext>;
-        "session.thread-deleted": HookSpec<{
             threadId: string;
         }, void, SessionHookContext>;
         "session.input-queued": HookSpec<{
@@ -1771,7 +1776,6 @@ declare module "./definition.js" {
             receipt: QueuedInputReceipt;
             cause: string;
         }, void, SessionHookContext>;
-        "session.before-close": HookSpec<{}, void, SessionHookContext>;
         "session.closed": HookSpec<{}, void, SessionHookContext>;
         diagnostic: HookSpec<{
             error: ErrorInfo;
@@ -1782,29 +1786,18 @@ declare module "./definition.js" {
         shutdown: HookSpec<{}>;
         "thread.prepare": HookSpec<CreateThreadOptions, CreateThreadOptions>;
         "thread.started": HookSpec<ThreadInfo>;
-        "thread.before-shutdown": HookSpec<{
-            threadId: string;
-        }>;
-        "thread.shutdown": HookSpec<{
-            threadId: string;
-        }>;
-        "thread.updated": HookSpec<{
-            checkpointId: string;
-            revision: number;
-        }>;
         "input.prepare": Transform<InputPreparation>;
         "input.received": HookSpec<{
             messages: readonly MessageData[];
         }>;
         "stream.before": Decision<{
             input: readonly MessageData[];
-        }>;
+        }, StreamDecision>;
         "stream.started": HookSpec<{
             modelRef: ModelRef;
             checkpointId: string;
             startedAt?: string;
         }>;
-        "stream.before-end": HookSpec<StreamOutcome>;
         "stream.end": HookSpec<StreamOutcome>;
         "stream.error": HookSpec<{
             /** Consumer errors detach delivery without failing the execution. Defaults to execution. */
@@ -1828,7 +1821,7 @@ declare module "./definition.js" {
             turnId: string;
             index: number;
             startedAt?: string;
-        }>;
+        }, void, import("../plugins/context.js").StateHookContext>;
         "turn.end": HookSpec<{
             turnId: string;
             usage: UsageSummary;
@@ -1838,13 +1831,12 @@ declare module "./definition.js" {
         "turn.decision": Decision<{
             turnId: string;
             hadTools: boolean;
-        }>;
+        }, TurnDecision>;
         "context.prepare": Transform<ModelRequest>;
-        "tools.select": Transform<readonly ToolDescription[]>;
         "model.select": Decision<{
             model: ModelRef;
-        }>;
-        "model.request": Transform<ModelRequest>;
+        }, ModelSelectionDecision>;
+        "provider.request": Transform<ProviderRequest>;
         "model.start": HookSpec<{
             attemptId: string;
             startedAt?: string;
@@ -1877,24 +1869,14 @@ declare module "./definition.js" {
         "model.recover": Decision<{
             attemptId: string;
             error: ErrorInfo;
-        }>;
+        }, ModelRecoveryDecision>;
         "message.prepare": Transform<MessageData>;
-        "message.before-commit": HookSpec<{
-            message: MessageData;
-        }>;
-        "message.delta": HookSpec<{
-            messageId: string;
-            partId: string;
-            partKind: "text" | "reasoning";
-            delta: string;
-            attemptId: string;
-        }>;
         "message.committed": HookSpec<{
             message: MessageData;
             checkpointId: string;
         }>;
         "tool.prepare": Transform<ToolPreparation>;
-        "tool.before": Decision<ToolPreparation>;
+        "tool.before": Decision<ToolPreparation, ToolDecision>;
         "tool.start": HookSpec<{
             toolExecutionId: string;
             startedAt?: string | null;
@@ -1932,6 +1914,28 @@ declare module "./definition.js" {
         }>;
     }
 }
+/** Dispatch behavior is internal metadata; public event identifiers are strings. */
+export declare const hookKinds: Readonly<Record<string, EventKind>>;
+export declare const ToolDecision: {
+    allow: () => OperationDecision;
+    deny: (reason: string) => OperationDecision;
+};
+export declare const TurnDecision: {
+    continue: () => {
+        decision: "continue";
+    };
+    stop: (reason: string) => {
+        decision: "stop";
+        reason: string;
+    };
+};
+export declare const InputDecision: {
+    continue: (messages: readonly MessageData[]) => InputPreparation;
+    handled: (outcome: {
+        output: readonly MessageData[];
+    }) => InputPreparation;
+    reject: (error: ErrorInfo) => InputPreparation;
+};
 ```
 
 ### Plugin state definition
@@ -1952,6 +1956,24 @@ export interface PluginStateDefinition<T extends JsonValue = JsonValue> {
 }
 
 export declare function definePluginState<T extends JsonValue>(definition: PluginStateDefinition<T>): PluginStateDefinition<T>;
+```
+
+### PluginStateContext — view public
+
+Contract được mở rộng ở đây để không yêu cầu import class serialization nội bộ.
+`withOwner` nhận Thread/Stream/Turn; agent/session dùng CAS qua `owned`.
+
+```ts
+interface PluginStateContext {
+  get<T extends JsonValue>(definition: PluginStateDefinition<T>): T;
+  update<T extends JsonValue>(definition: PluginStateDefinition<T>, value: T | ((previous: T) => T)): void;
+  commit(): Promise<string>;
+  withOwner(owner: { type: "thread" | "stream" | "turn" | "agent" | "session"; id: string }): PluginStateContext;
+  owned(owner: { type: "agent" | "session"; id: string }): {
+    read<T extends JsonValue>(definition: PluginStateDefinition<T>): Promise<{ value: T; revision: number; schemaVersion: number }>;
+    update<T extends JsonValue>(definition: PluginStateDefinition<T>, expectedRevision: number, value: T): Promise<{ value: T; revision: number }>;
+  };
+}
 ```
 
 ### Effects và tracked services
@@ -1993,11 +2015,7 @@ export declare function defineEffect<I, O>(definition: EffectDefinition<I, O>): 
 
 export interface TrackedServices {
     models: {
-        stream(options: {
-            model: ModelRef;
-            request: ModelRequest;
-            purpose: "auxiliary";
-        }): AsyncIterable<ModelChunk>;
+        stream(request: ModelRequest): AsyncIterable<ModelChunk>;
     };
     effects: {
         execute<I, O>(definition: EffectDefinition<I, O>, input: I, options: {
@@ -2010,7 +2028,7 @@ export interface TrackedServices {
 }
 
 export interface ExecutionHookContext extends HookContext, TrackedServices {
-    readonly state: PluginStateAccess;
+    readonly state: PluginStateContext;
     readonly signal: AbortSignal;
     readonly threadId: string;
     readonly streamId: string;
@@ -2022,7 +2040,7 @@ export interface ExecutionHookContext extends HookContext, TrackedServices {
 Nguồn: [packages/core/src/engine/interrupt.ts](packages/core/src/engine/interrupt.ts).
 
 ```ts
-export interface InterruptionDefinition<R = any, D extends ControlDecision = ControlDecision, P extends JsonValue = JsonValue> {
+export interface InterruptionDefinition<R = any, D extends ResolvedDecision = ResolvedDecision, P extends JsonValue = JsonValue> {
     readonly id: string;
     readonly version: number;
     readonly response: InputDefinition<R>;
@@ -2030,15 +2048,15 @@ export interface InterruptionDefinition<R = any, D extends ControlDecision = Con
     readonly resolve: (response: R, payload: P) => D;
 }
 
-export declare function defineInterruption<R, D extends ControlDecision, P extends JsonValue = JsonValue>(definition: InterruptionDefinition<R, D, P>): InterruptionDefinition<R, D, P>;
-
-export interface DecisionHookContext extends ExecutionHookContext {
-    readonly state: PluginStateAccess;
+export interface DecisionHookContext<D extends ControlDecision = ControlDecision> extends ExecutionHookContext {
+    readonly state: PluginStateContext;
     readonly signal: AbortSignal;
     readonly threadId: string;
     readonly streamId: string;
-    suspend<R, D extends ControlDecision, P extends JsonValue>(definition: InterruptionDefinition<R, D, P>, payload: P): ControlDecision;
+    suspend<R, P extends JsonValue>(definition: InterruptionDefinition<R, Exclude<D, SuspendDecision>, P>, payload: P): SuspendDecision;
 }
+
+export declare function defineInterruption<R, D extends ResolvedDecision, P extends JsonValue = JsonValue>(definition: InterruptionDefinition<R, D, P>): InterruptionDefinition<R, D, P>;
 ```
 
 ### Model adapter/request/response contract
@@ -2049,22 +2067,20 @@ Nguồn: [packages/core/src/models/contract.ts](packages/core/src/models/contrac
 export interface ModelRef {
     providerId: string;
     modelId: string;
+    /** Non-secret identity of a concrete connection, when supplied by an adapter. */
     connectionId?: string;
 }
-
 export interface ModelConnectionDescriptor {
     providerId: string;
     connectionId: string;
     protocol: string;
     endpoint: string;
 }
-
 export interface ToolDescription {
     name: string;
     description: string;
     inputSchema: JsonObject;
 }
-
 export interface ModelRequest {
     model: ModelRef;
     instructions: Instruction;
@@ -2072,45 +2088,93 @@ export interface ModelRequest {
     tools: readonly ToolDescription[];
     options?: JsonObject;
 }
-
 export interface ModelCallContext {
     signal: AbortSignal;
+    /** Observation clock supplied by the runtime. */
+    now?(): string;
+    /** Transform an encoded JSON body immediately before invoking the provider SDK. */
+    prepareRequest?(protocol: string, body: JsonObject): Promise<JsonObject>;
 }
-
+export interface ProviderRequest {
+    model: ModelRef;
+    protocol: string;
+    attemptId: string;
+    purpose: "primary" | "auxiliary";
+    body: JsonObject;
+}
 export interface ModelResponse {
     message: MessageData;
     usage?: ModelUsage;
     finishReason?: string;
     providerRequestId?: string;
 }
-
-export type ModelChunk = {
-    type: "message-delta";
+export interface PartIdentity {
     messageId: string;
     partId: string;
-    partKind: "text" | "reasoning";
-    delta: string;
+    partIndex: number;
+}
+export interface PartTiming {
+    startedAt: string;
+    boundary: "provider" | "observed";
+}
+export type ModelPartChunk = {
+    [K in "text" | "reasoning"]: (PartIdentity & PartTiming & {
+        type: `${K}.start`;
+    }) | (PartIdentity & {
+        type: `${K}.delta`;
+        delta: string;
+    }) | (PartIdentity & PartTiming & {
+        type: `${K}.end`;
+        endedAt: string;
+        status: "completed" | "interrupted";
+        text: string;
+    });
+}["text" | "reasoning"] | (PartIdentity & PartTiming & {
+    type: "tool.call.start";
+    toolCallId?: string;
+    name?: string;
+}) | (PartIdentity & PartTiming & {
+    type: "tool.call.end";
+    endedAt: string;
+} & ({
+    status: "completed";
+    toolCallId: string;
+    name: string;
+    arguments: JsonObject;
 } | {
+    status: "interrupted";
+    toolCallId?: string;
+    name?: string;
+}));
+type PartPayload<C> = C extends ModelPartChunk ? Omit<C, "type"> : never;
+export type PartEvent<N extends ModelPartChunk["type"]> = PartPayload<Extract<ModelPartChunk, {
+    type: N;
+}>> & {
+    attemptId: string;
+    purpose: "primary" | "auxiliary";
+    parentToolExecutionId: string | null;
+};
+export type ModelChunk = ModelPartChunk | {
     type: "usage";
     usage: ModelUsage;
 } | {
     type: "response";
     response: ModelResponse;
 };
-
 export interface ModelAdapter {
     readonly ref: ModelRef;
     readonly connection?: ModelConnectionDescriptor;
     readonly options?: object;
+    /** Select another model without changing credentials, endpoint or client. */
     withModel?(modelId: string): ModelAdapter;
+    /** Map a supported effort level into this adapter's native request options. */
+    effortOptions?(level: string, options: JsonObject): JsonObject;
     validate(request: ModelRequest): void;
     stream(request: ModelRequest, context: ModelCallContext): AsyncIterable<ModelChunk>;
 }
-
 export type ModelOptions<M> = M extends {
     readonly options: infer O;
 } ? Partial<O> : JsonObject;
-
 export interface ModelProviderRegistration {
     id: string;
     create(modelId: string): ModelAdapter;
@@ -3281,6 +3345,30 @@ export interface ResponseFormatTextJSONSchemaConfig {
 ### Rendering snapshot types
 
 ```ts
+export type RuntimePart = {
+    readonly partId: string;
+    readonly partIndex: number;
+    readonly status: "streaming" | "completed" | "interrupted";
+} & ({
+    [K in "text" | "reasoning"]: {
+        readonly type: K;
+        readonly text: string;
+    };
+}["text" | "reasoning"] | {
+    readonly type: "tool-call";
+    readonly toolCallId?: string;
+    readonly name?: string;
+    readonly arguments?: import("./json.js").JsonObject;
+});
+
+export type RuntimeDraft = Omit<MessageData, "content"> & {
+    readonly content: readonly RuntimePart[];
+};
+
+export type RuntimeMessage = Omit<MessageData, "content"> & {
+    readonly content: readonly (ContentPart | RuntimePart)[];
+};
+
 export interface StateTool {
     readonly id: string;
     readonly toolCallId: string;
@@ -3290,12 +3378,12 @@ export interface StateTool {
     readonly result: MessageData | null;
     readonly error: ErrorInfo | null;
 }
-/** An immutable rendering snapshot, separate from durable checkpoint state. */
+
 export interface RuntimeState {
     readonly status: StreamStatus | "idle" | "closed";
     /** Committed messages and the current draft, in conversation order. */
-    readonly messages: readonly MessageData[];
-    readonly currentMessage: MessageData | null;
+    readonly messages: readonly RuntimeMessage[];
+    readonly currentMessage: RuntimeDraft | null;
     readonly tools: readonly StateTool[];
     readonly interrupt: InterruptRecord | null;
     readonly queuedInputs: number;

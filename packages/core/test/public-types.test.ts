@@ -1,4 +1,5 @@
-import { tool as toolHooks, message as messageHooks } from "../src/index.js";
+import { text } from "../src/events/type.js";
+import { tool as toolHooks, message as messageHooks, provider, model } from "../src/index.js";
 import { it, expect } from "vitest";
 import {
   Agent,
@@ -17,6 +18,19 @@ it("infers the public plugin type map and discriminated event union", () => {
   const plugin: Plugin = {
     id: "typed-public",
     setup(tessar) {
+      tessar.hook(provider.request, event => {
+        const protocol: string = event.payload.protocol;
+        const purpose: "primary" | "auxiliary" = event.payload.purpose;
+        const attemptId: string = event.payload.attemptId;
+        void [protocol, purpose, attemptId];
+        return { ...event.payload, body: { ...event.payload.body, temperature: 0 } };
+      });
+      if (false) {
+        // @ts-expect-error Native requests belong to provider, not model
+        model.request;
+        // @ts-expect-error The normalized model.request hook was removed
+        tessar.hook("model.request", () => {});
+      }
       tessar.hook(toolHooks.before, (event) => {
         const name: string = event.payload.tool.name;
         if (name === "write") return { decision: "deny", reason: "blocked" };
@@ -42,8 +56,8 @@ it("infers the public plugin type map and discriminated event union", () => {
     },
   };
   const inspect = (event: StreamEvent) => {
-    if (event.type === messageHooks.delta) {
-      const kind: "text" | "reasoning" = event.payload.partKind;
+    if (event.type === text.delta) {
+      const kind: "text" = "text";
       return kind;
     }
     return null;
@@ -52,7 +66,7 @@ it("infers the public plugin type map and discriminated event union", () => {
   expect(plugin.id).toBe("typed-public");
   const inspectStream = async (execution: Stream) => {
     for await (const event of execution) {
-      if (event.type === messageHooks.delta) {
+      if (event.type === text.delta) {
         const delta: string = event.payload.delta;
         void delta;
         // @ts-expect-error A message delta is not a tool execution event

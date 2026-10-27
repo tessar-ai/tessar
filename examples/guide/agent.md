@@ -81,7 +81,7 @@ async function onBuildFinished() {
 }
 
 for await (const event of events) {
-  if (event.type === "message.delta") console.log(event.payload.delta);
+  if (event.type === "text.delta") console.log(event.payload.delta);
 }
 ```
 

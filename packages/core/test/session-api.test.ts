@@ -108,7 +108,7 @@ it("exposes model/thread operations only through Session", async () => {
   }
 });
 
-it("authorizes and persists options before publishing a model change", async () => {
+it("authorizes and persists options before publishing an options change", async () => {
   let deny = false;
   const seen: string[] = [];
   const { controller } = await fixture(
@@ -128,7 +128,7 @@ it("authorizes and persists options before publishing a model change", async () 
   );
   try {
     const session = await controller.createSession();
-    session.subscribe(events.modelChanged, (event) => {
+    session.subscribe(events.model.optionsChanged, (event) => {
       seen.push("after");
       expect(session.model.name()).toBe(event.payload.model.modelId);
       expect(event.payload.options).toEqual({ temperature: 0.3 });

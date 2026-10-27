@@ -17,7 +17,7 @@ Save as `tracing.ts`. Configure provider and destination credentials in an
 ignored `.env` file; set `OPENAI_MODEL` to a model your provider supports.
 
 ```ts
-import { Agent, Controller, message } from "@tessar/core";
+import { Agent, Controller, text as textEvents } from "@tessar/core";
 import { OpenAIProvider } from "@tessar/openai";
 import { OpenTelemetryPlugin, LangfuseAdapter } from "@tessar/opentelemetry";
 
@@ -45,7 +45,7 @@ const controller = new Controller({
 try {
   await controller.initialize();
   for await (const event of agent.stream("Introduce yourself.")) {
-    if (event.type === message.delta && event.payload.partKind === "text") {
+    if (event.type === textEvents.delta) {
       process.stdout.write(event.payload.delta);
     }
   }
