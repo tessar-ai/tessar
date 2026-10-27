@@ -1,6 +1,6 @@
 {
   "name": "@tessar/mongodb",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "license": "Apache-2.0",
   "description": "Transactional MongoDB persistence for Tessar state and checkpoints.",
   "keywords": ["tessar","ai-agent","mongodb","storage","persistence","checkpoints","typescript"],

@@ -56,6 +56,18 @@ changing the design. Do not silently redefine the contract to match existing cod
 
 ## Releases
 
+To build and package all public SDK packages locally:
+
+```sh
+pnpm build:release
+```
+
+Each package's existing `prepack` builds its source and includes its license.
+The command writes versioned `.tgz` archives to `dist/release/`, resolves
+workspace dependencies for distribution, and excludes the private fixture apps.
+It does not publish to npm. Regular `pnpm build` keeps output in each package's
+own `dist/` directory.
+
 Public packages are versioned and released independently. Update only the
 package being released and any dependency that also needs a new version. The
 private workspace root's version is not used for publishing. Commit the changes
@@ -89,12 +101,11 @@ dependencies. It also checks npm for an already published target version and
 compatible published internal dependencies before attempting publication.
 
 Publish changed dependencies first and wait for their release to succeed before
-tagging dependents. The tracing implementation requires the new Core
-hook payloads, so release `core@0.1.4` before `opentelemetry@0.1.0`. The logger API
-changes also require releasing `plugins@0.1.4`, after Core. OpenAI and storage
-packages do not need a new release for these changes. When releasing
-multiple versions of the same package, finish the earlier release first so
-the `latest` npm tag cannot race backwards.
+tagging dependents. For the current release, publish `core@0.1.5` first, then
+`plugins@0.1.5`, `openai@0.1.4`, `sqlite@0.1.4`, `postgresql@0.1.4` and
+`mongodb@0.1.4`. Packed workspace dependencies use the new Core version.
+When releasing multiple versions of the same package, finish the earlier
+release first so the `latest` npm tag cannot race backwards.
 
 Each package needs npm Trusted Publishing configured for GitHub owner
 `tessar-ai`, repository `tessar`, workflow `release.yml`, no environment and
@@ -102,8 +113,17 @@ permission to run `npm publish`. The workflow uses OIDC rather than `NPM_TOKEN`.
 See [npm's setup instructions](https://docs.npmjs.com/trusted-publishers/).
 
 New packages need an initial authenticated publish before configuring their
-package settings. Use a separate bootstrap version so the subsequent release
-workflow does not attempt to republish an existing version.
+package settings. OpenTelemetry's first release is published manually after
+Core succeeds:
+
+```sh
+pnpm build:release
+npm publish ./dist/release/tessar-opentelemetry-0.1.0.tgz --access public --tag latest
+```
+
+Then configure Trusted Publishing on npm for `@tessar/opentelemetry`. Its next
+version can use the workflow. Do not push `opentelemetry@0.1.0` to trigger another
+publish of the version that was just published manually.
 
 To inspect a release locally without publishing, use PowerShell:
 

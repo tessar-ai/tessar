@@ -1,6 +1,6 @@
 {
   "name": "@tessar/openai",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "license": "Apache-2.0",
   "description": "OpenAI Responses and Chat Completions provider with model metadata integration for Tessar.",
   "keywords": ["tessar","openai","ai-agent","llm","typescript","responses-api","chat-completions","streaming","tool-calling"],
