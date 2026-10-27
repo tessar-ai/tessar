@@ -62,7 +62,7 @@ export class AgentHarness {
           setup(tessar) {
             tessar.models.register({
               id: "scripted",
-              create: () => provider,
+              create: (modelId) => provider.withModel(modelId),
             });
           },
         },

@@ -325,7 +325,7 @@ it("stops a tool batch at the hard limit without dispatching the remainder or en
     await harness.dispose();
   }
 });
-it("commits required-finalizer failure as failed and preserves completed model usage", async () => {
+it("keeps completed outcomes and usage when an end observer fails", async () => {
   const harness = await AgentHarness.create({
     modelScripts: [
       { text: "done", usage: { inputTokens: 3, outputTokens: 2 } },
@@ -334,7 +334,7 @@ it("commits required-finalizer failure as failed and preserves completed model u
       {
         id: "finalizer",
         setup(tessar) {
-          tessar.hook(streamHooks.beforeEnd, () => {
+          tessar.hook(streamHooks.end, () => {
             throw Error("flush failed");
           });
         },
@@ -351,7 +351,7 @@ it("commits required-finalizer failure as failed and preserves completed model u
       });
     await harness.collect(stream);
     expect((await harness.records(stream.id!)).stream).toMatchObject({
-      status: "failed",
+      status: "completed",
       directUsage: { metrics: { totalTokens: { knownTotal: 5 } } },
     });
   } finally {

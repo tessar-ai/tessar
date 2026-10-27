@@ -13,6 +13,47 @@ are historical notes, not the current status.
 
 Ngày ghi nhận: 2026-10-14.
 
+## Cập nhật 2026-10-27: hoàn thiện hook contract
+
+Đã triển khai trong checkout, chưa khẳng định đã phát hành trên npm:
+
+- Lifecycle riêng `text.start/delta/end`, `reasoning.start/delta/end`,
+  `tool.call.start/end`; bỏ message.delta, không có tool.call.delta hay alias.
+  Adapter và runtime giữ một logical message ID, part identity/order và đóng
+  part đang mở khi lỗi/hủy/consumer ngừng đọc. Primary và auxiliary dùng chung
+  boundary kiểm tra và publish; UI chính không nhận draft của auxiliary.
+- `currentMessage.content` là projection ở RAM có status từng part. Không có
+  currentParts, không lưu UI status vào checkpoint, provider payload hoặc metadata.
+- `context.prepare` xử lý context/tools của loop Agent. `provider.request` sửa
+  native body sau adapter cho cả primary và auxiliary. Không sửa connection,
+  credentials, model hoặc streaming. SDK retry giữ body đã chuẩn bị.
+- Decision có type và validation theo boundary; invalid resumed decision giữ
+  interruption pending. ControlDecision chỉ là union, không phải mọi boundary
+  đều nhận mọi member. Notification không đổi kết quả execution đã commit.
+- Bỏ thread.updated, tools.select, notification Session trùng thao tác Thread và
+  barrier message.beforeCommit/stream.beforeEnd/session.beforeClose cùng lifecycle
+  Thread handle. Notification Thread được phát sau khi Session cập nhật selection.
+  Giữ policy gate trước fork/rename/delete/model switch/thread switch.
+- Plugin state view không expose snapshots(). `turn.start` có state context để
+  plugin cập nhật state lifecycle; checkpoint observers không có mutable services.
+- `ctx.models.stream(request)` nhận một ModelRequest; model chỉ khai báo một lần,
+  purpose auxiliary do runtime xác định. Helper không tự chạy context.prepare.
+- Session.model có get/name/info/list/switch/setEffort. Info là snapshot model đang
+  dùng và native options. Effort mapping thuộc adapter, không có effort state riêng.
+  Model/connection đổi phát modelChanged; options đổi phát model.optionsChanged sau
+  persistence. Per-stream override không thay cấu hình Session.
+- Session.isIdle() nghĩa là không chạy và không có input xếp hàng. Suspended không
+  có queue là idle; không cung cấp running() trùng nghĩa.
+
+Subagent vẫn do plugin tự ghép Agent, tool và context; cùng process hay process
+riêng do plugin chọn. Agent mới không tự kế thừa Controller/hook/tool/history.
+Controller chỉ cần khi Agent con dùng plugins; Session tùy nhu cầu persistence.
+Không có API chuyên subagent, tool lồng, signal transport hay client SDK trong đợt này.
+Không có migration/compatibility aliases, dependency hoặc DB schema mới.
+
+Tra contract và parameter hiện tại tại [API reference](api-review.md) và
+[plugin hooks](plugin-api-and-events.md). Các ghi chú cũ bên dưới là lịch sử.
+
 ## Cập nhật 2026-10-15: ponytail áp dụng từ đầu
 
 Áp dụng ponytail (full) cho toàn bộ thiết kế, plan và code đã viết, kể cả

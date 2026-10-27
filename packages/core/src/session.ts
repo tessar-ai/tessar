@@ -1,6 +1,7 @@
 import { notifyObserver } from "./events/observer.js";
 import {
   session as sessionHooks,
+  thread as threadHooks,
   stream as streamHooks,
   stateChanged,
 } from "./events/type.js";
@@ -13,6 +14,7 @@ import {
   type AnyEvent,
   type PayloadOf,
   type StreamEvent,
+  type EventContext,
 } from "./events/definition.js";
 import {
   type ExecutionReceipt,
@@ -96,7 +98,7 @@ export class Session {
   private readonly view = new StateView();
   readonly state = Object.freeze({ get: (): RuntimeState => this.view.get() });
   isIdle(): boolean {
-    return !this.busy;
+    return !this.busy && this.queue.length === 0;
   }
   isDisposed(): boolean {
     return this.disposed;
@@ -276,6 +278,17 @@ export class Session {
   readonly model = Object.freeze({
     get: (): string => this.modelId(this.selectedModel.ref),
     name: (): string => this.selectedModel.ref.modelId,
+    info: (): SessionModelInfo & { readonly options?: JsonObject } => {
+      this.check();
+      return immutable({
+        id: this.model.get(),
+        name: this.model.name(),
+        profile: this.selectedModel.profile(),
+        ...(this.record.selectedModel.options !== undefined
+          ? { options: this.record.selectedModel.options }
+          : {}),
+      });
+    },
     list: (): readonly SessionModelInfo[] => {
       this.check();
       const models = new Map(
@@ -294,6 +307,21 @@ export class Session {
     },
     switch: (modelId: string, options?: JsonObject): Promise<void> =>
       this.switchModel(modelId, options),
+    setEffort: (level: string): Promise<void> =>
+      this.control(async () => {
+        requireId(level, "effort level");
+        const selected = this.controller.sessionModel(this.selectedModel.ref);
+        if (!selected.adapter.effortOptions)
+          fail(
+            "UnsupportedOption",
+            "This provider does not support effort selection",
+          );
+        const options = selected.adapter.effortOptions(
+          level,
+          this.record.selectedModel.options ?? {},
+        );
+        await this.changeModel(this.model.get(), options);
+      }),
   });
   private modelId(ref: ModelRef): string {
     return ref.providerId + "/" + ref.modelId;
@@ -327,49 +355,66 @@ export class Session {
     return thread;
   }
   private switchModel(modelId: string, options?: JsonObject): Promise<void> {
-    return this.control(async () => {
-      requireId(modelId, "model id");
-      validateModelOptions(options);
-      const previous = this.selectedModel.ref;
-      const slash = modelId.indexOf("/");
-      const ref =
-        slash < 0
-          ? { ...previous, modelId }
-          : modelId.slice(0, slash) === previous.providerId
-            ? { ...previous, modelId: modelId.slice(slash + 1) }
-            : {
-                providerId: modelId.slice(0, slash),
-                modelId: modelId.slice(slash + 1),
-              };
-      const selected = this.controller.sessionModel(ref),
-        next = selected.model;
-      const effective =
-        options === undefined
-          ? selected.stored.options
-          : snapshotModelOptions({ ...selected.stored.options, ...options });
-      const payload = immutable({
-        previous,
-        model: next.ref,
-        ...(this.record.selectedModel.options !== undefined
-          ? { previousOptions: this.record.selectedModel.options }
-          : {}),
-        ...(effective !== undefined ? { options: effective } : {}),
-      });
-      await this.controller.hooks.authorize(
-        sessionHooks.model.beforeChange,
-        payload,
-        this.context(),
-      );
-      this.check();
-      await this.persist({
-        selectedModel: {
-          ...selected.stored,
-          ...(effective !== undefined ? { options: effective } : {}),
-        },
-      });
-      this.selectedModel = next;
-      this.notify(sessionHooks.modelChanged, payload);
+    return this.control(() => this.changeModel(modelId, options));
+  }
+  private async changeModel(
+    modelId: string,
+    options?: JsonObject,
+  ): Promise<void> {
+    requireId(modelId, "model id");
+    validateModelOptions(options);
+    const previous = this.selectedModel.ref;
+    const slash = modelId.indexOf("/");
+    const ref =
+      slash < 0
+        ? { ...previous, modelId }
+        : modelId.slice(0, slash) === previous.providerId
+          ? { ...previous, modelId: modelId.slice(slash + 1) }
+          : {
+              providerId: modelId.slice(0, slash),
+              modelId: modelId.slice(slash + 1),
+            };
+    const selected = this.controller.sessionModel(ref),
+      next = selected.model;
+    const effective =
+      options === undefined
+        ? selected.stored.options
+        : snapshotModelOptions({ ...selected.stored.options, ...options });
+    const payload = immutable({
+      previous,
+      model: next.ref,
+      ...(this.record.selectedModel.options !== undefined
+        ? { previousOptions: this.record.selectedModel.options }
+        : {}),
+      ...(effective !== undefined ? { options: effective } : {}),
     });
+    const modelChanged = canonicalJson(previous) !== canonicalJson(next.ref);
+    const optionsChanged =
+      canonicalJson(this.record.selectedModel.options ?? null) !==
+      canonicalJson(effective ?? null);
+    if (!modelChanged && !optionsChanged) return;
+    await this.controller.hooks.authorize(
+      sessionHooks.model.beforeChange,
+      payload,
+      this.context(),
+    );
+    this.check();
+    await this.persist({
+      selectedModel: {
+        ...selected.stored,
+        ...(effective !== undefined ? { options: effective } : {}),
+      },
+    });
+    this.selectedModel = next;
+    if (modelChanged) this.notify(sessionHooks.modelChanged, payload);
+    if (optionsChanged)
+      this.notify(sessionHooks.model.optionsChanged, {
+        model: next.ref,
+        ...(payload.previousOptions !== undefined
+          ? { previousOptions: payload.previousOptions }
+          : {}),
+        ...(payload.options !== undefined ? { options: payload.options } : {}),
+      });
   }
   subscribe(observer: Observer): () => void;
   subscribe<N extends AnyEvent>(
@@ -421,8 +466,9 @@ export class Session {
   private notify<N extends AnyEvent>(
     name: N,
     payload: PayloadOf<N>,
+    identity: Partial<EventContext> & { thread?: Thread } = {},
   ): Promise<void> {
-    const context = this.context();
+    const context = { ...this.context(), ...identity };
     this.emit(new EventEnvelope(name, payload, context));
     return this.controller.hooks
       .dispatch(name, payload, context)
@@ -454,7 +500,11 @@ export class Session {
         await this.persist({ selectedThreadId: thread.id });
         this.selection = thread;
         await this.restoreState();
-        this.notify(sessionHooks.threadCreated, { threadId: thread.id });
+        this.notify(
+          threadHooks.started,
+          await this.controller.queries.requireThread(thread.id),
+          { threadId: thread.id, thread, scope: thread.scope() },
+        );
         this.publishState();
         return thread;
       }),
@@ -504,7 +554,12 @@ export class Session {
           { scope: this.scope() },
           this,
         );
-        this.notify(sessionHooks.threadRenamed, { threadId: id, title });
+        const thread = await this.target(id);
+        this.notify(
+          threadHooks.renamed,
+          { threadId: id, title },
+          { threadId: id, thread, scope: thread.scope() },
+        );
       }),
     fork: (options: ForkOptions & ThreadTarget = {}): Promise<Thread> =>
       this.control(async () => {
@@ -519,10 +574,12 @@ export class Session {
             },
             this,
           );
-        this.notify(sessionHooks.threadForked, {
-          sourceThreadId,
-          threadId: thread.id,
-        });
+        const source = await this.target(sourceThreadId);
+        this.notify(
+          threadHooks.forked,
+          { threadId: sourceThreadId, forkedThreadId: thread.id },
+          { threadId: sourceThreadId, thread: source, scope: source.scope() },
+        );
         return thread;
       }),
     delete: (target: ThreadTarget = {}): Promise<void> =>
@@ -541,6 +598,10 @@ export class Session {
     return this.control(async () => {
       this.check();
       const id = this.selected(target.threadId);
+      const info = await this.controller.backend.threads.get(id, {
+        includeDeleted: true,
+      });
+      const thread = info ? Thread.create(this.controller, info) : undefined;
       await (permanent ? purgeThread : deleteThread)(
         this.controller,
         id,
@@ -567,11 +628,15 @@ export class Session {
         );
       this.record = stored;
       if (this.selection?.id === id) this.selection = null;
-      this.notify(sessionHooks.threadDeleted, { threadId: id });
       if (!this.selection) {
         await this.restoreState();
         this.publishState();
       }
+      this.notify(
+        threadHooks.deleted,
+        { threadId: id, permanent },
+        { threadId: id, thread, scope: thread?.scope() ?? this.scope() },
+      );
     });
   }
   readonly followUp = Object.assign(
@@ -640,12 +705,12 @@ export class Session {
     input: boolean,
   ): Promise<ExecutionReceipt> {
     const previous = this.foreground;
-    let resolveDone!: () => void;
+    const { promise: done, resolve: close } = Promise.withResolvers<void>();
     const foreground: Foreground = {
       thread,
       status: "running",
-      done: new Promise((resolve) => (resolveDone = resolve)),
-      close: () => resolveDone(),
+      done,
+      close,
       admitted: false,
       closed: false,
     };
@@ -786,12 +851,6 @@ export class Session {
     this.closing = true;
     this.disposal = (async () => {
       try {
-        await this.controller.hooks
-          .dispatch(sessionHooks.beforeClose, {}, this.context())
-          .catch((error) => {
-            if (!force) throw error;
-            this.controller.report(errorInfo(error));
-          });
         await this.foreground?.done;
         this.discard("Closed");
         this.disposed = true;

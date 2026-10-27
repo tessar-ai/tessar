@@ -70,10 +70,10 @@ result when execution completes or suspends; it can include multiple model reque
 and tool calls. Use `stream()` to consume events as they arrive:
 
 ```ts
-import { message, stream } from "@tessar/core";
+import { text, stream } from "@tessar/core";
 
 for await (const event of agent.stream("Explain agent tools briefly.")) {
-  if (event.type === message.delta && event.payload.partKind === "text") {
+  if (event.type === text.delta) {
     process.stdout.write(event.payload.delta);
   }
   if (event.type === stream.error) throw Error(event.payload.error.message);

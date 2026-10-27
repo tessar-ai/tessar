@@ -49,6 +49,40 @@ frames are not mistaken for restored history or additional model executions.
 This debt concerns the renderer. A terminal fix does not resolve the missing
 self-hosted server or browser application integration.
 
+## TD-004 — Consistent filtering, sorting and pagination for list APIs
+
+**Status:** deferred. **Scope:** public collection APIs for SDK and application consumers.
+
+### Gap
+
+Collection APIs currently offer different query capabilities. For example,
+`session.model.list()` returns an in-memory array without query parameters.
+Session/Thread and execution-record lists already support cursor/limit paging,
+with some resource-specific filters, but there is no shared public contract for
+filtering, sort fields, sort direction and pagination across applicable lists.
+Consumers implement those behaviors themselves, including model-selection UI.
+
+### Direction
+
+- Review public list APIs for models, tools, Sessions, Threads, checkpoints and
+  execution records; document which query capabilities each collection supports.
+- Define consistent filter/search, sort/order, paging and result semantics where
+  applicable, with clear defaults and supported fields for each resource.
+- Preserve existing scope boundaries, paging guarantees and compatibility.
+  Ordering must be deterministic when values tie, and pagination must remain
+  consistent with its active query and ordering.
+- Distinguish in-memory collections from storage-backed queries and capability
+  registry enumeration. Do not force a database-style query mechanism onto
+  every method merely because it returns a list.
+- Support CLI selectors and application/browser consumers without requiring
+  each host to reinvent common collection handling. Keep behavior consistent
+  across applicable storage backends.
+
+Completion requires public documentation and appropriate coverage of filtering,
+ordering, pagination and scope isolation for the affected APIs. Parameter names,
+page-versus-cursor choices, return shapes and implementation strategy require a
+separate design. Recording this debt does not change current APIs.
+
 ## Boundaries
 
 Preserve the minimal core and the "anything are plugin" direction. Server,

@@ -1,12 +1,16 @@
 import { fail, requireId } from "../errors.js";
 import type { JsonValue } from "../json.js";
 import type { InputDefinition } from "../tools/input-definition.js";
-import type { ControlDecision } from "../events/type.js";
-import type { PluginStateAccess } from "../state/plugin-state.js";
+import type {
+  ControlDecision,
+  ResolvedDecision,
+  SuspendDecision,
+} from "../events/type.js";
+import type { PluginStateContext } from "../state/plugin-state.js";
 import type { ExecutionHookContext } from "./tracked-effects.js";
 export interface InterruptionDefinition<
   R = any,
-  D extends ControlDecision = ControlDecision,
+  D extends ResolvedDecision = ResolvedDecision,
   P extends JsonValue = JsonValue,
 > {
   readonly id: string;
@@ -17,7 +21,7 @@ export interface InterruptionDefinition<
 }
 export function defineInterruption<
   R,
-  D extends ControlDecision,
+  D extends ResolvedDecision,
   P extends JsonValue = JsonValue,
 >(
   definition: InterruptionDefinition<R, D, P>,
@@ -27,15 +31,17 @@ export function defineInterruption<
     fail("InvalidConfiguration", "Invalid interruption version");
   return Object.freeze({ ...definition });
 }
-export interface DecisionHookContext extends ExecutionHookContext {
-  readonly state: PluginStateAccess;
+export interface DecisionHookContext<
+  D extends ControlDecision = ControlDecision,
+> extends ExecutionHookContext {
+  readonly state: PluginStateContext;
   readonly signal: AbortSignal;
   readonly threadId: string;
   readonly streamId: string;
-  suspend<R, D extends ControlDecision, P extends JsonValue>(
-    definition: InterruptionDefinition<R, D, P>,
+  suspend<R, P extends JsonValue>(
+    definition: InterruptionDefinition<R, Exclude<D, SuspendDecision>, P>,
     payload: P,
-  ): ControlDecision;
+  ): SuspendDecision;
 }
 export class Suspension extends Error {
   constructor() {

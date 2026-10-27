@@ -29,7 +29,7 @@ it("receives a closing Thread's next message without making its hook wait", asyn
       {
         id: "closing",
         setup(tessar) {
-          tessar.hook(stream.beforeEnd, async (_event, context) => {
+          tessar.hook(stream.end, async (_event, context) => {
             if (!sent && typeof context.threadId === "string") {
               sent = true;
               await agent.sendSignal({

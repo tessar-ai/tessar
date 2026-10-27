@@ -1,3 +1,5 @@
+import { start, delta as partDelta, end } from "./part-fixture.js";
+import { text as textEvents } from "../src/events/type.js";
 import { expect, it } from "vitest";
 import {
   Agent,
@@ -23,27 +25,13 @@ it("publishes immutable incremental snapshots from a standalone stream", async (
   const model = new ScriptedProvider([
     {
       chunks: [
-        {
-          type: "message-delta",
-          messageId: "answer",
-          partId: "reason",
-          partKind: "reasoning",
-          delta: "Think",
-        },
-        {
-          type: "message-delta",
-          messageId: "answer",
-          partId: "text",
-          partKind: "text",
-          delta: "Hel",
-        },
-        {
-          type: "message-delta",
-          messageId: "answer",
-          partId: "text",
-          partKind: "text",
-          delta: "lo",
-        },
+        start("answer", "reason", "reasoning"),
+        partDelta("answer", "Think", "reason", "reasoning"),
+        start("answer", "text", "text", 1),
+        partDelta("answer", "Hel", "text", "text", 1),
+        partDelta("answer", "lo", "text", "text", 1),
+        end("answer", "Think", "reason", "reasoning"),
+        end("answer", "Hello", "text", "text", 1),
       ],
       response: {
         message: MessageCodec.encode(
@@ -314,15 +302,11 @@ it("delivers text before the provider finishes and preserves detailed events", a
     ref: { providerId: "live", modelId: "test" },
     validate() {},
     async *stream() {
-      yield {
-        type: "message-delta" as const,
-        messageId: "live-answer",
-        partId: "text",
-        partKind: "text" as const,
-        delta: "Hel",
-      };
+      yield start("live-answer");
+      yield partDelta("live-answer", "Hel", "text", "text");
       await gate;
       finished = true;
+      yield end("live-answer", "Hello");
       yield {
         type: "response" as const,
         response: {
@@ -338,7 +322,7 @@ it("delivers text before the provider finishes and preserves detailed events", a
     delta = false;
   try {
     for await (const event of agent.stream("Hi")) {
-      if (event.type === "message.delta") delta = true;
+      if (event.type === textEvents.delta) delta = true;
       if (
         event.type === "state_changed" &&
         text(event.payload.state).includes("Hel")
@@ -359,13 +343,8 @@ it("projects prepared input and removes failed drafts before a retry", async () 
     [
       {
         chunks: [
-          {
-            type: "message-delta",
-            messageId: "failed",
-            partId: "text",
-            partKind: "text",
-            delta: "discard",
-          },
+          start("failed"),
+          partDelta("failed", "discard", "text", "text"),
         ],
         error: Error("retry"),
       },

@@ -1,4 +1,3 @@
-import { thread as threadHooks } from "./events/type.js";
 import { fail } from "./errors.js";
 import { immutable, type JsonObject, type JsonValue } from "./json.js";
 import { inputMessages } from "./messages/codec.js";
@@ -209,22 +208,6 @@ export class Thread {
   async dispose(): Promise<void> {
     if (this.disposed) return;
     this.check();
-    const context = {
-      controllerId: this.controller.id,
-      agentId: this.controller.agent.id,
-      threadId: this.id,
-      scope: this.scope(),
-    };
-    await this.controller.hooks.dispatch(
-      threadHooks.beforeShutdown,
-      { threadId: this.id },
-      context,
-    );
     this.disposed = true;
-    await this.controller.hooks.dispatch(
-      threadHooks.shutdown,
-      { threadId: this.id },
-      context,
-    );
   }
 }

@@ -1,8 +1,43 @@
 # Audit phạm vi mở rộng của Tessar
 
+Cập nhật 2026-10-27: bảng bên dưới là audit lịch sử trước triển khai. Đã xử lý
+notification trùng, tools.select, state serialization view, decision theo boundary,
+provider.request và lời gọi model phụ dư model/purpose. Các barrier handle/finalization
+đã bỏ; năm operation policy gate được giữ vì có quyền kiểm soát thực tế. Tracing
+cập nhật state ở turn.start, không còn mượn model.select. Bộ lifecycle part và
+Session model APIs đã triển khai; tham khảo [contract hiện tại](plugin-api-and-events.md).
+Không dùng số event để đánh giá khả năng plugin.
+
+## Kết quả cuối sau triển khai — 2026-10-27
+
+Đã đối chiếu lại toàn repo sau thay đổi, review độc lập và sửa hai lỗi review:
+abort adapter kết thúc im lặng và provenance lỗi tool identity của Responses.
+Các regression bao phủ cả primary/auxiliary và Responses/Chat, gồm tool-call ID trùng.
+Audit độ phức tạp không phát hiện thêm hook, dependency hoặc lớp trừu tượng cần gỡ.
+Không xóa policy gate có quyền thực tế hoặc gộp implementation backend độc lập.
+
+Đã chạy typecheck, build, check:boundaries; 488 package tests và 43 integration tests
+qua. 39 test bị skip; chưa kiểm thử lại cloud provider/dashboard hoặc database server
+thật. Không đổi schema DB, thêm dependency, commit, push hoặc publish trong đợt này.
+
+Kết luận ponytail-audit: **Lean already. Ship.** Đây là kết quả audit trong phạm vi
+độ phức tạp, không phải cam kết code không còn lỗi.
+
+## Bản audit lịch sử trước triển khai
+
 Đối chiếu source ngày 2026-10-26. Phạm vi: toàn bộ 63 event built-in,
 PluginContext, context trong hook/tool và lifecycle load/attach/detach.
 Đây là báo cáo thiết kế, chưa thay đổi API hoặc code.
+
+Cập nhật sau audit: phần `model.request` đã được thay bằng `provider.request`
+tại boundary native body sau adapter. `context.prepare` giữ phạm vi loop Agent;
+request chuẩn hóa của model phụ do caller tự dựng. Các phát hiện khác bên dưới
+vẫn là kết quả audit, không đồng nghĩa đã được triển khai hoặc duyệt xóa.
+
+Hướng xử lý đã thống nhất được ghi tại
+[architecture notes](architecture-notes.md#cập-nhật-2026-10-26-hướng-hoàn-thiện-plugin-api-đã-chốt).
+Định hướng đã chốt không đồng nghĩa từng ứng viên trong bảng dưới đây đã được
+duyệt xóa; tên event và contract thay thế vẫn cần thiết kế chi tiết.
 
 ## Tiêu chí
 
@@ -155,6 +190,39 @@ mới chốt tên event. Không thêm start/end giả chỉ để đủ bộ. Ad
 phát mốc provider thực sự cung cấp hoặc mốc quan sát được đã được định nghĩa rõ;
 vòng đời reasoning part không phải phép đo suy nghĩ nội bộ của model.
 
+Lựa chọn sau audit: người dùng chọn lifecycle riêng cho text/reasoning/tool-call.
+[Bản thiết kế streaming](superpowers/specs/2026-10-26-streaming-lifecycle-design.md)
+đề xuất thay message.delta bằng delta event riêng, không phát hai luồng trùng
+dữ liệu. Tên/payload cụ thể vẫn là bản nháp, chưa triển khai.
+
 Với effort, trước hết làm rõ event thay đổi model/options và cách đọc effective
 options. Chỉ thêm event effort riêng nếu Tessar chốt một contract effort chung;
 hiện options vẫn theo provider, không phải enum effort toàn framework.
+
+### Các ràng buộc cần giữ khi thiết kế streaming
+
+Đối chiếu sâu hơn đường adapter → loop → StateView cho thấy những điểm sau
+phải được giải quyết cùng contract, không chỉ thêm tên event:
+
+- Responses hiện dùng item_id làm messageId của delta, nhưng decodeOutput dùng
+  responseId cho assistant message cuối. Reasoning và text có thể thuộc các
+  item khác nhau. Cần identity nhất quán để UI ghép nhiều part vào đúng message
+  và thay draft bằng message đã commit mà không để lại bản nháp thừa.
+- Chat Completions đang ghép tool-call arguments trong adapter rồi mới trả
+  response cuối. Người dùng đã chọn không expose tool.call.delta; tiếp tục gom
+  arguments nội bộ và chỉ trả object hoàn chỉnh khi kết thúc tạo lời gọi.
+- Auxiliary model trả chunks cho caller nhưng hiện không phát message.delta
+  qua execution hooks như primary. Lifecycle mới cần quan sát được theo
+  attempt/purpose, đồng thời không đưa output phụ vào chat UI chính.
+- Vòng đời tool-call part mô tả model đang tạo lời gọi; tool.start/end mô tả
+  tool thực sự được thực thi. Không gộp hai nghĩa này hoặc bỏ tool.before.
+- Provider không cung cấp mốc kết thúc từng part thì phải mô tả đúng mốc quan
+  sát được; không khẳng định reasoning đã kết thúc chỉ vì text bắt đầu.
+- Lỗi/hủy không được đóng part như thể đã hoàn tất thành công. Final response
+  vẫn là kết quả authoritative; part event không tự tạo một commit history mới.
+
+Nguồn: [Responses adapter](../packages/openai/src/adapter.ts),
+[Responses codec](../packages/openai/src/codec.ts),
+[Chat adapter](../packages/openai/src/chat-adapter.ts),
+[StateView](../packages/core/src/runtime-state.ts) và
+[auxiliary streaming](../packages/core/src/engine/services.ts).

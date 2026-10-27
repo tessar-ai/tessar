@@ -1,3 +1,4 @@
+import { text } from "../../src/events/type.js";
 import { expect, it } from "vitest";
 import { z } from "zod";
 import { AgentHarness } from "../../src/testing/harness.js";
@@ -7,15 +8,51 @@ import { createTool } from "../../src/tools/tool.js";
 import { buildInstruction } from "../../src/instructions/instruction.js";
 import type { StreamEvent } from "../../src/events/definition.js";
 
+it.each(["primary", "auxiliary"] as const)("records %s cancellation when an adapter returns silently after abort", async purpose => {
+  let active: import("../../src/agent.js").Stream;
+  const h = await AgentHarness.create({ plugins: [{ id: "cancel-silent", setup(tessar) {
+    tessar.hook("model.start", event => { if (event.payload.purpose === purpose) active.abort("cancel"); });
+    tessar.hook("turn.decision", async (_event, ctx) => {
+      for await (const _ of ctx.models.stream({ model: { providerId: "scripted", modelId: "test" }, instructions: buildInstruction([]), messages: [], tools: [] })) {}
+    });
+  } }] });
+  h.provider.stream = async function* (_request, context) {
+    if (context.signal.aborted) return;
+    yield { type: "response", response: { message: MessageCodec.encode(new AssistantMessage("done")) } };
+  };
+  try {
+    active = h.agent.stream("go");
+    const events = await h.collect(active);
+    const record = (await h.records(active.id!)).attempts.find(attempt => attempt.purpose === purpose)!;
+    expect(record.status).toBe("cancelled");
+    expect(events.find(event => event.type === "model.error" && event.payload.attemptId === record.id)).toBeDefined();
+  } finally { await h.dispose(); }
+});
+
+it.each(["primary", "auxiliary"] as const)("records %s model cancellation consistently", async purpose => {
+  let stream: import("../../src/agent.js").Stream;
+  const h = await AgentHarness.create({ modelScripts: [{ text: "primary" }, { text: "helper" }], plugins: [{ id: "abort", setup(tessar) {
+    tessar.hook("model.start", event => { if (event.payload.purpose === purpose) stream.abort("cancel"); });
+    tessar.hook("turn.decision", async (_event, ctx) => {
+      const model = { providerId: "scripted", modelId: "test" };
+      for await (const _chunk of ctx.models.stream({ model, instructions: buildInstruction([]), messages: [], tools: [] })) {}
+    });
+  } }] });
+  try {
+    stream = h.agent.stream("go");
+    await h.collect(stream).catch(() => {});
+    const records = await h.records(stream.id!);
+    expect(records.stream.status).toBe("cancelled");
+    expect(records.attempts.find(attempt => attempt.purpose === purpose)!.status).toBe("cancelled");
+  } finally { await h.dispose(); }
+});
+
 it("correlates primary and concurrent auxiliary lifecycle events with their exact inputs and parent tools", async () => {
   const model = { providerId: "scripted", modelId: "test" };
   const helper = createTool({
     name: "helper", description: "Run an auxiliary model", schema: z.object({ task: z.string() }),
     execute: async ({ task }, context) => {
-      for await (const _ of context.models.stream({
-        model, purpose: "auxiliary",
-        request: { model, instructions: buildInstruction([{ id: "task", content: task }]), messages: [], tools: [] },
-      })) { /* Consume the complete auxiliary response. */ }
+      for await (const _ of context.models.stream({ model, instructions: buildInstruction([{ id: "task", content: task }]), messages: [], tools: [] })) { /* Consume the complete auxiliary response. */ }
       return "done";
     },
   });
@@ -47,8 +84,8 @@ it("correlates primary and concurrent auxiliary lifecycle events with their exac
       expect(events.some(end => end.type === "model.end" && end.payload.attemptId === record.id)).toBe(true);
       expect(events.find(end => end.type === "model.end" && end.payload.attemptId === record.id)!.payload).toMatchObject({ startedAt: record.startedAt, endedAt: record.endedAt });
     }
-    const deltas = events.filter(event => event.type === "message.delta");
-    expect(deltas.map(event => event.payload.delta)).not.toContain("private first");
+    const deltas = events.filter(event => event.type === "text.delta");
+    expect(deltas.filter(event => event.payload.purpose === "auxiliary").map(event => event.payload.delta)).toContain("private first");
     expect(events.filter(event => event.type === "model.usage")).toHaveLength(4);
     expect(events.filter(event => event.type === "state_changed").at(-1)?.payload.state.messages
       .flatMap(message => message.content).filter(part => part.type === "text").map(part => part.text)).toContain("public answer");
@@ -65,8 +102,7 @@ it("reports auxiliary errors without turning a caught helper failure into a conv
     plugins: [{ id: "helper", setup(tessar) {
       tessar.hook("turn.decision", async (_event, context) => {
         try {
-          for await (const _ of context.models.stream({ model, purpose: "auxiliary",
-            request: { model, instructions: buildInstruction([]), messages: [], tools: [] } })) {}
+          for await (const _ of context.models.stream({ model, instructions: buildInstruction([]), messages: [], tools: [] })) {}
         } catch { /* The plugin deliberately handles its auxiliary failure. */ }
       });
     } }],

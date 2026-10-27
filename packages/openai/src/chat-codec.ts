@@ -9,6 +9,11 @@ import {
   type ModelConnectionDescriptor,
 } from "@tessar/core";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions/completions";
+import {
+  responseError,
+  functionArguments,
+  functionIdentity,
+} from "./response-error.js";
 
 export interface ChatAssistant {
   role: "assistant";
@@ -27,12 +32,6 @@ interface ChatContinuity extends ModelRef {
   codec: "openai.chat-completions";
   version: 1;
   message: ChatAssistant;
-}
-export function chatResponseError(
-  message: string,
-  code = "ProviderResponse",
-): Error {
-  return Object.assign(new Error(message), { code });
 }
 function toolOutput(message: MessageData): string {
   return message.content
@@ -171,19 +170,11 @@ export function decodeChatMessage(
   if (message.refusal) parts.push({ type: "text", text: message.refusal });
   const ids = new Set<string>();
   for (const call of message.tool_calls ?? []) {
-    if (!call.id || !call.function.name)
-      throw chatResponseError("Missing Chat function identity");
+    functionIdentity(ref, call.id, call.function.name);
     if (ids.has(call.id))
-      throw chatResponseError("Duplicate Chat function identity");
+      throw responseError(ref, "Duplicate Chat function identity");
     ids.add(call.id);
-    let args: unknown;
-    try {
-      args = JSON.parse(call.function.arguments);
-    } catch {
-      throw chatResponseError("Invalid Chat function arguments");
-    }
-    if (!args || typeof args !== "object" || Array.isArray(args))
-      throw chatResponseError("Chat function arguments must be an object");
+    const args = functionArguments(call.function.arguments, ref);
     parts.push({
       type: "tool-call",
       toolCallId: call.id,

@@ -1,6 +1,7 @@
 import { createThread } from "../src/state/thread-operations.js";
 import {
   session as sessionHooks,
+  thread as threadHooks,
   stream as streamHooks,
   model as modelHooks,
 } from "../src/index.js";
@@ -28,26 +29,26 @@ it("isolates sync and async subscribers while delivering the same session event"
   try {
     const session = await controller.createSession(),
       seen: string[] = [];
-    session.subscribe(sessionHooks.threadCreated, () => {
+    session.subscribe(threadHooks.started, () => {
       throw Error("sync subscriber");
     });
-    session.subscribe(sessionHooks.threadCreated, async () => {
+    session.subscribe(threadHooks.started, async () => {
       throw Error("async subscriber");
     });
-    session.subscribe(sessionHooks.threadCreated, (event) => {
-      seen.push(event.payload.threadId);
+    session.subscribe(threadHooks.started, (event) => {
+      seen.push(event.payload.id);
     });
     const thread = await session.thread.create();
     expect(seen).toEqual([thread.id]);
     expect(controller.diagnostics).toMatchObject([
       {
         source: "application",
-        eventId: sessionHooks.threadCreated,
+        eventId: threadHooks.started,
         message: "sync subscriber",
       },
       {
         source: "application",
-        eventId: sessionHooks.threadCreated,
+        eventId: threadHooks.started,
         message: "async subscriber",
       },
     ]);
@@ -55,23 +56,14 @@ it("isolates sync and async subscribers while delivering the same session event"
     await controller.dispose();
   }
 });
-it("rejects new work while the close barrier is pending and reopens when that barrier fails", async () => {
-  let release!: () => void,
-    arrive!: () => void,
-    rejectClose = true;
-  let gate = new Promise<void>((resolve) => (release = resolve)),
-    entered = new Promise<void>((resolve) => (arrive = resolve));
+it("closes despite observer errors and rejects work during and after disposal", async () => {
   const { controller, provider } = await fixture(
     [{ text: "ok" }],
     [
       {
         id: "close",
         setup(tessar) {
-          tessar.hook(sessionHooks.beforeClose, async () => {
-            arrive();
-            await gate;
-            if (rejectClose) throw Error("close refused");
-          });
+          tessar.hook(sessionHooks.closed, () => { throw Error("close observer failed"); });
         },
       },
     ],
@@ -80,8 +72,6 @@ it("rejects new work while the close barrier is pending and reopens when that ba
     const session = await controller.createSession();
     await session.thread.create();
     const closing = session.dispose();
-    void closing.catch(() => {});
-    await entered;
     await expect(
       session.followUp(new HumanMessage("during close")),
     ).rejects.toMatchObject({ code: "Disposed" });
@@ -89,19 +79,13 @@ it("rejects new work while the close barrier is pending and reopens when that ba
       code: "Disposed",
     });
     expect(provider.calls).toHaveLength(0);
-    release();
-    await expect(closing).rejects.toThrow("close refused");
-    const done = boundary(session, streamHooks.end);
-    await session.followUp(new HumanMessage("after refused close"));
-    await done;
-    expect(provider.calls).toHaveLength(1);
-    rejectClose = false;
-    await session.dispose();
+    await closing;
+    expect(session.isDisposed()).toBe(true);
+    expect(controller.diagnostics.some(error => error.message === "close observer failed")).toBe(true);
     await expect(
       session.followUp(new HumanMessage("after close")),
     ).rejects.toMatchObject({ code: "Disposed" });
   } finally {
-    release();
     await controller.dispose();
   }
 });

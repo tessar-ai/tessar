@@ -143,7 +143,7 @@ checkboxes or any interface you choose. An event consumer can retain requests
 and pass form submissions back to Agent:
 
 ```ts
-import { stream as streamEvents, message as messageEvents, errorFromInfo, type Stream, type JsonValue } from "@tessar/core";
+import { stream as streamEvents, text as textEvents, errorFromInfo, type Stream, type JsonValue } from "@tessar/core";
 
 const pending = new Map<string, { threadId: string; payload: JsonValue }>();
 
@@ -155,7 +155,7 @@ async function consumeExecution(execution: Stream): Promise<void> {
       // Render request.payload with your application's UI.
       console.log("Question:", request.id, request.payload);
     }
-    if (event.type === messageEvents.delta && event.payload.partKind === "text") {
+    if (event.type === textEvents.delta) {
       process.stdout.write(event.payload.delta);
     }
     if (event.type === streamEvents.error) throw errorFromInfo(event.payload.error);

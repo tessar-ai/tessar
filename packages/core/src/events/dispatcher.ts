@@ -9,13 +9,9 @@ import {
 } from "./definition.js";
 import type { HookContext } from "../plugins/context.js";
 import type { RegistryLease } from "../plugins/registry.js";
-const operationEvents = new Set<string>([
-  "session.model.before-change",
-  "session.thread.before-switch",
-  "thread.before-fork",
-  "thread.before-rename",
-  "thread.before-delete",
-]);
+import type { ProviderRequest } from "../models/contract.js";
+import { validateProviderRequest } from "../models/provider-request.js";
+import { validateDecision } from "./decision.js";
 export async function dispatch<D extends AnyEvent>(
   lease: RegistryLease,
   definition: D,
@@ -36,6 +32,9 @@ export async function dispatch<D extends AnyEvent>(
   };
   let current: unknown =
     kind === "transformation" ? payload : context.initialDecision;
+  if (definition === "provider.request")
+    current = validateProviderRequest(payload, payload as ProviderRequest);
+  if (kind === "decision") validateDecision(definition, current);
   let handlerIndex = -1;
   const allowed = context.allowedHandlerIds as readonly string[] | undefined;
   const handlers = lease.handlers.filter(
@@ -60,23 +59,12 @@ export async function dispatch<D extends AnyEvent>(
         context,
       );
       const result = await registration.handler(event, hookContext);
-      if (operationEvents.has(definition) && result !== undefined) {
-        if (
-          !result ||
-          typeof result !== "object" ||
-          Array.isArray(result) ||
-          !["allow", "deny"].includes(
-            (result as { decision: string }).decision,
-          ) ||
-          ((result as { reason?: unknown }).reason !== undefined &&
-            typeof (result as { reason: unknown }).reason !== "string")
-        )
-          fail(
-            "InvalidHookResult",
-            "Operation hooks must return allow, deny or undefined",
-          );
-      }
-      if (kind === "transformation" && result !== undefined) current = result;
+      if (kind === "decision") validateDecision(definition, result);
+      if (kind === "transformation" && result !== undefined)
+        current =
+          definition === "provider.request"
+            ? validateProviderRequest(result, payload as ProviderRequest)
+            : result;
       if (kind === "decision" && result !== undefined) {
         const previous = current as { decision?: string } | undefined;
         if (

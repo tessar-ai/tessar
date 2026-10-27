@@ -33,6 +33,23 @@ const Approval = defineInterruption({
   resolve: (response) =>
     response.approved ? ToolDecision.allow() : ToolDecision.deny("declined"),
 });
+it("keeps an interrupt pending when a JavaScript resolver returns a decision for another boundary", async () => {
+  const invalid = defineInterruption({ id: "invalid-decision", version: 1,
+    response: { jsonSchema: {}, parse: (value: unknown) => value },
+    resolve: () => ({ decision: "retry" as const }),
+  });
+  const h = await AgentHarness.create({ plugins: [{ id: "invalid", setup(tessar) {
+    tessar.interruptions.register(invalid);
+    tessar.hook("stream.before", (_event, context) => context.suspend(invalid as any, {}));
+  } }] });
+  try {
+    const thread = await h.createThread();
+    const first = h.admit({ kind: "input", threadId: thread.id, input: [MessageCodec.encode(new HumanMessage("hello"))], model: { providerId: "scripted", modelId: "test" } });
+    const paused = (await h.collect(first)).find(event => event.type === "stream.suspended")!;
+    await expect(h.collect(h.admit({ kind: "resume", threadId: thread.id, interruptId: paused.payload.interrupt.id, value: true }))).rejects.toMatchObject({ code: "InvalidResumeResponse" });
+    expect((await h.queries.getRecord("interrupts", thread.id, paused.payload.interrupt.id))!.status).toBe("pending");
+  } finally { await h.dispose(); }
+});
 it("suspends durably, validates before consume, and resumes past previous handlers", async () => {
   let executions = 0,
     before = 0,
@@ -196,7 +213,7 @@ it.each([
           tessar.interruptions.register(Resume);
           tessar.hook(boundary, (_event, context) => {
             asks++;
-            return context.suspend(Resume, {});
+            return (context as import("../../src/engine/interrupt.js").DecisionHookContext).suspend(Resume, {});
           });
         },
       },

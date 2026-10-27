@@ -95,7 +95,7 @@ omit toolCallId; encoding history requires it, and the tool runtime binds it
 automatically. OpenAI Responses serializes JSON tool data as JSON text.
 
 Retry, conditional availability and permissions belong in tool implementations
-or plugins. Use `tools.select` for advertised tools and `tool.before` to enforce
+or plugins. Use `context.prepare` to select advertised tools and `tool.before` to enforce
 execution policy. Skills and subagents are host/plugin orchestration, expressed
 to providers through instructions, messages and tools.
 
@@ -117,7 +117,8 @@ orders sort by ordinal ID, independent of plugin registration order. Use distinc
 orders when sequence matters. IDs must be unique and orders finite numbers.
 Building copies/freezes the data; it does not mutate caller arrays or inject a
 default order. String instructions remain supported. Final requests are normalized
-after `context.prepare` and `model.request`, including sections added by plugins.
+after `context.prepare`, including sections added by plugins. `provider.request`
+transforms the native body after adapter encoding; it does not rewrite stored history.
 Ordering controls content placement; provider adapters own serialization and cache
 behavior. Core adds no cache markers or history breakpoint API.
 
@@ -182,3 +183,5 @@ Already accepted input keeps its model/options snapshot.
 Storage adapter authors must implement the new `sessions` CAS port, backend page
 and history queries, `threads.get(..., { includeDeleted })` and `threads.purge`.
 These are breaking storage-port changes; run storage conformance and query tests.
+
+`session.model.info()` returns the current immutable `{ id, name, profile, options? }` snapshot. `session.model.setEffort(level)` maps the level through the selected provider while preserving other options. Providers may omit effort support. Model selection changes emit `session.modelChanged`; native option changes emit `session.model.optionsChanged` after persistence.

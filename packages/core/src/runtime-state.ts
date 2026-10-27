@@ -1,7 +1,28 @@
 import type { ErrorInfo } from "./errors.js";
 import { immutable, type JsonValue } from "./json.js";
-import type { MessageData } from "./messages/message.js";
 import type { ContentPart } from "./messages/parts.js";
+import type { MessageData } from "./messages/message.js";
+export type RuntimePart = {
+  readonly partId: string;
+  readonly partIndex: number;
+  readonly status: "streaming" | "completed" | "interrupted";
+} & (
+  | {
+      [K in "text" | "reasoning"]: { readonly type: K; readonly text: string };
+    }["text" | "reasoning"]
+  | {
+      readonly type: "tool-call";
+      readonly toolCallId?: string;
+      readonly name?: string;
+      readonly arguments?: import("./json.js").JsonObject;
+    }
+);
+export type RuntimeDraft = Omit<MessageData, "content"> & {
+  readonly content: readonly RuntimePart[];
+};
+export type RuntimeMessage = Omit<MessageData, "content"> & {
+  readonly content: readonly (ContentPart | RuntimePart)[];
+};
 import type { InterruptRecord } from "./state/schema.js";
 import type { StreamStatus, ToolExecutionRecord } from "./trace/records.js";
 import type { StreamEvent } from "./events/definition.js";
@@ -20,8 +41,8 @@ export interface StateTool {
 export interface RuntimeState {
   readonly status: StreamStatus | "idle" | "closed";
   /** Committed messages and the current draft, in conversation order. */
-  readonly messages: readonly MessageData[];
-  readonly currentMessage: MessageData | null;
+  readonly messages: readonly RuntimeMessage[];
+  readonly currentMessage: RuntimeDraft | null;
   readonly tools: readonly StateTool[];
   readonly interrupt: InterruptRecord | null;
   readonly queuedInputs: number;
@@ -52,14 +73,15 @@ export class StateView {
     queuedInputs: 0,
     error: null,
   });
-  private readonly parts = new Map<string, number>();
   get(): RuntimeState {
     return this.value;
   }
   update(patch: Partial<RuntimeState>): RuntimeState {
     return (this.value = immutable({ ...this.value, ...patch }));
   }
-  private upsert(message: MessageData): readonly MessageData[] {
+  private upsert(
+    message: MessageData | RuntimeMessage,
+  ): readonly RuntimeMessage[] {
     return this.value.messages.some((value) => value.id === message.id)
       ? this.value.messages.map((value) =>
           value.id === message.id ? message : value,
@@ -81,7 +103,6 @@ export class StateView {
       case "model.start": {
         if (event.payload.purpose === "auxiliary") return null;
         const draft = this.value.currentMessage;
-        this.parts.clear();
         return this.update({
           currentMessage: null,
           error: null,
@@ -90,30 +111,81 @@ export class StateView {
           ),
         });
       }
-      case "message.delta": {
-        const { messageId, partId, partKind, delta } = event.payload;
+      case "text.start":
+      case "reasoning.start":
+      case "tool.call.start":
+      case "text.delta":
+      case "reasoning.delta":
+      case "text.end":
+      case "reasoning.end":
+      case "tool.call.end": {
+        if (event.payload.purpose === "auxiliary") return null;
+        const payload = event.payload;
         let draft = this.value.currentMessage;
-        if (!draft || draft.id !== messageId) {
-          this.parts.clear();
+        if (!draft || draft.id !== payload.messageId)
           draft = {
             schemaVersion: 1,
-            id: messageId,
+            id: payload.messageId,
             role: "assistant",
             content: [],
           };
-        }
-        const content: ContentPart[] = [...draft.content];
-        const index = this.parts.get(partId);
-        if (index === undefined) {
-          this.parts.set(partId, content.length);
-          content.push({ type: partKind, text: delta });
-        } else {
-          const part = content[index] as {
-            type: "text" | "reasoning";
-            text: string;
+        const content = [...draft.content];
+        const index = content.findIndex(
+          (part) => part.partId === payload.partId,
+        );
+        const previous = index < 0 ? undefined : content[index];
+        const identity = {
+          partId: payload.partId,
+          partIndex: payload.partIndex,
+        };
+        let part: RuntimePart;
+        if (event.type === "tool.call.start") {
+          part = {
+            ...identity,
+            type: "tool-call",
+            status: "streaming",
+            ...(event.payload.toolCallId
+              ? { toolCallId: event.payload.toolCallId }
+              : {}),
+            ...(event.payload.name ? { name: event.payload.name } : {}),
           };
-          content[index] = { ...part, text: part.text + delta };
+        } else if (event.type === "tool.call.end") {
+          const value = event.payload;
+          part = {
+            ...identity,
+            type: "tool-call",
+            status: value.status,
+            ...(value.toolCallId ? { toolCallId: value.toolCallId } : {}),
+            ...(value.name ? { name: value.name } : {}),
+            ...(value.status === "completed"
+              ? { arguments: value.arguments }
+              : {}),
+          };
+        } else {
+          const value =
+            event.payload as import("./models/contract.js").PartEvent<
+              | "text.start"
+              | "reasoning.start"
+              | "text.delta"
+              | "reasoning.delta"
+              | "text.end"
+              | "reasoning.end"
+            >;
+          part = {
+            ...identity,
+            type: event.type.startsWith("text.") ? "text" : "reasoning",
+            status: "status" in value ? value.status : "streaming",
+            text:
+              "text" in value
+                ? value.text
+                : "delta" in value
+                  ? (previous && "text" in previous ? previous.text : "") +
+                    value.delta
+                  : "",
+          };
         }
+        if (index < 0) content.push(part);
+        else content[index] = part;
         draft = { ...draft, content };
         return this.update({
           currentMessage: draft,
@@ -124,7 +196,6 @@ export class StateView {
         const message = event.payload.message;
         if (message.role === "assistant") {
           const draft = this.value.currentMessage;
-          this.parts.clear();
           this.update({
             messages: this.value.messages.filter(
               (value) => value.id !== draft?.id,
@@ -145,7 +216,7 @@ export class StateView {
         const tool: StateTool = {
           id: toolExecutionId,
           toolCallId,
-          name: call?.type === "tool-call" ? call.name : "",
+          name: call?.type === "tool-call" ? (call.name ?? "") : "",
           status: "running",
           progress: null,
           result: null,
