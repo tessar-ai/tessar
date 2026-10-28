@@ -18,6 +18,7 @@
     "test:storage": "node --env-file-if-exists=.env.storage node_modules/vitest/vitest.mjs run packages/postgresql/test packages/mongodb/test --configLoader native --pool threads"
   },
   "devDependencies": {
+    "@tessar/typesafe": "workspace:*",
     "@tessar/core": "workspace:*",
     "@tessar/opentelemetry": "workspace:*",
     "@tessar/mongodb": "workspace:*",

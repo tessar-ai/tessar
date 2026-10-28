@@ -43,6 +43,8 @@ Examples perform real model requests and can incur provider charges.
 | Add hooks and capabilities through plugins | [Plugins](plugins.md) |
 | Trace model calls, tools and execution lifecycle | [OpenTelemetry](opentelemetry.md) |
 | Keep history across application restarts | [Storage](storage.md) |
+| Classify, route or check policy using TypeSafe | [TypeSafe](typesafe.md) |
+| Identify errors safely and define custom failures | [Errors](errors.md) |
 
 `Agent` is enough for direct execution. A `Controller` adds plugin and shared
 service lifecycle; a `Session` adds a conversation interface around threads.

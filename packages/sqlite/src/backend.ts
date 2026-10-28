@@ -20,6 +20,7 @@ import {
   type PluginStateSnapshot,
 } from "@tessar/core";
 import { initializeSchema, recordTables } from "./schema.js";
+import { createRecordStore } from "./records.js";
 import {
   sqlPage,
   scopePredicate,
@@ -82,6 +83,7 @@ export async function createSqliteBackend(
     >,
   ) => canonicalJson([key.ownerType, key.ownerId, key.pluginId, key.namespace]);
   return {
+    records: createRecordStore(db),
     sessions: {
       get: async (id, query = {}) => {
         const row = getJson<SessionRecord>(

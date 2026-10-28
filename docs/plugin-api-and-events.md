@@ -75,6 +75,7 @@ phải yêu cầu framework frontend; Tessar không tự render terminal hay bro
 | API | Chỉ cần khi… |
 | --- | --- |
 | `state.define` và `context.state.*` | Plugin có dữ liệu cần được khôi phục; ví dụ summary và mốc compact của từng Thread |
+| `tessar.storage.records.append/get/list` | Lưu và truy vấn các record JSON độc lập, ví dụ lịch sử quyết định; không cần Thread hay execution, dùng sau initialize |
 | `context.state.owned()` | Plugin cần state cấp Session/Agent, cập nhật bằng revision để phát hiện ghi đè đồng thời |
 | `context.models.stream()` | Plugin/tool cần một lời gọi model phụ được ghi nhận attempt/usage; ví dụ tạo summary bằng LLM |
 | `effects.register` / `context.effects.execute()` | Muốn lưu kết quả một thao tác ngoài theo key và đối soát khi không biết thao tác đã thành công chưa; không bắt buộc cho mọi tool/fetch |
@@ -173,6 +174,9 @@ Các method bên dưới thuộc cùng instance context truyền vào `setup()`.
 | `tessar.tools.register(tool)` | `Tool` tạo bằng `createTool()` hoặc `new Tool()` | `void` | Đăng ký tool theo `tool.name`, giữ schema identity cho resume |
 | `tessar.models.register(provider)` | `ModelProviderRegistration` | `void` | Đăng ký provider factory và metadata |
 | `tessar.storage.register(backend)` | `StorageBackend` | `void` | Chọn storage backend; chỉ trước khi storage được chốt lúc initialize |
+| `tessar.storage.records.append(options)` | `{ namespace, data, id?, scope? }` | `Promise<StoredRecord>` | Thêm record độc lập trên backend đã chọn, không ghi vào checkpoint |
+| `tessar.storage.records.get(namespace, id, query?)` | Hai string; `{ scope? }` tùy chọn | `Promise<StoredRecord \| null>` | Đọc một record đúng namespace/ID và scope |
+| `tessar.storage.records.list(query)` | `{ namespace, scope?, limit?, cursor? }` | `Promise<Page<StoredRecord>>` | Đọc phân trang; mặc định 50, tối đa 200, tăng dần theo createdAt/ID |
 | `tessar.agent.register(agent)` | `Agent` | `void` | Đăng ký Agent độc lập; host đăng ký `agent.shutdown()` khi plugin được giải phóng |
 | `tessar.state.define(definition)` | `Omit<PluginStateDefinition<T>, "pluginId">`, `T extends JsonValue` | `PluginStateDefinition<T>` | Đăng ký namespace; `pluginId` lấy từ plugin hiện tại |
 | `tessar.effects.register(definition)` | `EffectDefinition` | `void` | Đăng ký external effect có contract phục hồi |

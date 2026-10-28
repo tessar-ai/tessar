@@ -39,6 +39,7 @@ import {
   type ThreadInfo,
 } from "@tessar/core";
 import { decode, mongoPage, scopeFilter, scopeTokens } from "./queries.js";
+import { createRecordStore } from "./records.js";
 
 const kinds = [
   "streams",
@@ -94,6 +95,7 @@ export async function createMongoDBBackend(
     >,
   ) => key(value.ownerType, value.ownerId, value.pluginId, value.namespace);
   return {
+    records: createRecordStore(db.records),
     id: "mongodb",
     capabilities: {
       durable: true,

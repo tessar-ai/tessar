@@ -90,7 +90,8 @@ export async function dispatch<D extends AnyEvent>(
       }
     } catch (cause) {
       if (
-        cause instanceof TessarError &&
+        TessarError.isInstance(cause) &&
+        cause.source === "tessar" &&
         ["StorageUnavailable", "CommitConflict", "OwnershipLost"].includes(
           cause.code,
         )
@@ -100,16 +101,11 @@ export async function dispatch<D extends AnyEvent>(
         cause !== null && typeof cause === "object"
           ? cause
           : new Error(String(cause), { cause });
-      const info = errorInfo(
-        error,
-        error instanceof TessarError
-          ? undefined
-          : {
-              source: "plugin",
-              pluginId: registration.pluginId,
-              eventId: definition,
-            },
-      );
+      const info = errorInfo(error, {
+        source: "plugin",
+        pluginId: registration.pluginId,
+        eventId: definition,
+      });
       if (kind !== "notification") throw error;
       try {
         diagnostics(info, context);

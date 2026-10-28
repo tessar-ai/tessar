@@ -1,5 +1,11 @@
 import { expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
+it("calls TypeSafe through built public exports and persists standalone decisions in SQLite", () => {
+  const result = spawnSync(process.execPath, ["tests/fixtures/typesafe-consumer.ts"], { encoding: "utf8" });
+  expect(result.error).toBeUndefined();
+  expect(result.status, result.stderr).toBe(0);
+  expect(result.stdout).toBe("");
+});
 it("loads built core without product startup I/O and runs the public APIs", () => {
   const result = spawnSync(
     process.execPath,

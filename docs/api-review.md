@@ -617,9 +617,67 @@ Mỗi plugin có `.setup(tessar: PluginContext): Promise<void>`. PostgreSQL sche
 
 ### API cho tác giả backend
 
-`StorageBackend` là contract public để `tessar.storage.register(backend)`. Các namespace `sessions`, `ownedState`, `threads`, `executions`, `checkpoints`, `commits`, `ownership` và `close()` được chép đầy đủ ở phụ lục storage, gồm tất cả tham số và return type.
+`StorageBackend` là contract public để `tessar.storage.register(backend)`. Các namespace `records`, `sessions`, `ownedState`, `threads`, `executions`, `checkpoints`, `commits`, `ownership` và `close()` được chép đầy đủ ở phụ lục storage, gồm tất cả tham số và return type.
+
+### Record độc lập — dùng trực tiếp hoặc từ plugin
+
+`backend.records` và `tessar.storage.records` dùng chung contract bên dưới. Backend
+dùng độc lập không cần runtime; plugin truy cập sau Controller initialize.
+
+```ts
+interface StoredRecord {
+  readonly id: string;
+  readonly namespace: string;
+  readonly scope: Scope;
+  readonly data: JsonValue;
+  readonly createdAt: string;
+}
+interface AppendRecordOptions {
+  id?: string;
+  namespace: string;
+  scope?: Scope;
+  data: JsonValue;
+}
+interface RecordsQuery extends StateQuery, PageOptions { namespace: string; }
+interface RecordStore {
+  append(options: AppendRecordOptions): Promise<StoredRecord>;
+  get(namespace: string, id: string, query?: StateQuery): Promise<StoredRecord | null>;
+  list(query: RecordsQuery): Promise<Page<StoredRecord>>;
+}
+```
+
+ID mặc định UUID, createdAt ISO tự sinh. Cặp namespace/ID trùng báo
+`RegistrationConflict`, không ghi đè. Scope filter theo subset như API state hiện
+tại; bỏ scope nghĩa là không lọc theo user. List bắt buộc namespace, limit mặc
+định 50, tối đa 200; thứ tự tăng dần createdAt rồi ID, cursor gắn namespace/scope.
+Không tự lưu mọi model call, không đưa data vào messages/checkpoint và không bị
+xóa theo Thread. Xem [storage guide](../examples/guide/storage.md#store-independent-json-records).
 
 Backend tự implement contract; ứng dụng thông thường dùng Session/Thread thay vì gọi trực tiếp các port. Cơ chế lưu records/checkpoint có thể được inspect qua các data type public trong phụ lục; không expose constructor coordinator/runtime nội bộ.
+
+### TypeSafe client độc lập — `@tessar/typesafe`
+
+`new TypeSafe({ apiKey?, baseURL?, model?, timeout?, maxRetries?, records?, headers? })`.
+Key lấy từ config hoặc `TYPESAFE_API_KEY`; baseURL từ config, `TYPESAFE_BASE_URL`,
+hoặc `https://api.typesafe.ai`. Timeout mặc định 30000 ms mỗi attempt; maxRetries
+mặc định 3 lần retry. records nhận `RecordStore`, client không đóng backend.
+
+`typesafe.generate({ state, questions, model?, assets? }, { id?, scope?, metadata?, signal? }?)`.
+State và questions bắt buộc mỗi lần gọi; constructor không nhận state/questions.
+State là string, JSON object hoặc array. Model phải có ở constructor hoặc request.
+`id` tự sinh UUID nếu không truyền; scope và metadata chỉ lưu cục bộ, không gửi
+provider. Client không có initialize/dispose hay alias systemOne/evaluate.
+
+Trả `Promise<TypeSafeResponse<Q>>`: `{ model, answers, usage }` theo native API,
+infer key/type của từng answer và các choice label. Hỗ trợ noul, choice, score,
+box và inline image assets với provider header rõ ràng. Không có multipart helper.
+HTTP errors là `TypeSafeAPIError(status, body, requestId)`; success sai cấu trúc là
+`TypeSafeResponseError(message, body)`. Các class lỗi có các field readonly tương ứng.
+
+Khi có records, lưu một record mỗi generate trong `typesafe.calls`, gồm request,
+response/error, status, startedAt/endedAt, attemptCount và metadata. Lỗi lưu không
+retry provider; lỗi provider + lỗi lưu giữ cả hai trong AggregateError. Không có
+automatic Agent integration hoặc Logger/OTel export. Xem [API đầy đủ và ví dụ](../packages/typesafe/README.md).
 
 ## 16. Model profile và provider tự viết
 
@@ -660,7 +718,7 @@ CatalogSnapshot là hình dạng `{ revision: string; fetchedAt: string; source?
 | --- | --- |
 | JSON | `assertJson(value: unknown, parents?: Set<object>)`, `deepFreeze<T>(value: T)`, `immutable<T>(value: T)`, `snapshotModelOptions(value: object)` |
 | ID / clock | `randomIds.next(kind: string): string`, `systemClock.now(): string`; type `Clock`, `IdGenerator` |
-| Error | `new TessarError(code, message, details?)`, `.toJSON()`, `fail(code, message)`, `requireId(id, name?)`, `errorInfo(error, origin?)`, `errorFromInfo(info)` |
+| Error | `new TessarError(code, message, options?)`, `.isInstance(value)` kế thừa theo class, `.toJSON()`, `fail(code, message)`, `requireId(id, name?)`, `errorInfo(error, origin?)`, `errorFromInfo(info)` |
 | Usage | `normalizeUsage(input: Partial<TokenCounts>, providerDetails?: JsonValue)`, `aggregateUsage(attempts: readonly { id: string; usage: ModelUsage }[])`, constant `tokenMetrics` |
 | Scope | `normalizeScope(value?: Scope)`, `matchesScope(state: Scope, filter?: Scope)` |
 | Storage validation | `buildThreadInfo(batch, head, stream)`, `canonicalJson(value: unknown)`, `commitFingerprint(batch: CommitBatch)`, `validateBatch(batch: CommitBatch)`, `validateSession(value, previous, expected, thread)` |
@@ -1522,6 +1580,7 @@ export interface PluginContext {
     };
     readonly storage: {
         register(backend: StorageBackend): void;
+        readonly records: RecordStore;
     };
     readonly tools: {
         register(tool: Tool): void;
@@ -2698,6 +2757,7 @@ export interface OwnershipPort {
 }
 
 export interface StorageBackend {
+    readonly records: RecordStore;
     readonly sessions: {
         get(id: string, query?: StateQuery): Promise<SessionRecord | null>;
         page(query: StateQuery & PageOptions & {
@@ -2746,6 +2806,9 @@ export declare function canonicalJson(value: unknown): string;
 export declare const commitFingerprint: (batch: CommitBatch) => Promise<string>;
 
 export declare function validateBatch(batch: CommitBatch): void;
+
+// Dành cho tác giả backend: validate JSON/scope, tạo ID và timestamp nếu cần.
+export declare function prepareStoredRecord(options: AppendRecordOptions, createdAt?: string): StoredRecord;
 ```
 
 ### Scope helpers
@@ -2897,10 +2960,17 @@ export interface ErrorInfo extends ErrorOrigin {
     details?: Record<string, unknown>;
 }
 
+export interface TessarErrorOptions extends ErrorOptions {
+    source?: ErrorOrigin["source"];
+    details?: Record<string, unknown>;
+}
+
 export declare class TessarError extends Error {
     readonly code: string;
+    readonly source: ErrorOrigin["source"];
     readonly details?: Record<string, unknown> | undefined;
-    constructor(code: string, message: string, details?: Record<string, unknown> | undefined);
+    static isInstance<E extends TessarError>(this: abstract new (...args: any[]) => E, value: unknown): value is E;
+    constructor(code: string, message: string, options?: TessarErrorOptions);
     toJSON(): ErrorInfo;
 }
 
@@ -2912,6 +2982,12 @@ export declare function errorInfo(error: unknown, origin?: ErrorOrigin): ErrorIn
 
 export declare function errorFromInfo(info: ErrorInfo): unknown;
 ```
+
+`TessarError` là base cho các lỗi Tessar định nghĩa; `.source` phân biệt nguồn,
+không suy từ quan hệ kế thừa. TypeSafeAPIError/TypeSafeResponseError kế thừa
+`.isInstance()` và giữ source provider. Guard kiểm tra class thực tế, không so
+name/errorId và không nhận JSON ErrorInfo là instance. Native cause/stack có trên
+exception nhưng chưa được serialize vào ErrorInfo. Xem [hướng dẫn lỗi](../examples/guide/errors.md).
 
 ### PluginManager options
 

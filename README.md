@@ -145,6 +145,7 @@ Install the packages your application uses:
 | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [`@tessar/core`](packages/core/README.md)             | Agent execution, sessions, messages, tools, hooks, state and in-memory storage |
 | [`@tessar/openai`](packages/openai/README.md)         | OpenAI Responses and Chat Completions adapters, including compatible endpoints |
+| [`@tessar/typesafe`](packages/typesafe/README.md)     | Typed TypeSafe calls for classification, routing and application decisions, with optional persistence |
 | [`@tessar/plugins`](packages/plugins/README.md)       | Plugin discovery/loading, npm plugin management and the `/logger` plugin       |
 | [`@tessar/opentelemetry`](packages/opentelemetry/README.md)     | OTLP tracing with Langfuse and Laminar adapters                 |
 | [`@tessar/sqlite`](packages/sqlite/README.md)         | SQLite persistence using Node's built-in SQLite API                            |

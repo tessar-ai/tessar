@@ -3,6 +3,7 @@ import type { StorageBackend, CommitBatch } from "../state/storage-ports.js";
 import { CommitCoordinator } from "../state/commit.js";
 import { ThreadService } from "../state/threads.js";
 import type { RecordEntry } from "../state/schema.js";
+import { compareOrdinal } from "../state/queries.js";
 export function initialBatch(threadId = "t1"): CommitBatch {
   return {
     commitId: "commit-" + threadId,
@@ -33,6 +34,89 @@ export function storageConformance(
   factory: () => Promise<StorageBackend>,
 ): void {
   describe(name, () => {
+    it("stores independent immutable JSON records without runtime objects", async () => {
+      const backend = await factory();
+      try {
+        const data = { request: { state: "review this" }, answers: ["allow", 0.9] };
+        const row = await backend.records.append({ namespace: "decisions", data, scope: { userId: "a" } });
+        expect(row.id).toMatch(/^[0-9a-f]{8}-[0-9a-f-]{27}$/);
+        expect(Number.isFinite(Date.parse(row.createdAt))).toBe(true);
+        data.answers.push("changed");
+        expect(await backend.records.get("decisions", row.id)).toEqual(row);
+        expect(row.data).toEqual({ request: { state: "review this" }, answers: ["allow", 0.9] });
+        expect(Object.isFrozen(row)).toBe(true);
+        expect(Object.isFrozen(row.data)).toBe(true);
+        expect(await backend.threads.list()).toEqual([]);
+        expect(await backend.records.get("missing", row.id)).toBeNull();
+        expect(await backend.records.get("decisions", "missing")).toBeNull();
+      } finally { await backend.close(); }
+    });
+    it("rejects duplicate record identities atomically and isolates namespaces", async () => {
+      const backend = await factory();
+      try {
+        const input = { namespace: "decisions", id: "same", data: "first", scope: { userId: "a" } };
+        const results = await Promise.allSettled([
+          backend.records.append(input), backend.records.append(input),
+        ]);
+        expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+        expect(results.find((result) => result.status === "rejected")).toMatchObject({ reason: { code: "RegistrationConflict" } });
+        await expect(backend.records.append({ ...input, data: "overwrite", scope: { userId: "b" } })).rejects.toMatchObject({ code: "RegistrationConflict" });
+        expect((await backend.records.get("decisions", "same"))?.data).toBe("first");
+        await backend.records.append({ ...input, namespace: "other", data: null });
+        expect((await backend.records.get("other", "same"))?.data).toBeNull();
+      } finally { await backend.close(); }
+    });
+    it("filters independent records by typed scope and binds page cursors to their query", async () => {
+      const backend = await factory();
+      try {
+        const scope = { 'user.$["id"]': "a", flag: true, tenant: 7 };
+        for (const id of ["z", "A", "é", "a"])
+          await backend.records.append({ namespace: "decisions", id, scope, data: id });
+        await backend.records.append({ namespace: "decisions", id: "hidden", scope: { ...scope, flag: 1 }, data: "hidden" });
+        const first = await backend.records.list({ namespace: "decisions", scope, limit: 2 });
+        expect(first.items).toHaveLength(2);
+        expect(first.nextCursor).not.toBeNull();
+        const second = await backend.records.list({ namespace: "decisions", scope, limit: 2, cursor: first.nextCursor! });
+        expect(second.items).toHaveLength(2);
+        expect(second.nextCursor).toBeNull();
+        const all = [...first.items, ...second.items];
+        expect(new Set(all.map((row) => row.id)).size).toBe(4);
+        expect(all).toEqual([...all].sort((a, b) =>
+          compareOrdinal(a.createdAt, b.createdAt) || compareOrdinal(a.id, b.id)));
+        expect(await backend.records.get("decisions", "z", { scope })).not.toBeNull();
+        expect(await backend.records.get("decisions", "z", { scope: { tenant: "7" } })).toBeNull();
+        await expect(backend.records.list({ namespace: "other", scope, cursor: first.nextCursor! })).rejects.toMatchObject({ code: "InvalidCursor" });
+        await expect(backend.records.list({ namespace: "decisions", scope: { tenant: 7 }, cursor: first.nextCursor! })).rejects.toMatchObject({ code: "InvalidCursor" });
+        await expect(backend.records.list({ namespace: "decisions", limit: 0 })).rejects.toMatchObject({ code: "InvalidConfiguration" });
+        await expect(backend.records.list({ namespace: "decisions", limit: 201 })).rejects.toMatchObject({ code: "InvalidConfiguration" });
+      } finally { await backend.close(); }
+    });
+    it("keeps independent records outside checkpoint state and thread purge", async () => {
+      const backend = await factory();
+      try {
+        const thread = await new ThreadService(backend).create({ scope: { userId: "a" } });
+        const record = await backend.records.append({ namespace: "audit", data: { threadId: thread.id } });
+        const checkpoint = (await backend.checkpoints.get(thread.currentCheckpointId))!;
+        expect(checkpoint.state.messages).toEqual([]);
+        expect(checkpoint.state.pluginStates).toEqual([]);
+        await new ThreadService(backend).delete(thread.id);
+        await backend.threads.purge(thread.id);
+        expect(await backend.records.get("audit", record.id)).toEqual(record);
+      } finally { await backend.close(); }
+    });
+    it("validates standalone record identities, JSON and scope before writing", async () => {
+      const backend = await factory();
+      try {
+        await expect(backend.records.append({ namespace: "", data: {} })).rejects.toMatchObject({ code: "InvalidConfiguration" });
+        await expect(backend.records.append({ namespace: "decisions", id: "", data: {} })).rejects.toMatchObject({ code: "InvalidConfiguration" });
+        await expect(backend.records.append({ namespace: "decisions", data: Number.NaN })).rejects.toMatchObject({ code: "InvalidData" });
+        await expect(backend.records.append({ namespace: "decisions", data: {}, scope: { invalid: Number.POSITIVE_INFINITY } })).rejects.toMatchObject({ code: "InvalidConfiguration" });
+        await expect(backend.records.get("", "id")).rejects.toMatchObject({ code: "InvalidConfiguration" });
+        await expect(backend.records.list({ namespace: "" })).rejects.toMatchObject({ code: "InvalidConfiguration" });
+        await expect(backend.records.list({ namespace: "decisions", cursor: "%invalid" })).rejects.toMatchObject({ code: "InvalidCursor" });
+        expect((await backend.records.list({ namespace: "decisions" })).items).toEqual([]);
+      } finally { await backend.close(); }
+    });
     it("round-trips tool-result interruptions and suspended/resuming execution records", async () => {
       const backend = await factory();
       try {

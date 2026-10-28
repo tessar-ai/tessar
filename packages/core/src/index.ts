@@ -56,6 +56,7 @@ export type {
 } from "./trace/records.js";
 export * from "./state/schema.js";
 export * from "./state/storage-ports.js";
+export * from "./state/records.js";
 export * from "./state/memory-backend.js";
 export {
   buildThreadInfo,

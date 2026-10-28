@@ -83,9 +83,41 @@ ordering, pagination and scope isolation for the affected APIs. Parameter names,
 page-versus-cursor choices, return shapes and implementation strategy require a
 separate design. Recording this debt does not change current APIs.
 
+## TD-005 — Local IPC and synchronized CLI tabs
+
+**Status:** deferred. **Scope:** optional communication between CLI processes,
+independent of the HTTP server/browser client SDK in TD-002.
+
+### Gap
+
+Tessar already supports building and packaging CLI applications. Stream events
+and Session subscriptions currently stay within their process. Two CLI tabs
+using the same persistent backend do not automatically share live rendering.
+Thread ownership protects execution and writes; it does not broadcast UI state.
+
+### Direction
+
+- Support local communication between CLI processes so tabs viewing the same
+  conversation can display the same text/reasoning, tool activity and status.
+- Allow input from either tab while preserving one active execution per Thread
+  and existing input/queue semantics.
+- Provide an initial state snapshot and ordered live updates, including when
+  another tab joins during streaming or reconnects after disconnection.
+- Preserve workspace, conversation and scope boundaries. Sharing a working
+  directory alone must not mix unrelated conversations.
+- Define connection and runtime lifecycle behavior so disconnecting a viewing
+  tab does not inadvertently cancel work used by another tab.
+- Keep this optional and outside the minimal execution core. Ordinary CLI use
+  must continue to work without an IPC host or HTTP server.
+
+Completion requires two real CLI processes showing synchronized state for the
+same conversation without duplicate model/tool execution. Process ownership and
+startup, transport, APIs and packaging remain undecided and require a separate
+design. A Controller plugin alone does not establish a shared runtime.
+
 ## Boundaries
 
 Preserve the minimal core and the "anything are plugin" direction. Server,
-client and presentation capabilities should be optional additions. Applications
-retain control of their backend integration, identity/access policy, deployment
-and UI choices.
+client, local IPC and presentation capabilities should be optional additions.
+Applications retain control of their backend integration, identity/access policy,
+deployment and UI choices.

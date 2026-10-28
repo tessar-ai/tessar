@@ -1,6 +1,5 @@
 import { diagnostic as diagnosticHooks } from "../events/type.js";
 import {
-  TessarError,
   errorInfo,
   fail,
   requireId,
@@ -24,6 +23,7 @@ import {
 import { definePluginState } from "../state/plugin-state.js";
 import { systemClock } from "../json.js";
 import { guardStorage } from "../state/storage-errors.js";
+import type { StorageBackend } from "../state/storage-ports.js";
 export class PluginHost {
   private slots: PluginSlot[] = [];
   private definitions = new Map<string, { kind: EventKind; version: number }>(
@@ -49,9 +49,7 @@ export class PluginHost {
     this.storageSealed = true;
   }
   kind(name: string): EventKind {
-    return (
-      this.definitions.get(name)?.kind ?? hookKinds[name] ?? "notification"
-    );
+    return this.definitions.get(name)?.kind ?? "notification";
   }
   private mutation: Promise<void> = Promise.resolve();
   private closed = false;
@@ -61,14 +59,17 @@ export class PluginHost {
     context?: EventContext,
   ) => void;
   private readonly values: readonly ValueRegistration[];
+  private readonly storage?: () => StorageBackend;
   constructor(
     options: {
       diagnostics?: (error: ErrorInfo, context?: EventContext) => void;
       values?: readonly ValueRegistration[];
+      storage?: () => StorageBackend;
     } = {},
   ) {
     this.diagnostics = options.diagnostics ?? (() => {});
     this.values = options.values ?? [];
+    this.storage = options.storage;
   }
   async initialize(plugins: readonly Plugin[]): Promise<void> {
     try {
@@ -202,6 +203,11 @@ export class PluginHost {
           register: (provider) => register("provider", provider.id, provider),
         },
         storage: {
+          records: {
+            append: async (options) => this.recordStore().append(options),
+            get: async (namespace, id, query) => this.recordStore().get(namespace, id, query),
+            list: async (query) => this.recordStore().list(query),
+          },
           register: (backend) => {
             const storage = guardStorage(backend);
             register("storage", "primary", storage);
@@ -214,8 +220,7 @@ export class PluginHost {
         hook: (name, handler, options = {}) => {
           requireId(name, "event name");
           const prior = definitions.get(name),
-            kind =
-              options.kind ?? prior?.kind ?? hookKinds[name] ?? "notification",
+            kind = options.kind ?? prior?.kind ?? "notification",
             version = options.version ?? prior?.version ?? 1;
           if (!Number.isInteger(version) || version < 1)
             fail("InvalidConfiguration", "Invalid hook version");
@@ -247,12 +252,7 @@ export class PluginHost {
         this.definitions = definitions;
       } catch (error) {
         this.diagnostics(
-          errorInfo(
-            error,
-            error instanceof TessarError
-              ? undefined
-              : { source: "plugin", pluginId: plugin.id },
-          ),
+          errorInfo(error, { source: "plugin", pluginId: plugin.id }),
         );
         slot.detached = true;
         await this.releaseSlot(slot);
@@ -318,6 +318,11 @@ export class PluginHost {
       ...this.values,
       ...this.slots.filter((s) => !s.detached).flatMap((s) => s.values),
     ];
+  }
+  private recordStore() {
+    if (this.closed || !this.storage)
+      fail("ControllerNotReady", "Record storage requires an initialized Controller");
+    return this.storage().records;
   }
   dispose(): Promise<void> {
     this.closed = true;

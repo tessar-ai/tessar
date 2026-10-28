@@ -128,6 +128,10 @@ export class Controller {
     const model = this.agent.getModel();
     this.hooks = new PluginHost({
       diagnostics: this.report,
+      storage: () => {
+        this.requireReady();
+        return this.backend;
+      },
       values: [
         {
           kind: "agent",
@@ -182,8 +186,6 @@ export class Controller {
         new TessarError("Disposed", "Controller is disposed"),
       );
     if (this.initialization) return this.initialization;
-    if (this.phase !== "new")
-      return Promise.reject(new Error("Controller is disposed"));
     this.phase = "initializing";
     this.initialization = (async () => {
       try {

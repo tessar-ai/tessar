@@ -45,8 +45,7 @@ export async function executeTool(
         ),
     );
   } catch (error) {
-    if (!(error instanceof TessarError))
-      errorInfo(error, { source: "tool", toolName: tool.name });
+    errorInfo(error, { source: "tool", toolName: tool.name });
     throw error;
   }
 }

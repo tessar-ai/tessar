@@ -1,6 +1,6 @@
 import { canonicalJson } from "../state/commit.js";
 import type { ExecutionPosition } from "../state/schema.js";
-import { errorInfo, fail, TessarError } from "../errors.js";
+import { errorInfo, fail } from "../errors.js";
 import { normalizeInstruction } from "../instructions/instruction.js";
 import type { RegistryLease } from "../plugins/registry.js";
 import type {
@@ -100,12 +100,11 @@ export function bindExecutionModel(
 }
 
 function record(error: unknown, ref: ModelRef): void {
-  if (!(error instanceof TessarError))
-    errorInfo(error, {
-      source: "provider",
-      providerId: ref.providerId,
-      modelId: ref.modelId,
-    });
+  errorInfo(error, {
+    source: "provider",
+    providerId: ref.providerId,
+    modelId: ref.modelId,
+  });
 }
 export function providerCall<T>(ref: ModelRef, operation: () => T): T {
   try {

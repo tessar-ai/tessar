@@ -42,6 +42,9 @@ export async function initializeSchema(db: Database): Promise<void> {
     CREATE INDEX IF NOT EXISTS tessar_commits_thread ON ${table("commits")}(thread_id);
     CREATE TABLE IF NOT EXISTS ${table("leases")}(thread_id TEXT PRIMARY KEY,owner_token TEXT NOT NULL,fencing_token BIGINT NOT NULL,expires_at TIMESTAMPTZ NOT NULL);
     CREATE TABLE IF NOT EXISTS ${table("owned_states")}(owner_key TEXT PRIMARY KEY,revision INTEGER NOT NULL,body JSONB NOT NULL);
+    CREATE TABLE IF NOT EXISTS ${table("records")}(namespace TEXT COLLATE "C" NOT NULL,id TEXT COLLATE "C" NOT NULL,created_at TEXT COLLATE "C" NOT NULL,body JSONB NOT NULL,PRIMARY KEY(namespace,id));
+    CREATE INDEX IF NOT EXISTS tessar_records_page ON ${table("records")}(namespace,created_at,id);
+    CREATE INDEX IF NOT EXISTS tessar_records_scope ON ${table("records")} USING GIN ((body->'scope'));
     CREATE TABLE IF NOT EXISTS ${table("sessions")}(id TEXT PRIMARY KEY,agent_id TEXT NOT NULL,selected_thread_id TEXT REFERENCES ${table("threads")}(id),revision INTEGER NOT NULL,created_at TEXT COLLATE "C" NOT NULL,updated_at TEXT NOT NULL,body JSONB NOT NULL);
     CREATE INDEX IF NOT EXISTS tessar_sessions_page ON ${table("sessions")}(agent_id,created_at,id COLLATE "C");
     CREATE INDEX IF NOT EXISTS tessar_sessions_thread ON ${table("sessions")}(selected_thread_id);

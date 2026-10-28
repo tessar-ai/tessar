@@ -63,6 +63,24 @@ suite("MongoDB (TESSAR_TEST_MONGODB_URL required)", () => {
     async () => (await fixture()).backend,
   );
 
+  it("adds independent records to existing databases and retains them across connections", async () => {
+    const { databaseName, open } = await fixture();
+    const client = new MongoClient(uri!);
+    try {
+      await client.connect();
+      await client.db(databaseName).collection("tessar_records").drop();
+    } finally { await client.close(); }
+    const reopened = await open();
+    const record = await reopened.records.append({ namespace: "audit", data: { answer: "allow" } });
+    const other = await open();
+    expect(await other.records.get("audit", record.id)).toEqual(record);
+    const results = await Promise.allSettled([
+      reopened.records.append({ namespace: "race", id: "one", data: 1 }),
+      other.records.append({ namespace: "race", id: "one", data: 2 }),
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((result) => result.status === "rejected")).toMatchObject({ reason: { code: "RegistrationConflict" } });
+  });
   it("versions its schema, adopts unversioned data and rejects future versions without resetting data", async () => {
     const { backend, open, databaseName } = await fixture();
     const thread = await new ThreadService(backend).create({

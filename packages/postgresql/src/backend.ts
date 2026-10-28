@@ -25,6 +25,7 @@ import {
 } from "@tessar/core";
 import { openDatabase, type PostgresqlStorageOptions } from "./database.js";
 import { initializeSchema, recordTables } from "./schema.js";
+import { createRecordStore } from "./records.js";
 import { assertOwnership, createOwnership } from "./ownership.js";
 import { page, scopeFilter } from "./queries.js";
 import {
@@ -93,6 +94,7 @@ export async function createPostgresqlBackend(
   ) => canonicalJson([key.ownerType, key.ownerId, key.pluginId, key.namespace]);
 
   return {
+    records: createRecordStore(db),
     id: "postgresql",
     capabilities: {
       durable: true,

@@ -3,6 +3,12 @@
 Tessar's TypeScript API for Agent, Controller, Session, Thread, messages,
 tools, hooks, state and checkpoints. Requires Node 24.22.1 or newer.
 
+`TessarError.isInstance(error)` safely narrows an unknown value to the shared
+error base; concrete subclasses inherit the method and narrow to their own
+fields. Constructor: `new TessarError(code, message, { source?, details?, cause? })`.
+Source defaults to `tessar` and is distinct from inheritance. See the
+[error guide](../../examples/guide/errors.md) for provider and custom subclasses.
+
 ```sh
 npm install @tessar/core @tessar/openai zod
 ```

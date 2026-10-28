@@ -20,6 +20,7 @@ export async function initializeSchema(db: Db) {
     versions = db.collection<Row>("tessar_versions"),
     sessions = db.collection<Row>("tessar_sessions"),
     owned = db.collection<Row>("tessar_owned_states"),
+    records = db.collection<Row>("tessar_records"),
     leases = db.collection<Row>("tessar_leases"),
     commits = db.collection<Row>("tessar_commits"),
     staging = db.collection<Row>("tessar_staging"),
@@ -31,6 +32,7 @@ export async function initializeSchema(db: Db) {
     versions,
     sessions,
     owned,
+    records,
     leases,
     commits,
     staging,
@@ -73,6 +75,13 @@ export async function initializeSchema(db: Db) {
     id: 1,
   });
   await sessions.createIndex({ selectedThreadId: 1 });
+  await records.createIndex({ namespace: 1, sortDate: 1, id: 1 });
+  await records.createIndex({
+    namespace: 1,
+    scopeTokens: 1,
+    sortDate: 1,
+    id: 1,
+  });
   await commits.createIndex({ threadId: 1 });
   await staging.createIndex({ threadId: 1 });
   await pieces.createIndex({ commitId: 1, kind: 1, position: 1 });
@@ -91,6 +100,7 @@ export async function initializeSchema(db: Db) {
     versions,
     sessions,
     owned,
+    records,
     leases,
     commits,
     staging,
