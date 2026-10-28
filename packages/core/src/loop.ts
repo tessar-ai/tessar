@@ -1,7 +1,6 @@
 import {
   turn as turnHooks,
   model as modelHooks,
-  tools as toolsHooks,
   context as contextHooks,
   message as messageHooks,
 } from "./events/type.js";
@@ -30,6 +29,8 @@ import {
   streamModel,
 } from "./models/stream.js";
 import { snapshotModelOptions } from "./models/options.js";
+import { providerRequest } from "./engine/provider-request.js";
+import { observeParts } from "./engine/model-parts.js";
 import type { TrackedServices } from "./engine/tracked-effects.js";
 
 export type LoopContext = {
@@ -56,7 +57,6 @@ export type LoopContext = {
   prepareMessage(
     frame: ExecutionFrame,
     message: MessageData,
-    persisted?: boolean,
   ): Promise<MessageData>;
   updateUsage(frame: ExecutionFrame): Promise<void>;
   appendMessage(frame: ExecutionFrame, message: MessageData): Promise<void>;
@@ -192,25 +192,23 @@ async function callModel(
       description: t.description,
       inputSchema: t.jsonSchema,
     }));
-  const selected = await context.hook(
-    frame,
-    toolsHooks.select,
-    immutable(descriptions),
-  );
-  if (selected.some((t) => !tools.some((tool) => tool.name === t.name)))
-    fail("UnknownTool", "Tool selection includes unregistered tool");
   await applySignals(frame, context);
   let request = buildContext(
     frame.cp,
     position.baseInstructions,
-    selected,
+    descriptions,
     position.modelRef,
   );
   request = { ...request, messages: signalMessages(frame) };
   if (position.modelOptions)
     request = { ...request, options: position.modelOptions };
   request = await context.hook(frame, contextHooks.prepare, request);
-  request = await context.hook(frame, modelHooks.request, immutable(request));
+  if (
+    request.tools.some(
+      (description) => !tools.some((tool) => tool.name === description.name),
+    )
+  )
+    fail("UnknownTool", "Context includes an unregistered tool");
   if (
     request.model.providerId !== position.modelRef.providerId ||
     request.model.modelId !== position.modelRef.modelId ||
@@ -250,22 +248,16 @@ async function callModel(
   const attemptStartedAt = performance.now();
   let response: ModelResponse | undefined;
   try {
-    for await (const chunk of streamModel(adapter, immutable(request), {
-      signal: frame.sink.controller.signal,
-    })) {
-      if (chunk.type === "message-delta") {
-        if (!attempt.firstOutputAt) {
-          attempt.firstOutputAt = context.clock.now();
-          attempt.timeToFirstOutputMs = Math.max(
-            0,
-            performance.now() - attemptStartedAt,
-          );
-        }
-        await context.hook(frame, messageHooks.delta, {
-          ...chunk,
-          attemptId: attempt.id,
-        });
-      }
+    for await (const chunk of streamModel(
+      adapter,
+      immutable(request),
+      {
+        signal: frame.sink.controller.signal,
+        now: () => context.clock.now(),
+        prepareRequest: providerRequest(context, frame, request.model, attempt),
+      },
+      observeParts(context, frame, attempt, attemptStartedAt),
+    )) {
       if (chunk.type === "usage") {
         attempt.usage = chunk.usage;
         await context.hook(frame, modelHooks.usage, {
@@ -278,7 +270,13 @@ async function callModel(
     }
     if (!response)
       fail("ProviderError", "Model stream ended without complete response");
+    const attemptMessageId = response.message.id;
     response = await context.hook(frame, modelHooks.response, response);
+    if (response.message.id !== attemptMessageId)
+      fail(
+        "InvalidMessage",
+        "Model response transform changed message identity",
+      );
     if (response.message.role !== "assistant")
       fail("InvalidMessage", "Model response must be assistant");
     attempt.usage = response.usage ?? attempt.usage;

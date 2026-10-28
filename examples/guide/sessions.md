@@ -84,7 +84,7 @@ need an application-owned transport; see [client SDK debt](../../docs/technical-
 Save as `conversation.ts` after the [setup](README.md).
 
 ```ts
-import { Agent, Controller, message, stream } from "@tessar/core";
+import { Agent, Controller, text as textEvents, stream } from "@tessar/core";
 import { OpenAIProvider } from "@tessar/openai";
 
 const agent = new Agent({
@@ -105,7 +105,7 @@ try {
     let unsubscribe = () => {};
     const completed = new Promise<void>((resolve, reject) => {
       unsubscribe = session.subscribe(event => {
-        if (event.type === message.delta && event.payload.partKind === "text") {
+        if (event.type === textEvents.delta) {
           process.stdout.write(event.payload.delta);
         }
         if (event.type === stream.end) resolve();

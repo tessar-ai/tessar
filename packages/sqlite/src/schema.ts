@@ -40,6 +40,8 @@ export function createSchema(db: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS tessar_commits_thread ON tessar_commits(thread_id);
     CREATE TABLE IF NOT EXISTS tessar_leases(thread_id TEXT PRIMARY KEY,owner_token TEXT NOT NULL,fencing_token INTEGER NOT NULL,expires_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS tessar_owned_states(owner_key TEXT PRIMARY KEY,revision INTEGER NOT NULL,body TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS tessar_records(namespace TEXT NOT NULL,id TEXT NOT NULL,created_at TEXT NOT NULL,body TEXT NOT NULL,PRIMARY KEY(namespace,id));
+    CREATE INDEX IF NOT EXISTS tessar_records_page ON tessar_records(namespace,created_at,id);
     CREATE TABLE IF NOT EXISTS tessar_sessions(id TEXT PRIMARY KEY,agent_id TEXT NOT NULL,selected_thread_id TEXT REFERENCES tessar_threads(id),revision INTEGER NOT NULL,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,body TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS tessar_sessions_page ON tessar_sessions(agent_id,created_at,id);
     CREATE INDEX IF NOT EXISTS tessar_sessions_thread ON tessar_sessions(selected_thread_id);

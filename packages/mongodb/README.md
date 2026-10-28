@@ -49,3 +49,11 @@ The adapter separates `schema.ts`, `ownership.ts`, `versions.ts`, `queries.ts`,
 connection/transaction lifecycle in `database.ts`, and contract wiring in
 `backend.ts`. It follows the same logical storage rules as SQLite/PostgreSQL;
 native collections and transactions implement those rules.
+
+Use `backend.records.append/get/list` for independent JSON entries, or
+`tessar.storage.records` in a plugin after Controller initialization. One
+`tessar_records` collection stores entries separately from conversation versions
+and checkpoints; initialization adds it and its indexes to existing databases.
+Each append is an atomic document insert. See
+[independent records](../../examples/guide/storage.md#store-independent-json-records)
+for parameters, scope filtering, duplicate identity behavior and pagination.

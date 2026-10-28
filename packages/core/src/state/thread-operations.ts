@@ -43,14 +43,13 @@ export async function prepareThread(
     ...prepared,
     ...(id !== undefined ? { id } : {}),
   });
-  await controller.hooks.dispatch(threadHooks.started, info, {
-    session,
-    sessionId: session?.id,
-    controllerId: controller.id,
-    agentId: controller.agent.id,
-    threadId: info.id,
-    scope: info.scope,
-  });
+  if (!session)
+    await controller.hooks.dispatch(threadHooks.started, info, {
+      controllerId: controller.id,
+      agentId: controller.agent.id,
+      threadId: info.id,
+      scope: info.scope,
+    });
   return info;
 }
 
@@ -103,11 +102,12 @@ export async function deleteThread(
   );
   controller.requireReady();
   await new ThreadService(controller.backend).delete(id, query);
-  await controller.hooks.dispatch(
-    threadHooks.deleted,
-    { threadId: id },
-    context,
-  );
+  if (!session)
+    await controller.hooks.dispatch(
+      threadHooks.deleted,
+      { threadId: id },
+      context,
+    );
 }
 
 export async function purgeThread(
@@ -136,7 +136,8 @@ export async function purgeThread(
   await controller.hooks.authorize(threadHooks.beforeDelete, payload, context);
   controller.requireReady();
   await new ThreadService(controller.backend).purge(id, query);
-  await controller.hooks.dispatch(threadHooks.deleted, payload, context);
+  if (!session)
+    await controller.hooks.dispatch(threadHooks.deleted, payload, context);
 }
 
 export async function renameThread(
@@ -159,7 +160,8 @@ export async function renameThread(
   await controller.hooks.authorize(threadHooks.beforeRename, payload, context);
   controller.requireReady();
   await new ThreadService(controller.backend).rename(id, title, query);
-  await controller.hooks.dispatch(threadHooks.renamed, payload, context);
+  if (!session)
+    await controller.hooks.dispatch(threadHooks.renamed, payload, context);
 }
 
 export async function forkThread(
@@ -190,11 +192,12 @@ export async function forkThread(
     id,
     options,
   );
-  await controller.hooks.dispatch(
-    threadHooks.forked,
-    { threadId: id, forkedThreadId: info.id },
-    context,
-  );
+  if (!session)
+    await controller.hooks.dispatch(
+      threadHooks.forked,
+      { threadId: id, forkedThreadId: info.id },
+      context,
+    );
   return Thread.create(controller, info);
 }
 

@@ -1,11 +1,10 @@
-import { errorInfo, TessarError } from "../errors.js";
+import { errorInfo } from "../errors.js";
 import type { StorageBackend } from "./storage-ports.js";
 
 /** Attribute driver failures at the host boundary, preserving original errors. */
 export function guardStorage(backend: StorageBackend): StorageBackend {
   const failed = (error: unknown): never => {
-    if (!(error instanceof TessarError))
-      errorInfo(error, { source: "storage", backendId: backend.id });
+    errorInfo(error, { source: "storage", backendId: backend.id });
     throw error;
   };
   const port = <T extends object>(target: T): T =>
@@ -27,6 +26,7 @@ export function guardStorage(backend: StorageBackend): StorageBackend {
     });
   return {
     ...backend,
+    records: port(backend.records),
     sessions: port(backend.sessions),
     ownedState: port(backend.ownedState),
     threads: port(backend.threads),

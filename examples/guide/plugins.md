@@ -73,12 +73,61 @@ try {
 }
 ```
 
-`context.prepare` transforms a model request before it is sent. The example keeps
+`context.prepare` transforms the Agent loop's normalized model context. The example keeps
 the existing request and instructions, then adds an ordered section. This affects
 the prepared request; it does not rewrite stored conversation history. Section
 order controls instruction placement independently of plugin discovery order.
 The logger writes JSON entries to stderr by default. Configure transports to
 write files or connect your application's logging system.
+
+## Change a provider-native request
+
+`provider.request` runs after the adapter encodes the SDK body, before the SDK call.
+Use it for provider-specific fields rather than adding those fields to Tessar
+messages or instructions. For example, add this plugin to your Controller:
+
+```ts
+import { provider, type Plugin, type PluginContext } from "@tessar/core";
+
+class RequestOptionsPlugin implements Plugin {
+  readonly id = "request-options";
+
+  setup(tessar: PluginContext): void {
+    tessar.hook(provider.request, event => {
+      if (event.payload.model.providerId !== "openai") return;
+      return {
+        ...event.payload,
+        body: { ...event.payload.body, service_tier: "auto" },
+      };
+    });
+  }
+}
+```
+
+Only send fields supported by the selected provider. Payload fields are `model`,
+`protocol`, `attemptId`, `purpose` (`primary` or `auxiliary`) and `body`.
+Return the full envelope with a replacement body; returning nothing keeps it.
+Handlers are awaited in registration order, each seeing the preceding result.
+Payloads are immutable. Do not change execution identity, the native model,
+streaming mode, endpoint, credentials, or SDK client options through this hook.
+Invalid replacements and thrown errors fail the attempt without sending a fallback.
+
+The hook runs once per adapter invocation; SDK HTTP retries reuse that body.
+It covers primary and auxiliary model calls. `context.prepare` stays on the
+Agent loop; auxiliary calls use the request explicitly supplied by the plugin.
+`model.start.request` is normalized context, while `provider.request.body` is the
+native SDK body at that handler's position. Later handlers and SDK serialization
+may still affect what is sent; neither snapshot represents HTTP headers.
+
+An Agent created by a user plugin has its own context preparation. If it needs
+hooks, the plugin creates a Controller for that Agent with the selected plugin
+instances. `tessar.agent.register(agent)` registers the Agent and its shutdown;
+it does not inherit the parent's Controller, hooks, history or tools. A separate
+process creates its own runtime. These choices remain plugin responsibilities.
+
+Provider adapter authors invoke the optional
+`ModelCallContext.prepareRequest(protocol, body)` after encoding and await its
+result before SDK invocation. Agent calls without a Controller still work.
 
 ## Configure logging
 

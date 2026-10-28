@@ -4,7 +4,6 @@ import { immutable } from "../json.js";
 
 import type {
   ModelChunk,
-  ModelRef,
   ModelRequest,
   ModelResponse,
 } from "../models/contract.js";
@@ -16,6 +15,8 @@ import {
   type TrackedServices,
 } from "./tracked-effects.js";
 import type { ExecutionContext, ExecutionFrame } from "./frame.js";
+import { observeParts } from "./model-parts.js";
+import { providerRequest } from "./provider-request.js";
 
 export function services(
   execution: ExecutionContext,
@@ -75,32 +76,27 @@ async function* auxiliary(
   execution: ExecutionContext,
   frame: ExecutionFrame,
   toolExecutionId: string | undefined,
-  options: { model: ModelRef; request: ModelRequest; purpose: "auxiliary" },
+  supplied: ModelRequest,
 ): AsyncIterable<ModelChunk> {
   const position = frame.cp.execution!;
   if (!position.turnId)
     fail("UnsupportedBoundary", "Auxiliary calls require an active turn");
   const adapter = selectAdapter(
       frame.registry,
-      options.model,
+      supplied.model,
       frame.request.adapter,
     ),
-    request = await execution.hook(
-      frame,
-      modelHooks.request,
-      immutable(options.request),
-      toolExecutionId,
-    );
+    request = immutable(supplied);
   // Reserve after awaited hooks so concurrent auxiliary calls cannot oversubscribe.
   if (
     position.budgets.modelAttempts >= position.budgets.limits.maxModelAttempts
   )
     fail("StreamLimit", "Model attempt budget exhausted");
-  providerCall(options.model, () => adapter.validate(request));
+  providerCall(supplied.model, () => adapter.validate(request));
   const attempt = createModelAttempt(
     execution,
     frame.cp,
-    options.model,
+    supplied.model,
     "auxiliary",
     toolExecutionId,
   );
@@ -114,7 +110,7 @@ async function* auxiliary(
     modelHooks.start,
     {
       attemptId: attempt.id,
-      model: options.model,
+      model: supplied.model,
       request: immutable(request),
       startedAt: attempt.startedAt,
       purpose: attempt.purpose,
@@ -124,16 +120,28 @@ async function* auxiliary(
     toolExecutionId,
   );
   try {
-    for await (const chunk of streamModel(adapter, request, {
-      signal: frame.sink.controller.signal,
-    })) {
-      if (chunk.type === "message-delta" && attempt.firstOutputAt === null) {
-        attempt.firstOutputAt = execution.clock.now();
-        attempt.timeToFirstOutputMs = Math.max(
-          0,
-          performance.now() - attemptStartedAt,
-        );
-      }
+    for await (const chunk of streamModel(
+      adapter,
+      request,
+      {
+        signal: frame.sink.controller.signal,
+        now: () => execution.clock.now(),
+        prepareRequest: providerRequest(
+          execution,
+          frame,
+          supplied.model,
+          attempt,
+          toolExecutionId,
+        ),
+      },
+      observeParts(
+        execution,
+        frame,
+        attempt,
+        attemptStartedAt,
+        toolExecutionId,
+      ),
+    )) {
       if (chunk.type === "usage") {
         attempt.usage = chunk.usage;
         await execution.hook(
@@ -157,7 +165,9 @@ async function* auxiliary(
       yield chunk;
     }
   } catch (error) {
-    attempt.status = "failed";
+    attempt.status = frame.sink.controller.signal.aborted
+      ? "cancelled"
+      : "failed";
     attempt.error = errorInfo(error);
     attempt.endedAt = execution.clock.now();
     await execution.hook(

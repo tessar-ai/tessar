@@ -136,13 +136,13 @@ it("disposes resources when shutdown races an asynchronous plugin setup", async 
   expect(closed).toBe(1);
   expect(host.registrations()).toHaveLength(0);
 });
-it("protects Session lifecycle barriers from notification overrides", async () => {
+it("protects shutdown cleanup from notification overrides", async () => {
   const host = new PluginHost();
   await expect(
     host.attach({
       id: "override",
       setup(tessar) {
-        tessar.hook(sessionHooks.beforeClose, () => {}, {
+        tessar.hook("shutdown", () => {}, {
           kind: "notification",
         });
       },

@@ -52,3 +52,10 @@ before committing; an expired lease rolls back the complete publication.
 
 See the [storage guide](../../examples/guide/storage.md) for persistent conversations
 and restoring a Session after restart.
+
+Independent JSON records are available through `backend.records.append/get/list`
+or `tessar.storage.records` after Controller initialization. They use one
+`tessar_records` table and do not require a Session/Thread or become checkpoint
+state. Initialization adds the table/index to existing stores without resetting
+data. See [independent records](../../examples/guide/storage.md#store-independent-json-records)
+for parameters, scope filtering and cursor pagination.

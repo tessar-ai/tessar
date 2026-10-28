@@ -421,15 +421,11 @@ it("attributes concurrent auxiliary calls to their own tool execution", async ()
       if (++ready === 2) gate.resolve();
       await gate.promise;
       for await (const _ of context.models.stream({
-        model,
-        purpose: "auxiliary",
-        request: {
           model,
           instructions: normalizeInstruction(String(index)),
           messages: [],
           tools: [],
-        },
-      })) {
+        })) {
       }
       return String(index);
     },
@@ -527,15 +523,11 @@ it("keeps concurrent auxiliary requests inside the model-attempt budget", async 
       if (++ready === 2) gate.resolve();
       await gate.promise;
       for await (const _ of context.models.stream({
-        model,
-        purpose: "auxiliary",
-        request: {
           model,
           instructions: normalizeInstruction("aux"),
           messages: [],
           tools: [],
-        },
-      })) {
+        })) {
       }
       return "done";
     },

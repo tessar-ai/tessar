@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "pnpm -r build",
+    "build:release": "pnpm --filter \"./packages/*\" -r pack --pack-destination dist/release",
     "typecheck": "tsc --noEmit -p tsconfig.tests.json",
     "test": "vitest run --configLoader native --pool threads --exclude tests/integration/**",
     "test:integration": "vitest run --configLoader native --pool threads tests/integration",
@@ -17,6 +18,7 @@
     "test:storage": "node --env-file-if-exists=.env.storage node_modules/vitest/vitest.mjs run packages/postgresql/test packages/mongodb/test --configLoader native --pool threads"
   },
   "devDependencies": {
+    "@tessar/typesafe": "workspace:*",
     "@tessar/core": "workspace:*",
     "@tessar/opentelemetry": "workspace:*",
     "@tessar/mongodb": "workspace:*",

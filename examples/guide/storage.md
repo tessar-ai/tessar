@@ -26,7 +26,7 @@ Save as `storage.ts`. The same database, Agent ID and model connection identity
 are used each time the application starts.
 
 ```ts
-import { Agent, Controller, message, stream } from "@tessar/core";
+import { Agent, Controller, text as textEvents, stream } from "@tessar/core";
 import { OpenAIProvider } from "@tessar/openai";
 import { SqliteStoragePlugin } from "@tessar/sqlite";
 
@@ -59,7 +59,7 @@ try {
   let unsubscribe = () => {};
   const completed = new Promise<void>((resolve, reject) => {
     unsubscribe = session.subscribe(event => {
-      if (event.type === message.delta && event.payload.partKind === "text") {
+      if (event.type === textEvents.delta) {
         process.stdout.write(event.payload.delta);
       }
       if (event.type === stream.end) resolve();
@@ -153,3 +153,80 @@ Checkpointed plugin JSON state uses Tessar's state APIs and selected backend.
 Plugins needing their own searchable tables or job queues can own a separate
 database/schema and its migrations. Storage plugins do not expose a generic SQL
 connection through the plugin API.
+
+## Store independent JSON records
+
+Use `backend.records` when data must be inspected independently of a conversation:
+for example, the input and result of a classifier or guardrail. No Agent,
+Controller, Session, Thread or checkpoint is required.
+
+```ts
+import { createSqliteBackend } from "@tessar/sqlite";
+
+const backend = await createSqliteBackend({ filename: "./state.db" });
+try {
+  const scope = { userId: "demo-user" };
+  const record = await backend.records.append({
+    namespace: "decisions",
+    scope,
+    // id: "application-call-id", // optional; omitted IDs are UUIDs
+    data: {
+      request: { state: "Deploy failed twice", question: "Escalate?" },
+      response: { escalate: true, confidence: 0.97 },
+    },
+  });
+  console.log(await backend.records.get("decisions", record.id, { scope }));
+  const page = await backend.records.list({ namespace: "decisions", scope, limit: 20 });
+  console.log(page.items);
+  if (page.nextCursor) console.log(await backend.records.list({
+    namespace: "decisions", scope, limit: 20, cursor: page.nextCursor,
+  }));
+} finally {
+  await backend.close();
+}
+```
+
+PostgreSQL, MongoDB and the memory backend have the same `records` contract.
+SQLite/PostgreSQL use one `tessar_records` table; MongoDB uses one collection.
+Each append inserts a record; it does not create another table. Initialization
+adds this structure to an existing database without resetting runtime state.
+
+`StoredRecord` contains `id`, `namespace`, `scope`, JSON `data` and an automatically
+generated ISO `createdAt`. `(namespace, id)` is unique across scopes. Duplicates
+throw `RegistrationConflict`; appending never updates an existing record. List
+requires `namespace`, orders ascending by `createdAt` then ID, and returns
+`{ items, nextCursor }`. Default limit is 50, allowed range 1–200. Cursors belong
+to their namespace/scope query. Omitting scope queries all scopes in that namespace;
+applications must supply authorized scope filters for their users.
+
+Record writes commit independently. They are not included in checkpoints,
+history, fork, rewind or Thread deletion/purge, and are never automatically sent
+to a model. This API does not automatically capture provider calls, implement
+retention, or provide arbitrary queries into JSON data. Use plugin state for
+current data that must follow execution recovery; use records for independent
+entries that must remain available for inspection.
+
+Plugins access the selected backend through `tessar.storage.records` after
+Controller initialization. This also works outside an active execution:
+
+```ts
+import { ready, type Plugin, type PluginContext } from "@tessar/core";
+
+class StartupAuditPlugin implements Plugin {
+  readonly id = "startup-audit";
+  setup(tessar: PluginContext): void {
+    tessar.hook(ready, async () => {
+      await tessar.storage.records.append({
+        namespace: "startup-audit",
+        data: { action: "application-ready" },
+      });
+    });
+  }
+}
+```
+
+Capture the storage handle during setup, then call it from a ready hook, a tool,
+or application callbacks after initialization. Calling record operations during
+setup rejects with `ControllerNotReady`; no storage-plugin registration order is
+required. The Controller owns backend cleanup. Without a durable storage plugin,
+records use the default memory backend and disappear when it closes.

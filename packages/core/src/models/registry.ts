@@ -10,6 +10,7 @@ import { ProfileResolver } from "./resolver.js";
 import type { CatalogSnapshot } from "./catalog.js";
 import { normalizeCatalog } from "./normalize-catalog.js";
 import { canonicalJson } from "../state/commit.js";
+import { matchingAdapter } from "./stream.js";
 export class ModelRegistry {
   private readonly providers = new Map<string, ModelProviderRegistration>();
   private readonly handles = new Map<string, Model>();
@@ -97,17 +98,7 @@ export class ModelRegistry {
         "UnsupportedModelSelection",
         "This adapter cannot select another model ID",
       );
-    if (
-      adapter.ref.providerId !== ref.providerId ||
-      adapter.ref.modelId !== ref.modelId ||
-      (ref.connectionId !== undefined &&
-        adapter.ref.connectionId !== ref.connectionId)
-    )
-      fail(
-        "ModelContextIncompatible",
-        "The selected connection is no longer available",
-      );
-    return adapter;
+    return matchingAdapter(adapter, ref);
   }
   private obtain(ref: ModelRef, schedule: boolean): Model {
     if (this.shutdown.signal.aborted) fail("Disposed", "Model registry closed");

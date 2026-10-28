@@ -127,7 +127,8 @@ Optional fields include `instructions`, `tools`, and `limits` (e.g. `maxToolCall
 ```ts
 import {
   Agent, buildInstruction,
-  message as messageEvents, tool as toolEvents, stream as streamEvents,
+  text as textEvents,
+  reasoning as reasoningEvents, tool as toolEvents, stream as streamEvents,
 } from "@tessar/core";
 
 const instructions = buildInstruction([
@@ -158,11 +159,11 @@ A typical stream with tool calling goes through this flow:
 ```text
 input.received → stream.started
   → turn.start (turn 0)
-    → model.start → message.delta (reasoning + text) → model.end
+    → model.start → text/reasoning start/delta/end + tool.call start/end → model.end
     → tool.start → tool.end
   → turn.end
   → turn.start (turn 1)
-    → model.start → message.delta (reasoning + text) → model.end
+    → model.start → text/reasoning start/delta/end + tool.call start/end → model.end
   → turn.end
 → stream.end
 ```
@@ -173,7 +174,8 @@ In turn 0, the model reads the prompt, reasons, and decides to call a tool. In t
 
 | Event | When it fires | Payload |
 | :--- | :--- | :--- |
-| `"message.delta"` | Each streamed content fragment | `delta` (the text chunk), `partKind` (`"reasoning"` or `"text"`), `partId`, `messageId` |
+| `text.start/delta/end`, `reasoning.start/delta/end` | A text/thinking part starts, grows or ends | `messageId`, `partId`, `partIndex`, `attemptId`, `purpose`; delta has `delta`, end has `text`, `status`, `startedAt`, `endedAt`, `boundary` |
+| `tool.call.start/end` | The model generates a tool call | Arguments appear only at completed end; this does not execute the tool. There is no tool.call.delta. |
 | `"tool.start"` | Model requested a tool call, execution begins | `toolCallId`, `toolExecutionId`, `startedAt` |
 | `"tool.end"` | Tool result was published | `status` (`"succeeded"` / `"failed"`), `result.content`, `startedAt`, `endedAt` |
 | `"stream.end"` | Entire execution completed | `status`, `usage.metrics`, `output`, `startedAt`, `endedAt` |
@@ -188,7 +190,7 @@ an overflowing consumer without cancelling the Agent; it is not execution failur
 
 ### Separating reasoning from the answer
 
-When the provider exposes reasoning content, deltas distinguish it using `partKind`:
+When the provider exposes reasoning content, separate `reasoning.delta` and `text.delta` events distinguish it:
 
 - `"reasoning"`: reasoning content exposed by the endpoint, which may be a summary or may be absent.
 - `"text"`: the final user-facing answer.
@@ -197,7 +199,7 @@ Without filtering, both streams print interleaved into a single unreadable block
 
 ### Handling empty text tokens before tool calls
 
-Before emitting a tool call, many models flush a few empty whitespace or newline tokens with `partKind: "text"`. Without the `delta.trim().length === 0` guard, a premature `[Answer]` label appears before `[Tool Call]`.
+Before emitting a tool call, many models flush a few empty whitespace or newline tokens on `text.delta`. Without the `delta.trim().length === 0` guard, a premature `[Answer]` label appears before `[Tool Call]`.
 
 ```ts
 async function runStream(prompt: string) {
@@ -212,8 +214,9 @@ async function runStream(prompt: string) {
       console.log(`\n\n[Tool Call] Fetching data...`);
     } else if (event.type === toolEvents.end) {
       console.log(`[Tool Result]`, event.payload.result.content);
-    } else if (event.type === messageEvents.delta) {
-      const { partKind, delta } = event.payload;
+    } else if (event.type === textEvents.delta || event.type === reasoningEvents.delta) {
+      const { delta } = event.payload;
+      const partKind = event.type === reasoningEvents.delta ? "reasoning" : "text";
 
       if (partKind === "reasoning") {
         if (currentMode !== "reasoning") {
@@ -319,3 +322,9 @@ Tokens: in=694, out=325 (reasoning: 269), total=1019
 - Use `agent.generate()` when you only need the final result instead of a live event stream.
 - Use a `Session` for multi-turn conversations with persistent thread state.
 - Extend the agent with plugins that register their own tools and instruction sections.
+
+## Render from snapshots
+
+Listen for `state_changed` and render `event.payload.state`. `messages` contains committed messages plus the same live draft as `currentMessage`. Draft content parts have `partId`, `partIndex` and a UI-only `status`: `streaming`, `completed` or `interrupted`. Tool-call drafts may not yet have a name, ID or arguments. Do not pass a draft to a provider or save it as canonical history. Committed messages replace the draft and clear `currentMessage`.
+
+Text and reasoning may interleave; text starting does not imply reasoning ended. `boundary: "provider"` marks a native protocol boundary; `"observed"` marks an adapter/runtime observation. Open parts end as interrupted on cancellation/error. Auxiliary part events have `purpose: "auxiliary"` and do not enter the main chat snapshot.

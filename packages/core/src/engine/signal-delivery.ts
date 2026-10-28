@@ -51,11 +51,7 @@ function reserveTarget(
 ): Mailbox {
   let entries = mailboxes.get(agent);
   if (!entries) mailboxes.set(agent, (entries = new Map()));
-  let resolve!: () => void, reject!: (error: unknown) => void;
-  const ready = new Promise<void>((yes, no) => {
-    resolve = yes;
-    reject = no;
-  });
+  const { promise: ready, resolve, reject } = Promise.withResolvers<void>();
   void ready.catch(() => {});
   const box: Mailbox = {
     id,
@@ -332,7 +328,7 @@ export async function applySignals(
   for (const id of order) {
     const message = values.get(id);
     if (!message) continue;
-    const value = await context.prepareMessage(frame, message, ids.has(id));
+    const value = await context.prepareMessage(frame, message);
     if (ids.has(id)) {
       prepared.push(value);
       after = value.id;

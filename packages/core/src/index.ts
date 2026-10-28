@@ -17,9 +17,11 @@ export {
   stream,
   turn,
   context,
-  tools,
   model,
+  provider,
   message,
+  text,
+  reasoning,
   tool,
   checkpoint,
   ToolDecision,
@@ -30,6 +32,11 @@ export {
   type QueuedInputReceipt,
   type ExecutionReceipt,
   type ControlDecision,
+  type StreamDecision,
+  type ModelSelectionDecision,
+  type ModelRecoveryDecision,
+  type SuspendDecision,
+  type ResolvedDecision,
   type InputPreparation,
   type ToolPreparation,
   type StreamOutcome,
@@ -49,6 +56,7 @@ export type {
 } from "./trace/records.js";
 export * from "./state/schema.js";
 export * from "./state/storage-ports.js";
+export * from "./state/records.js";
 export * from "./state/memory-backend.js";
 export {
   buildThreadInfo,
@@ -74,6 +82,7 @@ export type { ForkOptions } from "./state/fork.js";
 export {
   definePluginState,
   type PluginStateDefinition,
+  type PluginStateContext,
 } from "./state/plugin-state.js";
 export {
   defineInterruption,
@@ -104,6 +113,12 @@ export { Thread } from "./thread.js";
 export { ProfileResolver } from "./models/resolver.js";
 export { snapshotModelOptions } from "./models/options.js";
 export * from "./session.js";
-export type { RuntimeState, StateTool } from "./runtime-state.js";
+export type {
+  RuntimeState,
+  StateTool,
+  RuntimePart,
+  RuntimeMessage,
+  RuntimeDraft,
+} from "./runtime-state.js";
 
 export * from "./state/sessions.js";

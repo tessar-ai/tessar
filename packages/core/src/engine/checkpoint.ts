@@ -1,6 +1,5 @@
 import {
   checkpoint as checkpointHooks,
-  thread as threadHooks,
   message as messageHooks,
   stream as streamHooks,
   turn as turnHooks,
@@ -116,17 +115,12 @@ async function commitNow(
     checkpointId: cp.id,
     revision: cp.revision,
   });
-  await execution.hook(frame, threadHooks.updated, {
-    checkpointId: cp.id,
-    revision: cp.revision,
-  });
 }
 
 export async function prepareMessage(
   execution: ExecutionContext,
   frame: ExecutionFrame,
   message: MessageData,
-  persisted = true,
 ): Promise<MessageData> {
   const value = await execution.hook(
     frame,
@@ -143,10 +137,6 @@ export async function prepareMessage(
       "Message transform changed identity/role/correlation",
     );
   const validated = MessageCodec.encode(MessageCodec.decode(value));
-  if (persisted)
-    await execution.hook(frame, messageHooks.beforeCommit, {
-      message: validated,
-    });
   return validated;
 }
 
@@ -217,7 +207,7 @@ export async function finish(
   frame.stream.error = error;
   frame.stream.endedAt = execution.clock.now();
   await execution.updateUsage(frame);
-  let outcome: StreamOutcome = {
+  const outcome: StreamOutcome = {
     startedAt: frame.stream.startedAt,
     endedAt: frame.stream.endedAt,
     status,
@@ -229,19 +219,6 @@ export async function finish(
     error,
     interrupt: null,
   };
-  try {
-    await execution.hook(frame, streamHooks.beforeEnd, immutable(outcome));
-  } catch (finalizationError) {
-    if (!error && status !== "cancelled") {
-      status = "failed";
-      error = errorInfo(finalizationError);
-      reason = "FinalizationFailed";
-      frame.stream.status = status;
-      frame.stream.error = error;
-      frame.stream.stopReason = reason;
-      outcome = { ...outcome, status, error, reason };
-    }
-  }
   const activeTurns = execution
     .rows<TurnRecord>(frame, "turns")
     .filter((turn) => turn.status === "running");

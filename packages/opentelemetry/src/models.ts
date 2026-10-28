@@ -1,7 +1,8 @@
 import type { Span } from "@opentelemetry/api";
 import {
   model,
-  message,
+  text,
+  reasoning,
   type ModelUsage,
   type PluginContext,
 } from "@tessar/core";
@@ -32,7 +33,7 @@ export function registerModelHooks(
       }
       update(parentTurn(state, event, turnId), "span", {
         input: request,
-        metadata: { inputSource: "model.request" },
+        metadata: { inputSource: "normalized-context" },
       });
     }
     const parent = parentToolExecutionId
@@ -69,15 +70,17 @@ export function registerModelHooks(
     );
     state.models.set(attemptId, span);
   });
-  tessar.hook(message.delta, (event) => {
-    const state = current(event),
-      span = state?.models.get(event.payload.attemptId);
-    if (!span || state!.firstOutputs.has(event.payload.attemptId)) return;
-    state!.firstOutputs.add(event.payload.attemptId);
-    update(span, "generation", {
-      completionStartTime: time(event) ?? new Date(),
+  for (const name of [text.delta, reasoning.delta] as const)
+    tessar.hook(name, (event) => {
+      if (!event.payload.delta) return;
+      const state = current(event),
+        span = state?.models.get(event.payload.attemptId);
+      if (!span || state!.firstOutputs.has(event.payload.attemptId)) return;
+      state!.firstOutputs.add(event.payload.attemptId);
+      update(span, "generation", {
+        completionStartTime: time(event) ?? new Date(),
+      });
     });
-  });
   const recordUsage = (span: Span, usage: ModelUsage) =>
     update(span, "generation", {
       usage,

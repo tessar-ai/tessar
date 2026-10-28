@@ -1,4 +1,5 @@
-import { fail } from "../errors.js";
+import { fail, requireId } from "../errors.js";
+import { prepareStoredRecord, type StoredRecord } from "./records.js";
 import { immutable, systemClock, type Clock } from "../json.js";
 import {
   canonicalJson,
@@ -24,7 +25,7 @@ import {
   checkpointSafety,
 } from "./queries.js";
 import { validateSession } from "./sessions.js";
-import { matchesScope } from "./scope.js";
+import { matchesScope, normalizeScope } from "./scope.js";
 import type {
   CommitBatch,
   CommitReceipt,
@@ -47,6 +48,7 @@ export function createMemoryBackend(
   const stagedFingerprints = new Map<string, string>();
   const sessions = new Map<string, SessionRecord>();
   const ownedStates = new Map<string, PluginStateSnapshot>();
+  const independentRecords = new Map<string, StoredRecord>();
   const ownerKey = (
     key: Pick<
       PluginStateSnapshot,
@@ -83,6 +85,36 @@ export function createMemoryBackend(
           .filter((h) => !h.deleted)
           .flatMap((h) => currentRecords(h.id));
   const backend: StorageBackend = {
+    records: {
+      append: async (options) => {
+        guard();
+        const value = prepareStoredRecord(options, clock.now());
+        const key = canonicalJson([value.namespace, value.id]);
+        if (independentRecords.has(key))
+          fail("RegistrationConflict", "Record ID already exists in namespace");
+        independentRecords.set(key, value);
+        return value;
+      },
+      get: async (namespace, id, query = {}) => {
+        guard();
+        requireId(namespace, "record namespace");
+        requireId(id, "record id");
+        const scope = normalizeScope(query.scope);
+        const value = independentRecords.get(canonicalJson([namespace, id]));
+        return value && matchesScope(value.scope, scope) ? value : null;
+      },
+      list: async (query) => {
+        guard();
+        requireId(query.namespace, "record namespace");
+        const scope = normalizeScope(query.scope);
+        return pageRows(
+          [...independentRecords.values()].filter((value) =>
+            value.namespace === query.namespace && matchesScope(value.scope, scope)),
+          query,
+          canonicalJson({ records: query.namespace, scope }),
+        );
+      },
+    },
     sessions: {
       get: async (id, query = {}) => {
         guard();
@@ -459,6 +491,7 @@ export function createMemoryBackend(
     close: async () => {
       closed = true;
       sessions.clear();
+      independentRecords.clear();
       fingerprints.clear();
       stagedFingerprints.clear();
       heads.clear();

@@ -137,7 +137,7 @@ it("parents post-Turn auxiliary work to the Agent without reopening an ended Tur
   const h = await AgentHarness.create({ modelScripts: [{ text: "answer" }, { text: "auxiliary" }], plugins: [createTracing(), {
     id: "after-turn", setup(tessar) {
       tessar.hook("turn.decision", async (_event, context) => {
-        for await (const _ of context.models.stream({ model, purpose: "auxiliary", request: { model, instructions: { sections: [] }, messages: [], tools: [] } })) {}
+        for await (const _ of context.models.stream({ model, instructions: { sections: [] }, messages: [], tools: [] })) {}
       });
     },
   }] });
@@ -219,15 +219,11 @@ it("exports stream/turn/model/tool hierarchy including auxiliary calls and exclu
     schema: z.object({}),
     execute: async (_input, context) => {
       for await (const _ of context.models.stream({
-        model,
-        purpose: "auxiliary",
-        request: {
           model,
           instructions: { sections: [] },
           messages: [],
           tools: [],
-        },
-      })) {
+        })) {
       }
       return "tool result";
     },
@@ -686,7 +682,7 @@ it("uses the effective request and committed messages after application transfor
       {
         id: "transforms",
         setup(tessar) {
-          tessar.hook("model.request", (event) => ({
+          tessar.hook("context.prepare", (event) => ({
             ...event.payload,
             options: { temperature: 0.25 },
           }));

@@ -70,10 +70,10 @@ result when execution completes or suspends; it can include multiple model reque
 and tool calls. Use `stream()` to consume events as they arrive:
 
 ```ts
-import { message, stream } from "@tessar/core";
+import { text, stream } from "@tessar/core";
 
 for await (const event of agent.stream("Explain agent tools briefly.")) {
-  if (event.type === message.delta && event.payload.partKind === "text") {
+  if (event.type === text.delta) {
     process.stdout.write(event.payload.delta);
   }
   if (event.type === stream.error) throw Error(event.payload.error.message);
@@ -145,6 +145,7 @@ Install the packages your application uses:
 | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [`@tessar/core`](packages/core/README.md)             | Agent execution, sessions, messages, tools, hooks, state and in-memory storage |
 | [`@tessar/openai`](packages/openai/README.md)         | OpenAI Responses and Chat Completions adapters, including compatible endpoints |
+| [`@tessar/typesafe`](packages/typesafe/README.md)     | Typed TypeSafe calls for classification, routing and application decisions, with optional persistence |
 | [`@tessar/plugins`](packages/plugins/README.md)       | Plugin discovery/loading, npm plugin management and the `/logger` plugin       |
 | [`@tessar/opentelemetry`](packages/opentelemetry/README.md)     | OTLP tracing with Langfuse and Laminar adapters                 |
 | [`@tessar/sqlite`](packages/sqlite/README.md)         | SQLite persistence using Node's built-in SQLite API                            |

@@ -1,0 +1,20 @@
+{
+  "name": "@tessar/typesafe",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "Typed TypeSafe inference with retries, cancellation and optional Tessar record persistence.",
+  "keywords": ["tessar", "typesafe", "ai", "llm", "typescript", "guardrails", "classification", "routing", "structured-output"],
+  "type": "module",
+  "engines": { "node": ">=24.22.1" },
+  "files": ["dist"],
+  "homepage": "https://github.com/tessar-ai/tessar/tree/release/packages/typesafe#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/tessar-ai/tessar.git", "directory": "packages/typesafe" },
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "dependencies": { "@tessar/core": "workspace:*" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

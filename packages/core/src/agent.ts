@@ -453,8 +453,8 @@ export class Agent<M extends ModelSelection = ModelSelection> {
       rows,
       commit: (frame, cause, change) => commit(execution, frame, cause, change),
       updateUsage: (frame) => updateUsage(execution, frame),
-      prepareMessage: (frame, message, persisted) =>
-        prepareMessage(execution, frame, message, persisted),
+      prepareMessage: (frame, message) =>
+        prepareMessage(execution, frame, message),
       appendMessage: (frame, message) =>
         appendMessage(execution, frame, message),
       services: (frame, toolExecutionId) =>

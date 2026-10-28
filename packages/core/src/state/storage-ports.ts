@@ -14,6 +14,7 @@ import type {
   StateQuery,
   PluginStateSnapshot,
 } from "./schema.js";
+import type { RecordStore } from "./records.js";
 export interface Lease {
   threadId: string;
   ownerToken: string;
@@ -92,6 +93,7 @@ export interface OwnershipPort {
   release(lease: Lease): Promise<void>;
 }
 export interface StorageBackend {
+  readonly records: RecordStore;
   readonly sessions: {
     get(id: string, query?: StateQuery): Promise<SessionRecord | null>;
     page(

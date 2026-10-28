@@ -534,7 +534,7 @@ it("rejects signals at the closed completion boundary instead of acknowledging l
       {
         id: "late-signal",
         setup(tessar) {
-          tessar.hook(streamEvents.beforeEnd, async (_event, context) => {
+          tessar.hook(streamEvents.end, async (_event, context) => {
             try {
               await agent.sendSignal({
                 streamId: String(context.streamId),

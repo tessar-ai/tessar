@@ -5,6 +5,7 @@ import type {
   ModelRef,
   ModelRequest,
   ModelResponse,
+  ProviderRequest,
   ToolDescription,
 } from "../models/contract.js";
 import type { ErrorInfo } from "../errors.js";
@@ -34,19 +35,33 @@ export interface ExecutionReceipt {
   streamId: string;
   threadId: string;
 }
-export type ControlDecision =
-  | {
-      decision: "allow" | "deny" | "continue" | "stop" | "retry" | "fail";
-      reason?: string;
-    }
+export type SuspendDecision = {
+  decision: "suspend";
+  definitionId: string;
+  payload: JsonValue;
+  pluginId: string;
+  definitionVersion: number;
+};
+export type StreamDecision =
+  | { decision: "allow" | "deny" | "stop"; reason?: string }
+  | SuspendDecision;
+export type ToolDecision = StreamDecision;
+export type TurnDecision =
+  | { decision: "allow" | "continue" | "deny" | "stop"; reason?: string }
+  | SuspendDecision;
+export type ModelSelectionDecision =
+  | { decision: "allow" }
   | { decision: "select"; model: ModelRef }
-  | {
-      decision: "suspend";
-      definitionId: string;
-      payload: JsonValue;
-      pluginId: string;
-      definitionVersion: number;
-    };
+  | SuspendDecision;
+export type ModelRecoveryDecision =
+  | { decision: "deny" | "retry"; reason?: string }
+  | SuspendDecision;
+export type ControlDecision =
+  | StreamDecision
+  | TurnDecision
+  | ModelSelectionDecision
+  | ModelRecoveryDecision;
+export type ResolvedDecision = Exclude<ControlDecision, SuspendDecision>;
 export interface InputPreparation {
   messages: readonly MessageData[];
   handled?: { output: readonly MessageData[] };
@@ -76,9 +91,6 @@ export const stateChanged = "state_changed";
 export const thread = {
   prepare: "thread.prepare",
   started: "thread.started",
-  beforeShutdown: "thread.before-shutdown",
-  shutdown: "thread.shutdown",
-  updated: "thread.updated",
   beforeFork: "thread.before-fork",
   forked: "thread.forked",
   beforeRename: "thread.before-rename",
@@ -89,17 +101,13 @@ export const thread = {
 export const session = {
   created: "session.created",
   modelChanged: "session.model-changed",
-  threadCreated: "session.thread-created",
   threadSwitched: "session.thread-switched",
-  threadRenamed: "session.thread-renamed",
-  threadForked: "session.thread-forked",
-  threadDeleted: "session.thread-deleted",
   inputQueued: "session.input-queued",
   inputDiscarded: "session.input-discarded",
-  beforeClose: "session.before-close",
   closed: "session.closed",
   model: {
     beforeChange: "session.model.before-change",
+    optionsChanged: "session.model.options-changed",
   },
   thread: {
     beforeSwitch: "session.thread.before-switch",
@@ -112,7 +120,6 @@ export const input = {
 export const stream = {
   before: "stream.before",
   started: "stream.started",
-  beforeEnd: "stream.before-end",
   end: "stream.end",
   error: "stream.error",
   suspended: "stream.suspended",
@@ -127,12 +134,8 @@ export const turn = {
 export const context = {
   prepare: "context.prepare",
 } as const;
-export const tools = {
-  select: "tools.select",
-} as const;
 export const model = {
   select: "model.select",
-  request: "model.request",
   start: "model.start",
   end: "model.end",
   response: "model.response",
@@ -140,13 +143,25 @@ export const model = {
   error: "model.error",
   recover: "model.recover",
 } as const;
+export const provider = {
+  request: "provider.request",
+} as const;
 export const message = {
   prepare: "message.prepare",
-  beforeCommit: "message.before-commit",
-  delta: "message.delta",
   committed: "message.committed",
 } as const;
+export const text = {
+  start: "text.start",
+  delta: "text.delta",
+  end: "text.end",
+} as const;
+export const reasoning = {
+  start: "reasoning.start",
+  delta: "reasoning.delta",
+  end: "reasoning.end",
+} as const;
 export const tool = {
+  call: { start: "tool.call.start", end: "tool.call.end" },
   prepare: "tool.prepare",
   before: "tool.before",
   start: "tool.start",
@@ -159,9 +174,18 @@ export const checkpoint = {
   committed: "checkpoint.committed",
 } as const;
 type Transform<P> = HookSpec<P, P, ExecutionHookContext>;
-type Decision<P> = HookSpec<P, ControlDecision, DecisionHookContext>;
+type Decision<P, D extends ControlDecision> = HookSpec<
+  P,
+  D,
+  DecisionHookContext<D>
+>;
+type PartHooks = {
+  [N in import("../models/contract.js").ModelPartChunk["type"]]: HookSpec<
+    import("../models/contract.js").PartEvent<N>
+  >;
+};
 declare module "./definition.js" {
-  interface EventMap {
+  interface EventMap extends PartHooks {
     state_changed: HookSpec<{ state: RuntimeState }>;
     "session.model.before-change": HookSpec<
       {
@@ -219,8 +243,12 @@ declare module "./definition.js" {
       void,
       SessionHookContext
     >;
-    "session.thread-created": HookSpec<
-      { threadId: string },
+    "session.model.options-changed": HookSpec<
+      {
+        model: ModelRef;
+        previousOptions?: JsonObject;
+        options?: JsonObject;
+      },
       void,
       SessionHookContext
     >;
@@ -229,24 +257,6 @@ declare module "./definition.js" {
         previousThreadId: string | null;
         threadId: string;
       },
-      void,
-      SessionHookContext
-    >;
-    "session.thread-renamed": HookSpec<
-      { threadId: string; title: string },
-      void,
-      SessionHookContext
-    >;
-    "session.thread-forked": HookSpec<
-      {
-        sourceThreadId: string;
-        threadId: string;
-      },
-      void,
-      SessionHookContext
-    >;
-    "session.thread-deleted": HookSpec<
-      { threadId: string },
       void,
       SessionHookContext
     >;
@@ -263,25 +273,23 @@ declare module "./definition.js" {
       void,
       SessionHookContext
     >;
-    "session.before-close": HookSpec<{}, void, SessionHookContext>;
     "session.closed": HookSpec<{}, void, SessionHookContext>;
     diagnostic: HookSpec<{ error: ErrorInfo }>;
     ready: HookSpec<{ agentId: string }>;
     shutdown: HookSpec<{}>;
     "thread.prepare": HookSpec<CreateThreadOptions, CreateThreadOptions>;
     "thread.started": HookSpec<ThreadInfo>;
-    "thread.before-shutdown": HookSpec<{ threadId: string }>;
-    "thread.shutdown": HookSpec<{ threadId: string }>;
-    "thread.updated": HookSpec<{ checkpointId: string; revision: number }>;
     "input.prepare": Transform<InputPreparation>;
     "input.received": HookSpec<{ messages: readonly MessageData[] }>;
-    "stream.before": Decision<{ input: readonly MessageData[] }>;
+    "stream.before": Decision<
+      { input: readonly MessageData[] },
+      StreamDecision
+    >;
     "stream.started": HookSpec<{
       modelRef: ModelRef;
       checkpointId: string;
       startedAt?: string;
     }>;
-    "stream.before-end": HookSpec<StreamOutcome>;
     "stream.end": HookSpec<StreamOutcome>;
     "stream.error": HookSpec<{
       /** Consumer errors detach delivery without failing the execution. Defaults to execution. */
@@ -301,22 +309,28 @@ declare module "./definition.js" {
       interruptId: string | null;
       reason: string;
     }>;
-    "turn.start": HookSpec<{
-      turnId: string;
-      index: number;
-      startedAt?: string;
-    }>;
+    "turn.start": HookSpec<
+      {
+        turnId: string;
+        index: number;
+        startedAt?: string;
+      },
+      void,
+      import("../plugins/context.js").StateHookContext
+    >;
     "turn.end": HookSpec<{
       turnId: string;
       usage: UsageSummary;
       startedAt?: string;
       endedAt?: string | null;
     }>;
-    "turn.decision": Decision<{ turnId: string; hadTools: boolean }>;
+    "turn.decision": Decision<
+      { turnId: string; hadTools: boolean },
+      TurnDecision
+    >;
     "context.prepare": Transform<ModelRequest>;
-    "tools.select": Transform<readonly ToolDescription[]>;
-    "model.select": Decision<{ model: ModelRef }>;
-    "model.request": Transform<ModelRequest>;
+    "model.select": Decision<{ model: ModelRef }, ModelSelectionDecision>;
+    "provider.request": Transform<ProviderRequest>;
     "model.start": HookSpec<{
       attemptId: string;
       startedAt?: string;
@@ -346,22 +360,17 @@ declare module "./definition.js" {
       startedAt?: string;
       endedAt?: string | null;
     }>;
-    "model.recover": Decision<{ attemptId: string; error: ErrorInfo }>;
+    "model.recover": Decision<
+      { attemptId: string; error: ErrorInfo },
+      ModelRecoveryDecision
+    >;
     "message.prepare": Transform<MessageData>;
-    "message.before-commit": HookSpec<{ message: MessageData }>;
-    "message.delta": HookSpec<{
-      messageId: string;
-      partId: string;
-      partKind: "text" | "reasoning";
-      delta: string;
-      attemptId: string;
-    }>;
     "message.committed": HookSpec<{
       message: MessageData;
       checkpointId: string;
     }>;
     "tool.prepare": Transform<ToolPreparation>;
-    "tool.before": Decision<ToolPreparation>;
+    "tool.before": Decision<ToolPreparation, ToolDecision>;
     "tool.start": HookSpec<{
       toolExecutionId: string;
       startedAt?: string | null;
@@ -402,9 +411,6 @@ export const hookKinds: Readonly<Record<string, EventKind>> = Object.freeze({
   diagnostic: "notification",
   "thread.prepare": "transformation",
   "thread.started": "notification",
-  "thread.before-shutdown": "barrier",
-  "thread.shutdown": "notification",
-  "thread.updated": "notification",
   "thread.before-fork": "decision",
   "thread.forked": "notification",
   "thread.before-rename": "decision",
@@ -413,14 +419,10 @@ export const hookKinds: Readonly<Record<string, EventKind>> = Object.freeze({
   "thread.deleted": "notification",
   "session.created": "notification",
   "session.model-changed": "notification",
-  "session.thread-created": "notification",
+  "session.model.options-changed": "notification",
   "session.thread-switched": "notification",
-  "session.thread-renamed": "notification",
-  "session.thread-forked": "notification",
-  "session.thread-deleted": "notification",
   "session.input-queued": "notification",
   "session.input-discarded": "notification",
-  "session.before-close": "barrier",
   "session.closed": "notification",
   "session.model.before-change": "decision",
   "session.thread.before-switch": "decision",
@@ -428,7 +430,6 @@ export const hookKinds: Readonly<Record<string, EventKind>> = Object.freeze({
   "input.received": "notification",
   "stream.before": "decision",
   "stream.started": "notification",
-  "stream.before-end": "barrier",
   "stream.end": "notification",
   "stream.error": "notification",
   "stream.suspended": "notification",
@@ -438,9 +439,8 @@ export const hookKinds: Readonly<Record<string, EventKind>> = Object.freeze({
   "turn.end": "notification",
   "turn.decision": "decision",
   "context.prepare": "transformation",
-  "tools.select": "transformation",
   "model.select": "decision",
-  "model.request": "transformation",
+  "provider.request": "transformation",
   "model.start": "notification",
   "model.end": "notification",
   "model.response": "transformation",
@@ -448,8 +448,14 @@ export const hookKinds: Readonly<Record<string, EventKind>> = Object.freeze({
   "model.error": "notification",
   "model.recover": "decision",
   "message.prepare": "transformation",
-  "message.before-commit": "barrier",
-  "message.delta": "notification",
+  "text.start": "notification",
+  "text.delta": "notification",
+  "text.end": "notification",
+  "reasoning.start": "notification",
+  "reasoning.delta": "notification",
+  "reasoning.end": "notification",
+  "tool.call.start": "notification",
+  "tool.call.end": "notification",
   "message.committed": "notification",
   "tool.prepare": "transformation",
   "tool.before": "decision",
@@ -461,12 +467,15 @@ export const hookKinds: Readonly<Record<string, EventKind>> = Object.freeze({
   "checkpoint.committed": "notification",
 });
 export const ToolDecision = {
-  allow: (): ControlDecision => ({ decision: "allow" }),
-  deny: (reason: string): ControlDecision => ({ decision: "deny", reason }),
+  allow: (): OperationDecision => ({ decision: "allow" }),
+  deny: (reason: string): OperationDecision => ({ decision: "deny", reason }),
 };
 export const TurnDecision = {
-  continue: (): ControlDecision => ({ decision: "continue" }),
-  stop: (reason: string): ControlDecision => ({ decision: "stop", reason }),
+  continue: (): { decision: "continue" } => ({ decision: "continue" }),
+  stop: (reason: string): { decision: "stop"; reason: string } => ({
+    decision: "stop",
+    reason,
+  }),
 };
 export const InputDecision = {
   continue: (messages: readonly MessageData[]): InputPreparation => ({

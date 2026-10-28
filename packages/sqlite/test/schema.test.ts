@@ -18,6 +18,7 @@ it("initializes the current schema as v1 with tessar_ tables and indexes", async
       "tessar_messages",
       "tessar_model_attempts",
       "tessar_owned_states",
+      "tessar_records",
       "tessar_sessions",
       "tessar_staging",
       "tessar_streams",

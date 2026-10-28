@@ -49,3 +49,12 @@ of the Tessar state contracts and npm package versions.
 Source responsibilities match the SQLite adapter: `schema.ts` initializes the
 layout, `ownership.ts` manages leases, `versions.ts` stores historical records,
 `queries.ts` implements paging, and `backend.ts` wires the storage contract.
+
+Use `backend.records.append/get/list` for independent JSON entries, or
+`tessar.storage.records` in a plugin after Controller initialization. One
+`tessar_records` table in the configured schema stores these entries separately
+from checkpoints. Initialization adds the table/indexes to existing stores.
+See [independent records](../../examples/guide/storage.md#store-independent-json-records)
+for parameters, scope filtering, duplicate identity behavior and pagination.
+Record data has the same native JSONB limits as other stored state; PostgreSQL
+rejects U+0000 and invalid Unicode surrogate strings, preserving its driver error.

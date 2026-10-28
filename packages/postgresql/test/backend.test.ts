@@ -98,6 +98,29 @@ describe.skipIf(!connectionString)(
       "PostgreSQL storage conformance",
       async () => (await fixture()).backend,
     );
+    it("adds independent records to existing schemas and retains them across connections", async () => {
+      const f = await fixture();
+      await f.admin.query(`DROP TABLE "${f.schema}".tessar_records`);
+      const reopened = await f.connect();
+      const record = await reopened.records.append({ namespace: "audit", data: { answer: "allow" } });
+      const other = await f.connect();
+      expect(await other.records.get("audit", record.id)).toEqual(record);
+      const results = await Promise.allSettled([
+        reopened.records.append({ namespace: "race", id: "one", data: 1 }),
+        other.records.append({ namespace: "race", id: "one", data: 2 }),
+      ]);
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      expect(results.find((result) => result.status === "rejected")).toMatchObject({ reason: { code: "RegistrationConflict" } });
+      for (const id of ["a", "Z"])
+        await other.records.append({ namespace: "ties", id, data: id });
+      await f.admin.query(
+        `UPDATE "${f.schema}".tessar_records SET created_at=$1,body=jsonb_set(body,'{createdAt}',to_jsonb($1::text)) WHERE namespace=$2`,
+        ["2026-10-27T00:00:00.000Z", "ties"],
+      );
+      const first = await other.records.list({ namespace: "ties", limit: 1 });
+      expect(first.items.map((row) => row.id)).toEqual(["Z"]);
+      expect((await other.records.list({ namespace: "ties", limit: 1, cursor: first.nextCursor! })).items.map((row) => row.id)).toEqual(["a"]);
+    });
 
     it("records schema version 1 and reopens existing data without resetting it", async () => {
       const f = await fixture(),

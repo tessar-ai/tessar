@@ -92,8 +92,10 @@ it("streams official SDK SSE, retains reasoning state and counts cumulative usag
   expect(bodies[0]).not.toHaveProperty("include");
   expect(bodies[0]).not.toHaveProperty("store");
   expect(
-    chunks.filter((c) => c.type === "message-delta").map((c) => c.partKind),
-  ).toEqual(["reasoning", "text"]);
+    chunks
+      .filter((c) => c.type === "text.delta" || c.type === "reasoning.delta")
+      .map((c) => c.type),
+  ).toEqual(["reasoning.delta", "text.delta"]);
   const response = chunks.find((c) => c.type === "response")!;
   expect(response.type === "response" && response.response.usage).toMatchObject(
     {

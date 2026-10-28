@@ -196,3 +196,13 @@ export class PluginStateAccess {
     return this.publish();
   }
 }
+
+/** Plugin-facing state operations; checkpoint serialization stays internal. */
+export type PluginStateContext = Pick<
+  PluginStateAccess,
+  "get" | "update" | "commit" | "owned"
+> & {
+  withOwner(
+    owner: Parameters<PluginStateAccess["withOwner"]>[0],
+  ): PluginStateContext;
+};

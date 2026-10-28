@@ -38,15 +38,11 @@ it("tracks auxiliary model attempts under their originating tool", async () => {
               schema: z.object({}),
               execute: async (_input, context) => {
                 for await (const _chunk of context.models.stream({
-                  model,
-                  purpose: "auxiliary",
-                  request: {
                     model,
                     instructions: normalizeInstruction("aux"),
                     messages: [],
                     tools: [],
-                  },
-                })) {
+                  })) {
                 }
                 return "aux completed";
               },

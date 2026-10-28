@@ -1,6 +1,5 @@
 import {
   input,
-  model,
   stream,
   turn,
   message,
@@ -36,18 +35,19 @@ export function registerLifecycleHooks(
       turnId: saved.turnId,
     });
   });
-  tessar.hook(model.select, (event, context) => {
-    if (!event.sessionId || typeof context.turnId !== "string") return;
-    const link = links.get(context.streamId);
+  tessar.hook(turn.start, async (event, context) => {
+    if (!event.sessionId || !event.payload.turnId) return;
+    const link = links.get(event.streamId!);
     if (!link) return;
     const saved = context.state.get(savedTrace),
-      fresh = saved.turnId !== context.turnId;
+      fresh = saved.turnId !== event.payload.turnId;
     const value = {
-      turnId: context.turnId,
+      turnId: event.payload.turnId,
       turnCount: saved.turnCount + (fresh ? 1 : 0),
     };
     context.state.update(savedTrace, value);
     Object.assign(link, value);
+    await context.state.commit();
   });
   tessar.defer(async () => {
     for (const streamId of [...executions.keys()])
@@ -138,7 +138,7 @@ export function registerLifecycleHooks(
     if (!state) return;
     state.currentTurn = event.payload.turnId;
     state.turnStartedAt = event.payload.startedAt ?? event.timestamp;
-    // Thread numbering is checkpointed by model.select before model.start.
+    // Thread numbering is updated at turn.start before a model is selected.
     if (!state.link)
       parentTurn(state, event, event.payload.turnId, event.payload.index);
   });
