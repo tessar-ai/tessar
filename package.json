@@ -18,13 +18,15 @@
     "test:storage": "node --env-file-if-exists=.env.storage node_modules/vitest/vitest.mjs run packages/postgresql/test packages/mongodb/test --configLoader native --pool threads"
   },
   "devDependencies": {
-    "@tessar/typesafe": "workspace:*",
     "@tessar/core": "workspace:*",
-    "@tessar/opentelemetry": "workspace:*",
     "@tessar/mongodb": "workspace:*",
+    "@tessar/openai": "workspace:*",
+    "@tessar/opentelemetry": "workspace:*",
     "@tessar/plugins": "workspace:*",
     "@tessar/postgresql": "workspace:*",
+    "@tessar/rag": "workspace:*",
     "@tessar/sqlite": "workspace:*",
+    "@tessar/typesafe": "workspace:*",
     "@types/node": "^24.0.0",
     "semver": "^7.8.5",
     "typescript": "7.0.2",

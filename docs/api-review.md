@@ -45,7 +45,7 @@ Danh mục gồm API ứng dụng, API viết plugin/provider/storage và các s
 | `@tessar/core/tool` | Tool, createTool, ToolSuspension và các type tool; cùng implementation với root |
 | `@tessar/core/testing` | ScriptedProvider, AgentHarness, ModelScript |
 | `@tessar/core/testing/storage-conformance` | initialBatch, storageConformance |
-| `@tessar/openai` | OpenAIProvider, OpenAIPlugin và các type cấu hình |
+| `@tessar/openai` | OpenAIProvider, OpenAIEmbedding, OpenAIPlugin và các type cấu hình |
 | `@tessar/plugins` | PluginManager, PluginManagerOptions |
 | `@tessar/plugins/logger` | LoggerPlugin, FileTransport, ConsoleTransport, logGroup và các type logger; default export là một instance logger |
 | `@tessar/opentelemetry` | OpenTelemetryPlugin, OTLPAdapter, LangfuseAdapter, LaminarAdapter và các type cấu hình |
@@ -3522,3 +3522,142 @@ Each invocation has an Agent-rooted trace. Langfuse Sessions group traces by Tes
 Thread ID; the Tessar Session ID stays in observation metadata. Turn counters
 persist per Thread. Resume/recovery gets a fresh trace segment and observations,
 retaining logical Stream/Turn IDs rather than reusing ended parents.
+
+## Standalone content reader (`@tessar/rag`)
+
+```ts
+type ReadSource =
+  | { path: string }
+  | { url: string }
+  | { text: string; mimeType?: string }
+  | { data: Uint8Array; mimeType: string };
+interface ReadInput {
+  id?: string;
+  source: ReadSource;
+}
+interface ReadOptions {
+  metadata?: JsonObject;
+}
+interface Content {
+  text: string;
+  format: "text" | "markdown";
+  source?: { uri?: string; page?: number };
+  metadata: JsonObject;
+}
+interface ReadTask {
+  readonly id: string;
+  result(): Promise<Content[]>;
+  cancel(reason?: string): void;
+}
+class DocumentReader {
+  load(input: ReadInput, options?: ReadOptions): ReadTask;
+}
+class TessarRagError extends TessarError {
+  readonly name = "TessarRagError";
+  // Inherits constructor(code, message, options?) and static isInstance().
+}
+```
+
+There is one object-input signature and no public signal, init/dispose or
+Agent/Controller/Session requirement. An omitted ID generates a bare UUID;
+active duplicate IDs on the same Reader reject admission. Arguments are checked
+synchronously; I/O and extraction failures reject the task's stable result
+Promise. Caller metadata and bytes are snapshotted. Cancellation is cooperative,
+rejects promptly with `Cancelled`, and reserves the active ID until underlying
+cleanup completes. Late cancellation does not alter a completed result.
+
+Source variants are exclusive, including in the exported TypeScript types.
+Readers return text/Markdown and actual source provenance, not embedding chunks.
+The [guide](../examples/guide/rag.md) and [package README](../packages/rag/README.md)
+document format support, MIME selection and extraction limits. There is no OCR,
+model invocation, auto-persistence or retrieval workflow in this increment.
+
+## Standalone document splitter (`@tessar/rag`)
+
+```ts
+type SplitStrategy = "character" | "recursive" | "sentence" | "markdown";
+interface Tokenizer {
+  count(text: string): number;
+}
+type SplitOptions = {
+  strategy: SplitStrategy;
+  maxSize: number;
+  overlap?: number;
+} & (
+  | { unit?: "characters"; tokenizer?: Tokenizer }
+  | { unit: "tokens"; tokenizer: Tokenizer }
+);
+interface Chunk extends Content {
+  position: { contentIndex: number; start: number; end: number };
+}
+class DocumentSplitter {
+  constructor(options: SplitOptions);
+  chunk(input: Content | readonly Content[]): Chunk[];
+}
+```
+
+`strategy`/`maxSize` are required; `overlap` defaults to 0 and `unit` to characters.
+maxSize is a positive safe integer; overlap is a nonnegative safe integer below
+maxSize. Character budgets count Unicode code points. Token budgets require an
+explicit synchronous tokenizer returning deterministic nonnegative safe integers.
+The assembled text is measured, without assuming additive piece counts.
+
+chunk() is synchronous and independent of Agent/Controller/Session. Each Content
+is split separately in input order. Empty inputs/text return no chunks. Position
+uses a zero-based Content index and UTF-16 slice offsets, with end excluded.
+Chunks preserve source text/format and independently copy source and metadata.
+source.page identifies the actual one-based source page, not total pages; it is
+not duplicated in position. No chunk ID or task lifecycle is created.
+
+Recursive splitting prefers paragraphs/lines/words, sentence splitting prefers
+whole sentences, and Markdown splitting parses block structure. Oversized units
+are subdivided; table/code fragments may not be independently valid Markdown.
+Overlap respects boundaries and can be smaller to make room for new content.
+Invalid configuration/content/counts and an indivisible unit exceeding the
+token budget throw TessarRagError; native tokenizer exceptions are preserved.
+
+## Embedding model contract (`@tessar/rag`)
+
+Source: `packages/rag/src/embedding/types.ts`. Exported as a TypeScript type only.
+
+```ts
+interface EmbeddingModel {
+  embedDocuments(input: readonly (string | { text: string })[]): Promise<number[][]>;
+  embedQuery(input: string): Promise<number[]>;
+}
+```
+
+Document inputs accept strings or objects with text (including Content/Chunk)
+and extract only text. Each input is one embedding unit; no automatic loading,
+chunking or concatenation. Document vectors retain input order; a query returns
+one vector. Consumers can
+accept any structurally compatible provider/application object, with no runtime
+base class, registration or forwarding wrapper. Model-specific task fields,
+instructions and optional overrides are adapter responsibilities. The contract
+itself performs no requests, input rewriting, batching or cancellation and has
+no native provider options argument. OpenAIEmbedding from @tessar/openai is a
+concrete structurally compatible implementation.
+
+## OpenAI embedding model (`@tessar/openai`)
+
+```ts
+type OpenAIEmbeddingOptions = ClientOptions & Omit<EmbeddingCreateParams, "input">;
+class OpenAIEmbedding {
+  constructor(configuration: OpenAIEmbeddingOptions);
+  embedDocuments(input: readonly (string | { text: string })[]): Promise<number[][]>;
+  embedQuery(input: string): Promise<number[]>;
+}
+```
+
+ClientOptions and EmbeddingCreateParams are the installed OpenAI SDK types.
+model is required; dimensions/user/encoding_format are optional native request
+fields. apiKey/baseURL/defaultHeaders/fetch/timeout/maxRetries and other client
+settings stay outside the request body. Input comes from the two methods only.
+
+Results are numeric vectors in input order. Explicit base64 is decoded; omitted
+fields retain SDK behavior, including its automatic transport encoding.
+Empty document arrays return []; other calls make one SDK embeddings request,
+with no implicit batching, task fields, prefixing or model inference.
+SDK exceptions propagate unchanged; malformed provider vectors/indices use
+TessarError with source provider. No public configuration properties, Agent,
+Controller, Session or RAG runtime dependency are required.

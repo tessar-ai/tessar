@@ -1,4 +1,5 @@
 export type { OpenAIOptions } from "./adapter.js";
+export { OpenAIEmbedding, type OpenAIEmbeddingOptions } from "./embedding.js";
 export { OpenAIPlugin, type OpenAIPluginOptions } from "./plugin.js";
 export {
   OpenAIProvider,
