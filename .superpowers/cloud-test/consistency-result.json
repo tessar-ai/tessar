@@ -1,0 +1,203 @@
+{
+  "threadId": "consistency-17a01646-1308-4207-a16f-177e786e76b7",
+  "sessionId": "6dece7b4-759e-436d-a3a9-afe9a06cf369",
+  "realtimeVisibleBeforeCompletion": true,
+  "traceIds": [
+    "a1c7887c08ca0f19b7141cdef6b0966a",
+    "a2ff61951a732e3524e9a9c25ee3e589"
+  ],
+  "groups": [
+    {
+      "traceId": "a1c7887c08ca0f19b7141cdef6b0966a",
+      "observations": [
+        {
+          "name": "test",
+          "type": "GENERATION",
+          "parent": "0ff402b783821a73",
+          "start": "2026-10-25T07:36:29.217Z",
+          "end": "2026-10-25T07:36:29.222Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        },
+        {
+          "name": "turn 3",
+          "type": "SPAN",
+          "parent": "7412a7807bf58d66",
+          "start": "2026-10-25T07:36:29.212Z",
+          "end": "2026-10-25T07:36:29.233Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        },
+        {
+          "name": "get_weather",
+          "type": "TOOL",
+          "parent": "45a8c120137a91a3",
+          "start": "2026-10-25T07:36:22.181Z",
+          "end": "2026-10-25T07:36:29.183Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        },
+        {
+          "name": "test",
+          "type": "GENERATION",
+          "parent": "45a8c120137a91a3",
+          "start": "2026-10-25T07:36:22.172Z",
+          "end": "2026-10-25T07:36:22.174Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        },
+        {
+          "name": "turn 2",
+          "type": "SPAN",
+          "parent": "7412a7807bf58d66",
+          "start": "2026-10-25T07:36:22.170Z",
+          "end": "2026-10-25T07:36:29.198Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        },
+        {
+          "name": "get_current_time",
+          "type": "TOOL",
+          "parent": "442fa69703449079",
+          "start": "2026-10-25T07:36:22.152Z",
+          "end": "2026-10-25T07:36:22.156Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        },
+        {
+          "name": "test",
+          "type": "GENERATION",
+          "parent": "442fa69703449079",
+          "start": "2026-10-25T07:36:22.116Z",
+          "end": "2026-10-25T07:36:22.119Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        },
+        {
+          "name": "turn 1",
+          "type": "SPAN",
+          "parent": "7412a7807bf58d66",
+          "start": "2026-10-25T07:36:22.113Z",
+          "end": "2026-10-25T07:36:22.165Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        },
+        {
+          "name": "test-agent",
+          "type": "AGENT",
+          "parent": null,
+          "start": "2026-10-25T07:36:22.106Z",
+          "end": "2026-10-25T07:36:29.239Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        }
+      ]
+    },
+    {
+      "traceId": "a2ff61951a732e3524e9a9c25ee3e589",
+      "observations": [
+        {
+          "name": "test",
+          "type": "GENERATION",
+          "parent": "8537ec8e1eb3aa5d",
+          "start": "2026-10-25T07:36:29.255Z",
+          "end": "2026-10-25T07:36:29.260Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        },
+        {
+          "name": "turn 4",
+          "type": "SPAN",
+          "parent": "77023bfbb556c5ba",
+          "start": "2026-10-25T07:36:29.251Z",
+          "end": "2026-10-25T07:36:29.265Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        },
+        {
+          "name": "test-agent",
+          "type": "AGENT",
+          "parent": null,
+          "start": "2026-10-25T07:36:29.245Z",
+          "end": "2026-10-25T07:36:29.271Z",
+          "sessionId": "consistency-17a01646-1308-4207-a16f-177e786e76b7"
+        }
+      ]
+    }
+  ],
+  "receipts": [
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "test"
+      ]
+    },
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "test"
+      ]
+    },
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "get_current_time"
+      ]
+    },
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "turn 1"
+      ]
+    },
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "test"
+      ]
+    },
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "turn 3"
+      ]
+    },
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "turn 2"
+      ]
+    },
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "get_weather"
+      ]
+    },
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "test"
+      ]
+    },
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "test-agent"
+      ]
+    },
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "test-agent"
+      ]
+    },
+    {
+      "code": 0,
+      "count": 1,
+      "names": [
+        "turn 4"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "threadId": "mapping-check-219f8599-d2a4-477f-b2ca-912073ab22ab",
+  "traceId": "1923084fafe7782e5ac9c0eec5824435",
+  "started": "2026-10-23T10:22:38.745Z",
+  "receipts": [
+    {
+      "platform": "Arize",
+      "code": 0,
+      "count": 9
+    }
+  ]
+}

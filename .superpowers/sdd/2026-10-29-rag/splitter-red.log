@@ -1,0 +1,279 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/rag/test/splitter.test.ts (44 tests | 44 failed) 32ms
+   × exports a standalone synchronous DocumentSplitter 12ms
+   × counts code points while returning exact UTF-16 positions and overlap 1ms
+   × retains page provenance and independent metadata copies for each input 1ms
+   × preserves blank content and returns no chunks for empty input 0ms
+   × rejects invalid splitter configuration: {} 2ms
+   × rejects invalid splitter configuration: {"strategy":"missing","maxSize":2} 0ms
+   × rejects invalid splitter configuration: {"strategy":"recursive"} 1ms
+   × rejects invalid splitter configuration: {"maxSize":0} 1ms
+   × rejects invalid splitter configuration: {"maxSize":-1} 1ms
+   × rejects invalid splitter configuration: {"maxSize":1.5} 1ms
+   × rejects invalid splitter configuration: {"maxSize":null} 0ms
+   × rejects invalid splitter configuration: {"maxSize":9007199254740992} 0ms
+   × rejects invalid splitter configuration: {"overlap":-1} 0ms
+   × rejects invalid splitter configuration: {"overlap":2} 1ms
+   × rejects invalid splitter configuration: {"overlap":0.5} 1ms
+   × rejects invalid splitter configuration: {"unit":"words"} 1ms
+   × rejects invalid splitter configuration: {"unit":"tokens"} 0ms
+   × rejects invalid splitter configuration: {"unit":"tokens","tokenizer":{}} 0ms
+   × rejects invalid splitter configuration: {"unknown":true} 0ms
+   × rejects invalid Content data: null 0ms
+   × rejects invalid Content data: "text" 0ms
+   × rejects invalid Content data: {} 0ms
+   × rejects invalid Content data: {"text":1,"format":"text","metadata":{}} 0ms
+   × rejects invalid Content data: {"text":"x","format":"html","metadata":{}} 0ms
+   × rejects invalid Content data: {"text":"x","format":"text","metadata":null} 0ms
+   × rejects invalid Content data: {"text":"x","format":"text","metadata":{}} 0ms
+   × rejects invalid Content data: {"text":"x","format":"text","source":{"page":0},"metadata":{}} 0ms
+   × snapshots configuration and retains a tokenizer's method receiver 0ms
+   × measures complete candidates instead of assuming additive token counts 1ms
+   × rejects invalid tokenizer counts: -1 0ms
+   × rejects invalid tokenizer counts: NaN 0ms
+   × rejects invalid tokenizer counts: Infinity 0ms
+   × rejects invalid tokenizer counts: 1.5 0ms
+   × rejects invalid tokenizer counts: 9007199254740992 0ms
+   × rejects invalid tokenizer counts: 1 0ms
+   × preserves tokenizer errors and reports an indivisible oversized code point 0ms
+   × prefers paragraphs, then lines and words before falling back to characters 0ms
+   × packs whole sentences and preserves a decimal number 0ms
+   × keeps overlap at sentence boundaries and always makes forward progress 0ms
+   × uses Markdown blocks, preserving fences with fake headings, tables and lists 0ms
+   × character preserves source slices and budgets with CRLF, Unicode and high overlap 0ms
+   × recursive preserves source slices and budgets with CRLF, Unicode and high overlap 0ms
+   × sentence preserves source slices and budgets with CRLF, Unicode and high overlap 0ms
+   × markdown preserves source slices and budgets with CRLF, Unicode and high overlap 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 44 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > exports a standalone synchronous DocumentSplitter
+AssertionError: expected 'undefined' to be 'function' // Object.is equality
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ packages/rag/test/splitter.test.ts:10:39
+      8|
+      9| it("exports a standalone synchronous DocumentSplitter", () => {
+     10|   expect(typeof rag.DocumentSplitter).toBe("function");
+       |                                       ^
+     11|   const splitter = new rag.DocumentSplitter({ strategy: "character", m…
+     12|   const chunks = splitter.chunk(content("abcdef"));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > counts code points while returning exact UTF-16 positions and overlap
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:23:18
+     21| it("counts code points while returning exact UTF-16 positions and over…
+     22|   const original = content("A😀BC😀D");
+     23|   const chunks = new rag.DocumentSplitter({
+       |                  ^
+     24|     strategy: "character", maxSize: 3, overlap: 1,
+     25|   }).chunk(original);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > retains page provenance and independent metadata copies for each input
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:42:18
+     40|   const metadata = { tenant: "a", nested: { revision: 1 } };
+     41|   const original: Content = { ...content("abcdef"), source, metadata };
+     42|   const chunks = new rag.DocumentSplitter({ strategy: "character", max…
+       |                  ^
+     43|     .chunk([content(""), original, { ...content("xyz"), source: { page…
+     44|   expect(chunks.map(chunk => chunk.position.contentIndex)).toEqual([1,…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > preserves blank content and returns no chunks for empty input
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:59:20
+     57|
+     58| it("preserves blank content and returns no chunks for empty input", ()…
+     59|   const splitter = new rag.DocumentSplitter({ strategy: "recursive", m…
+       |                    ^
+     60|   expect(splitter.chunk([])).toEqual([]);
+     61|   expect(splitter.chunk(content(""))).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"strategy":"missing","maxSize":2}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"strategy":"recursive"}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"maxSize":0}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"maxSize":-1}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"maxSize":1.5}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"maxSize":null}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"maxSize":9007199254740992}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"overlap":-1}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"overlap":2}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"overlap":0.5}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"unit":"words"}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"unit":"tokens"}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"unit":"tokens","tokenizer":{}}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"unknown":true}
+AssertionError: expected error to be instance of TessarRagError
+
+- Expected:
+[Function TessarRagError]
+
++ Received:
+TypeError {
+  "message": "__vite_ssr_import_1__.DocumentSplitter is not a constructor",
+}
+
+ ❯ packages/rag/test/splitter.test.ts:76:60
+     74|     ? overrides
+     75|     : { strategy: "recursive", maxSize: 2, ...overrides };
+     76|   expect(() => new rag.DocumentSplitter(options as never)).toThrow(rag…
+       |                                                            ^
+     77| });
+     78|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid Content data: null
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid Content data: "text"
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid Content data: {}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid Content data: {"text":1,"format":"text","metadata":{}}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid Content data: {"text":"x","format":"html","metadata":{}}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid Content data: {"text":"x","format":"text","metadata":null}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid Content data: {"text":"x","format":"text","metadata":{}}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid Content data: {"text":"x","format":"text","source":{"page":0},"metadata":{}}
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:86:20
+     84|   { text: "x", format: "text", source: { page: 0 }, metadata: {} },
+     85| ])("rejects invalid Content data: %j", input => {
+     86|   const splitter = new rag.DocumentSplitter({ strategy: "character", m…
+       |                    ^
+     87|   expect(() => splitter.chunk(input as never)).toThrow(rag.TessarRagEr…
+     88| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > snapshots configuration and retains a tokenizer's method receiver
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:96:20
+     94|   }
+     95|   const options = { strategy: "character" as const, maxSize: 4, unit: …
+     96|   const splitter = new rag.DocumentSplitter(options);
+       |                    ^
+     97|   options.maxSize = 100;
+     98|   expect(splitter.chunk(content("abcde")).map(chunk => chunk.text)).to…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > measures complete candidates instead of assuming additive token counts
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:103:18
+    101| it("measures complete candidates instead of assuming additive token co…
+    102|   const tokenizer = { count: (text: string) => text.length + (text.mat…
+    103|   const chunks = new rag.DocumentSplitter({
+       |                  ^
+    104|     strategy: "character", maxSize: 4, overlap: 1, unit: "tokens", tok…
+    105|   }).chunk(content("ab cd ef"));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid tokenizer counts: -1
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid tokenizer counts: NaN
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid tokenizer counts: Infinity
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid tokenizer counts: 1.5
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid tokenizer counts: 9007199254740992
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid tokenizer counts: 1
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:119:22
+    117| it.each([-1, NaN, Infinity, 1.5, Number.MAX_SAFE_INTEGER + 1, "1"])(
+    118|   "rejects invalid tokenizer counts: %s", count => {
+    119|     const splitter = new rag.DocumentSplitter({
+       |                      ^
+    120|       strategy: "character", maxSize: 3, unit: "tokens",
+    121|       tokenizer: { count: () => count } as never,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > preserves tokenizer errors and reports an indivisible oversized code point
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:129:20
+    127| it("preserves tokenizer errors and reports an indivisible oversized co…
+    128|   const error = new TypeError("custom tokenizer failure");
+    129|   const splitter = new rag.DocumentSplitter({
+       |                    ^
+    130|     strategy: "recursive", maxSize: 1, unit: "tokens",
+    131|     tokenizer: { count: () => { throw error; } },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > prefers paragraphs, then lines and words before falling back to characters
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:143:20
+    141|
+    142| it("prefers paragraphs, then lines and words before falling back to ch…
+    143|   const splitter = new rag.DocumentSplitter({ strategy: "recursive", m…
+       |                    ^
+    144|   const text = "Alpha.\n\nBeta.\n\n0123456789abcdefgh ij kl\nNext";
+    145|   const chunks = splitter.chunk(content(text));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > packs whole sentences and preserves a decimal number
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:154:18
+    152| it("packs whole sentences and preserves a decimal number", () => {
+    153|   const text = "Value is 3.14. Next sentence. Last sentence.";
+    154|   const chunks = new rag.DocumentSplitter({ strategy: "sentence", maxS…
+       |                  ^
+    155|     .chunk(content(text));
+    156|   expect(chunks.map(chunk => chunk.text)).toEqual([
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > keeps overlap at sentence boundaries and always makes forward progress
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:166:18
+    164|
+    165| it("keeps overlap at sentence boundaries and always makes forward prog…
+    166|   const chunks = new rag.DocumentSplitter({ strategy: "sentence", maxS…
+       |                  ^
+    167|     .chunk(content("One. Two. Three. Four."));
+    168|   expect(chunks.map(chunk => chunk.text)).toEqual(["One. Two. ", "Two.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > uses Markdown blocks, preserving fences with fake headings, tables and lists
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:176:18
+    174|   const list = "- first\n- second\n\n";
+    175|   const text = "# Guide\n\nIntro.\n\n" + fence + table + list + "## Ne…
+    176|   const chunks = new rag.DocumentSplitter({ strategy: "markdown", maxS…
+       |                  ^
+    177|     .chunk(content(text, "markdown"));
+    178|   expect(chunks.some(chunk => chunk.text.includes(fence))).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/44]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > character preserves source slices and budgets with CRLF, Unicode and high overlap
+ FAIL  packages/rag/test/splitter.test.ts > recursive preserves source slices and budgets with CRLF, Unicode and high overlap
+ FAIL  packages/rag/test/splitter.test.ts > sentence preserves source slices and budgets with CRLF, Unicode and high overlap
+ FAIL  packages/rag/test/splitter.test.ts > markdown preserves source slices and budgets with CRLF, Unicode and high overlap
+TypeError: DocumentSplitter is not a constructor
+ ❯ packages/rag/test/splitter.test.ts:189:22
+    187|     const text = "# Title\r\n\r\nXin chào 😀. Tiếp tục.\r\n\r\n```ts\r…
+    188|     for (const overlap of [0, 3, 10]) {
+    189|       const chunks = new rag.DocumentSplitter({ strategy, maxSize: 11,…
+       |                      ^
+    190|       let end = 0;
+    191|       for (const chunk of chunks) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/44]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  44 failed (44)
+   Start at  15:28:46
+   Duration  8.73s (import 71%, transform 28%, worker 1%)
+

@@ -1,0 +1,13 @@
+import { readFile, writeFile } from "node:fs/promises";
+import { parseEnv } from "node:util";
+const saved = JSON.parse(await readFile(new URL("arize-check-spans.json", import.meta.url), "utf8"));
+const env = parseEnv(await readFile("D:/tessar-implement/.env", "utf8"));
+const headers = { Authorization: "Bearer " + env.ARIZE_API_KEY, "Content-Type": "application/json" };
+const projects = await fetch("https://api.arize.com/v2/projects?space_id=" + encodeURIComponent(env.ARIZE_SPACE_ID), { headers, signal: AbortSignal.timeout(15000) }).then(r => r.json());
+const project = projects.projects.find(p => p.name === env.ARIZE_PROJECT_NAME);
+const response = await fetch("https://api.arize.com/v2/spans?limit=100", { method: "POST", headers, body: JSON.stringify({ project_id: project.id, start_time: new Date(Date.now() - 3600000).toISOString(), end_time: new Date().toISOString() }), signal: AbortSignal.timeout(15000) });
+if (!response.ok) throw Error("Arize spans HTTP " + response.status);
+const payload = await response.json();
+const rows = (payload.spans ?? []).filter(span => [saved.threadId, saved.otherId].includes(span.attributes["session.id"]));
+await writeFile(new URL("arize-check-spans.json", import.meta.url), JSON.stringify({ ...saved, rows }, null, 2));
+console.log(JSON.stringify({ received: rows.length, sample: rows.filter(span => span.kind === "LLM").slice(-2).map(span => ({name:span.name,context:span.context,sessionId:span.attributes["session.id"],messages:span.attributes["llm.output_messages"],tools:span.attributes["llm.tools"]})), allSessions: [...new Set((payload.spans ?? []).map(span=>span.attributes["session.id"]))] }));

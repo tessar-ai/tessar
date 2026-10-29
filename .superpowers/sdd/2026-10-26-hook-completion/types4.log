@@ -1,0 +1,11 @@
+packages/core/test/engine/delivery.test.ts(225,7): error TS2561: Object literal may only specify known properties, but 'partKind' does not exist in type 'PartEvent<"text.delta">'. Did you mean to write 'partId'?
+packages/core/test/engine/model-observability.test.ts(73,98): error TS2339: Property 'text' does not exist on type 'ContentPart | RuntimePart'.
+  Property 'text' does not exist on type '{ readonly type: "tool-call"; readonly toolCallId: string; readonly name: string; readonly arguments: JsonObject; } & { readonly metadata?: JsonObject | undefined; }'.
+packages/core/test/public-types.test.ts(60,56): error TS2551: Property 'partKind' does not exist on type 'PartEvent<"text.delta">'. Did you mean 'partId'?
+packages/core/test/runtime-state.test.ts(2,10): error TS2440: Import declaration conflicts with local declaration of 'text'.
+packages/core/test/runtime-state.test.ts(21,27): error TS2339: Property 'text' does not exist on type 'ContentPart | RuntimePart'.
+  Property 'text' does not exist on type '{ readonly type: "tool-call"; readonly toolCallId: string; readonly name: string; readonly arguments: JsonObject; } & { readonly metadata?: JsonObject | undefined; }'.
+packages/core/test/runtime-state.test.ts(306,13): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+packages/openai/test/adapter.test.ts(95,26): error TS2367: This comparison appears to be unintentional because the types '"reasoning.delta" | "reasoning.end" | "reasoning.start" | "response" | "text.delta" | "text.end" | "text.start" | "tool.call.end" | "tool.call.start" | "usage"' and '"message-delta"' have no overlap.
+packages/openai/test/adapter.test.ts(95,67): error TS2339: Property 'partKind' does not exist on type 'never'.

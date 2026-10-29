@@ -1,0 +1,10 @@
+$ vitest run --configLoader native --pool threads tests/integration "--maxWorkers" "4"
+
+ RUN  v5.0.4 D:/tessar
+
+
+ Test Files  9 passed (9)
+      Tests  43 passed (43)
+   Start at  22:12:16
+   Duration  30.05s (tests 91%, import 8%, transform 1%)
+

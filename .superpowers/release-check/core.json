@@ -1,0 +1,63 @@
+{
+  "name": "@tessar/core",
+  "version": "0.1.4",
+  "license": "Apache-2.0",
+  "description": "Minimal agent execution, sessions, hooks, state and checkpoints.",
+  "keywords": [
+    "tessar",
+    "ai",
+    "ai-agent",
+    "agent-framework",
+    "agent-sdk",
+    "llm",
+    "typescript",
+    "cli",
+    "tool-calling",
+    "plugins"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=24.14.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tessar-ai/tessar.git",
+    "directory": "packages/core"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "exports": {
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js"
+    },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./tool": {
+      "types": "./dist/tools/index.d.ts",
+      "import": "./dist/tools/index.js"
+    },
+    "./testing/storage-conformance": {
+      "types": "./dist/testing/storage-conformance.d.ts",
+      "import": "./dist/testing/storage-conformance.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src/models/catalog.LICENSE"
+  ],
+  "devDependencies": {
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "zod": "^4.6.7"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

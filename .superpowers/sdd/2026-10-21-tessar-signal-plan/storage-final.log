@@ -1,0 +1,10 @@
+$ node --env-file-if-exists=.env.storage node_modules/vitest/vitest.mjs run packages/postgresql/test packages/mongodb/test --configLoader native --pool threads "--maxWorkers" "4"
+
+ RUN  v5.0.4 D:/tessar
+
+
+ Test Files  3 passed | 1 skipped (4)
+      Tests  29 passed | 17 skipped (46)
+   Start at  17:31:38
+   Duration  10.23s (tests 77%, import 14%, transform 9%)
+

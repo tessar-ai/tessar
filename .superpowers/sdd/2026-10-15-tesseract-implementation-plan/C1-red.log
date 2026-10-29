@@ -1,0 +1,43 @@
+$ vitest run --configLoader native --pool threads --exclude tests/integration/**
+
+ RUN  v5.0.4 D:/Tesseract
+
+(node:23156) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ packages/sdk/src/models/registry.test.ts (0 test)
+ ❯ packages/sdk/src/models/resolver.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/sdk/src/models/registry.test.ts [ packages/sdk/src/models/registry.test.ts ]
+Error: Cannot find module './registry.js' imported from D:/Tesseract/packages/sdk/src/models/registry.test.ts
+ ❯ packages/sdk/src/models/registry.test.ts:2:1
+      1| import { expect,it } from "vitest";
+      2| import { ModelRegistry } from "./registry.js";
+       | ^
+      3| it("resolves metadata automatically while its synchronous getter remai…
+      4|  let calls=0;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/sdk/src/models/resolver.test.ts [ packages/sdk/src/models/resolver.test.ts ]
+Error: Cannot find module './registry.js' imported from D:/Tesseract/packages/sdk/src/models/resolver.test.ts
+ ❯ packages/sdk/src/models/resolver.test.ts:2:1
+      1| import { expect,it } from "vitest";
+      2| import { ModelRegistry } from "./registry.js";
+       | ^
+      3| it("uses exact offline catalog identity and preserves unknown fields a…
+      4|  const registry=new ModelRegistry({catalog:{revision:"fixture",fetched…
+
+ Test Files  2 failed | 23 passed (25)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+      Tests  58 passed (58)
+   Start at  13:57:58
+   Duration  1.23s (transform 48%, import 32%, tests 17%, worker 3%)
+
+    Isolate  25 workers spawned · ~217ms startup each (spawn + environment, per file)
+             at least ~277ms faster with isolate: false — reuses workers across files instead of one per file
+
+[ELIFECYCLE] Test failed. See above for more details.

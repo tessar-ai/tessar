@@ -1,0 +1,50 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/rag/test/splitter.test.ts (46 tests | 3 failed) 29ms
+   × rejects invalid splitter configuration: {"overlap":null} 3ms
+   × rejects invalid splitter configuration: {"unit":null} 0ms
+   × prefers paragraphs, then lines and words before falling back to characters 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"overlap":null}
+ FAIL  packages/rag/test/splitter.test.ts > rejects invalid splitter configuration: {"unit":null}
+AssertionError: expected function to throw an error, but it didn't
+ ❯ packages/rag/test/splitter.test.ts:77:60
+     75|     ? overrides
+     76|     : { strategy: "recursive", maxSize: 2, ...overrides };
+     77|   expect(() => new rag.DocumentSplitter(options as never)).toThrow(rag…
+       |                                                            ^
+     78| });
+     79|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > prefers paragraphs, then lines and words before falling back to characters
+AssertionError: expected 'Beta.\n\n01' to be 'Beta.\n\n' // Object.is equality
+
+- Expected
++ Received
+
+  Beta.
+
+-
++ 01
+
+ ❯ packages/rag/test/splitter.test.ts:148:27
+    146|   const chunks = splitter.chunk(content(text));
+    147|   expect(chunks[0]!.text).toBe("Alpha.\n\n");
+    148|   expect(chunks[1]!.text).toBe("Beta.\n\n");
+       |                           ^
+    149|   expect(chunks.map(chunk => chunk.text).join("")).toBe(text);
+    150|   expect(chunks.every(chunk => Array.from(chunk.text).length <= 9)).to…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 43 passed (46)
+   Start at  15:31:29
+   Duration  827ms (import 62%, transform 33%, tests 4%, worker 1%)
+

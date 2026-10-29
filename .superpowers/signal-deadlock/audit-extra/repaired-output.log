@@ -1,0 +1,13 @@
+{"name":"abort-self-thread-prepare","before":{"status":"fulfilled"},"afterAction":{"status":"fulfilled"},"completionAfterAction":{"status":"fulfilled"},"afterEscape":{"status":"fulfilled"},"completionAfterEscape":{"status":"fulfilled"},"calls":0}
+{"name":"abort-self-thread-started","before":{"status":"fulfilled"},"afterAction":{"status":"fulfilled"},"completionAfterAction":{"status":"fulfilled"},"afterEscape":{"status":"fulfilled"},"completionAfterEscape":{"status":"fulfilled"},"calls":0}
+{"name":"dispose-self-thread-prepare","before":{"status":"fulfilled"},"afterAction":{"status":"fulfilled"},"completionAfterAction":{"status":"fulfilled"},"disposalAfterAction":{"status":"fulfilled"},"afterEscape":{"status":"fulfilled"},"completionAfterEscape":{"status":"fulfilled"},"calls":0}
+{"name":"abort-transient-thread-prepare","before":{"status":"fulfilled"},"afterAction":{"status":"fulfilled"},"completionAfterAction":{"status":"fulfilled"},"afterEscape":{"status":"fulfilled"},"completionAfterEscape":{"status":"fulfilled"},"calls":0}
+{"name":"cross-stream-admission","before":[{"status":"fulfilled"},{"status":"fulfilled"}],"after":[{"status":"fulfilled"},{"status":"fulfilled"}],"callsBefore":0,"callsAfter":2,"trace":["send-to:target-b","send-to:target-a","hook-return:0","hook-return:1"]}
+{"name":"external-closing-thread-target","receipt":{"status":"fulfilled"},"calls":1}
+{"name":"external-closing-stream-target","receipt":{"status":"rejected","code":"AlreadyTerminal","message":"Execution is no longer accepting signals"},"calls":1}
+{"name":"persisted-receipt-blocked-by-hook","before":{"status":"fulfilled"},"pendingInCheckpoint":1,"completionWhileHookBlocked":{"status":"pending"},"after":{"status":"fulfilled"},"pendingAfterRejection":1,"calls":2,"deliveredToProvider":true}
+{"name":"persisted-receipt-rejected-after-commit","before":{"status":"fulfilled"},"pendingInCheckpoint":1,"completionWhileHookBlocked":{"status":"pending"},"after":{"status":"fulfilled"},"pendingAfterRejection":1,"calls":1,"deliveredToProvider":false}
+{"name":"sqlite-receipt-rejected-after-commit","before":{"status":"fulfilled"},"pendingInCheckpoint":1,"completionWhileHookBlocked":{"status":"pending"},"after":{"status":"fulfilled"},"pendingAfterRejection":1,"calls":1,"deliveredToProvider":false}
+{"name":"parallel-commit-notifications-without-signals","overlapped":false,"signalCalls":0,"traceBeforeRelease":["enter:10"]}
+{"name":"idle-thread-signal-burst","first":{"status":"fulfilled"},"second":{"status":"fulfilled"},"historyHasFirst":true,"historyHasSecond":true}
+{"checked":12,"receiptContract":"memory acceptance"}

@@ -1,0 +1,41 @@
+$ tsc -p tsconfig.json && node ../../scripts/copy-license.mjs
+package: @tessar/rag@0.1.0
+Tarball Contents
+dist/errors.d.ts
+dist/errors.js
+dist/errors.js.map
+dist/index.d.ts
+dist/index.js
+dist/index.js.map
+dist/ingestion/binary.d.ts
+dist/ingestion/binary.js
+dist/ingestion/binary.js.map
+dist/ingestion/boundaries.d.ts
+dist/ingestion/boundaries.js
+dist/ingestion/boundaries.js.map
+dist/ingestion/chunking.d.ts
+dist/ingestion/chunking.js
+dist/ingestion/chunking.js.map
+dist/ingestion/document.d.ts
+dist/ingestion/document.js
+dist/ingestion/document.js.map
+dist/ingestion/formats.d.ts
+dist/ingestion/formats.js
+dist/ingestion/formats.js.map
+dist/ingestion/source.d.ts
+dist/ingestion/source.js
+dist/ingestion/source.js.map
+dist/ingestion/splitter.d.ts
+dist/ingestion/splitter.js
+dist/ingestion/splitter.js.map
+dist/ingestion/types.d.ts
+dist/ingestion/types.js
+dist/ingestion/types.js.map
+dist/ingestion/validation.d.ts
+dist/ingestion/validation.js
+dist/ingestion/validation.js.map
+LICENSE
+package.json
+README.md
+Tarball Details
+D:\tessar\dist\release\tessar-rag-0.1.0.tgz

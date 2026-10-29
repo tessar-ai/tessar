@@ -1,0 +1,37 @@
+$ vitest run --configLoader native --pool threads --exclude tests/integration/**
+
+ RUN  v5.0.4 D:/Tesseract
+
+(node:25384) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ packages/core/src/engine/plugin-continuity.test.ts (3 tests | 1 failed) 56ms
+   × keeps captured executors alive and applies newly attached policy only to new streams 23ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/engine/plugin-continuity.test.ts > keeps captured executors alive and applies newly attached policy only to new streams
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/core/src/engine/plugin-continuity.test.ts:30:49
+     28|   await harness.registry.attach({id:"new-policy",apiVersion:1,setup(ap…
+     29|   await harness.registry.detach("work");expect(disposed).toBe(0);relea…
+     30|   await harness.engine.shutdown();expect(calls).toBe(1);
+       |                                                 ^
+     31|  }finally{release();await harness.dispose();}
+     32| });
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed | 22 passed (23)
+      Tests  1 failed | 56 passed (57)
+   Start at  13:53:44
+   Duration  908ms (import 41%, tests 28%, transform 26%, worker 5%)
+
+[ELIFECYCLE] Test failed. See above for more details.

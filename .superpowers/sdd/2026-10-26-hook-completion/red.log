@@ -1,0 +1,332 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/core/test/events/decision-contract.test.ts (11 tests | 11 failed) 29ms
+   × rejects stream.before returning another boundary's decision retry 14ms
+   × rejects tool.before returning another boundary's decision select 1ms
+   × rejects turn.decision returning another boundary's decision retry 1ms
+   × rejects model.select returning another boundary's decision deny 1ms
+   × rejects model.recover returning another boundary's decision continue 1ms
+   × rejects tool.before returning another boundary's decision fail 1ms
+   × rejects malformed built-in decisions: "fail" 1ms
+   × rejects malformed built-in decisions: null 3ms
+   × rejects malformed built-in decisions: "allow" 1ms
+   × rejects malformed built-in decisions: {"decision":"allow","reason":false} 1ms
+   × rejects malformed built-in decisions: {"decision":"select","model":{}} 2ms
+ ❯ packages/core/test/models/identity-parity.test.ts (4 tests | 3 failed) 18ms
+   × rejects incorrect adapter identity in both registry and execution selection: {"providerId":"wrong","modelId":"wanted","connectionId":"connection"} 14ms
+   × rejects incorrect adapter identity in both registry and execution selection: {"providerId":"expected","modelId":"wrong","connectionId":"connection"} 1ms
+   × validates withModel results before executing a retained adapter 1ms
+ ❯ packages/core/test/engine/model-observability.test.ts (4 tests | 1 failed) 162ms
+   × records auxiliary model cancellation consistently 27ms
+ ❯ packages/openai/test/error-parity.test.ts (6 tests | 3 failed) 109ms
+   × responses throws malformed provider tool arguments as provider errors: { 53ms
+   × responses throws malformed provider tool arguments as provider errors: [] 12ms
+   × keeps adapter implementation exceptions distinct from provider failures: undefined 5ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 18 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/openai/test/error-parity.test.ts > responses throws malformed provider tool arguments as provider errors: {
+ FAIL  packages/openai/test/error-parity.test.ts > responses throws malformed provider tool arguments as provider errors: []
+AssertionError: expected null not to be null
+ ❯ packages/openai/test/error-parity.test.ts:19:25
+     17|     try {
+     18|       const error = await agent.generate("task").then(() => null, erro…
+     19|       expect(error).not.toBeNull();
+       |                         ^
+     20|       expect(errorInfo(error)).toMatchObject({ code: "ProviderResponse…
+     21|     } finally { await agent.shutdown(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯
+
+ FAIL  packages/openai/test/error-parity.test.ts > keeps adapter implementation exceptions distinct from provider failures: undefined
+AssertionError: expected { source: 'provider', …(6) } to match object { source: 'tessar', name: 'TypeError' }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "name": "TypeError",
+-   "source": "tessar",
++   "source": "provider",
+  }
+
+ ❯ packages/openai/test/error-parity.test.ts:33:30
+     31|     for await (const _chunk of model.stream({ model: model.ref, instru…
+     32|   }).rejects.toBe(failure);
+     33|   expect(errorInfo(failure)).toMatchObject({ source: "tessar", name: "…
+       |                              ^
+     34| });
+     35|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/18]⎯
+
+ FAIL  packages/core/test/engine/model-observability.test.ts > records auxiliary model cancellation consistently
+AssertionError: expected 'failed' to be 'cancelled' // Object.is equality
+
+Expected: "cancelled"
+Received: "failed"
+
+ ❯ packages/core/test/engine/model-observability.test.ts:24:83
+     22|     const records = await h.records(stream.id!);
+     23|     expect(records.stream.status).toBe("cancelled");
+     24|     expect(records.attempts.find(attempt => attempt.purpose === purpos…
+       |                                                                                   ^
+     25|   } finally { await h.dispose(); }
+     26| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/18]⎯
+
+ FAIL  packages/core/test/events/decision-contract.test.ts > rejects stream.before returning another boundary's decision retry
+ FAIL  packages/core/test/events/decision-contract.test.ts > rejects turn.decision returning another boundary's decision retry
+AssertionError: promise resolved "{ decision: 'retry' }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "decision": "retry",
+  }
+
+ ❯ packages/core/test/events/decision-contract.test.ts:16:100
+     14|   } });
+     15|   try {
+     16|     await expect(host.dispatch(event, {} as any, { onDecision: async (…
+       |                                                                                                    ^
+     17|       .rejects.toMatchObject({ code: "InvalidHookResult" });
+     18|     expect(recorded).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/18]⎯
+
+ FAIL  packages/core/test/events/decision-contract.test.ts > rejects tool.before returning another boundary's decision select
+AssertionError: promise resolved "{ decision: 'select' }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "decision": "select",
+  }
+
+ ❯ packages/core/test/events/decision-contract.test.ts:16:100
+     14|   } });
+     15|   try {
+     16|     await expect(host.dispatch(event, {} as any, { onDecision: async (…
+       |                                                                                                    ^
+     17|       .rejects.toMatchObject({ code: "InvalidHookResult" });
+     18|     expect(recorded).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/18]⎯
+
+ FAIL  packages/core/test/events/decision-contract.test.ts > rejects model.select returning another boundary's decision deny
+AssertionError: promise resolved "{ decision: 'deny' }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "decision": "deny",
+  }
+
+ ❯ packages/core/test/events/decision-contract.test.ts:16:100
+     14|   } });
+     15|   try {
+     16|     await expect(host.dispatch(event, {} as any, { onDecision: async (…
+       |                                                                                                    ^
+     17|       .rejects.toMatchObject({ code: "InvalidHookResult" });
+     18|     expect(recorded).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/18]⎯
+
+ FAIL  packages/core/test/events/decision-contract.test.ts > rejects model.recover returning another boundary's decision continue
+AssertionError: promise resolved "{ decision: 'continue' }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "decision": "continue",
+  }
+
+ ❯ packages/core/test/events/decision-contract.test.ts:16:100
+     14|   } });
+     15|   try {
+     16|     await expect(host.dispatch(event, {} as any, { onDecision: async (…
+       |                                                                                                    ^
+     17|       .rejects.toMatchObject({ code: "InvalidHookResult" });
+     18|     expect(recorded).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/18]⎯
+
+ FAIL  packages/core/test/events/decision-contract.test.ts > rejects tool.before returning another boundary's decision fail
+AssertionError: promise resolved "{ decision: 'fail' }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "decision": "fail",
+  }
+
+ ❯ packages/core/test/events/decision-contract.test.ts:16:100
+     14|   } });
+     15|   try {
+     16|     await expect(host.dispatch(event, {} as any, { onDecision: async (…
+       |                                                                                                    ^
+     17|       .rejects.toMatchObject({ code: "InvalidHookResult" });
+     18|     expect(recorded).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/18]⎯
+
+ FAIL  packages/core/test/events/decision-contract.test.ts > rejects malformed built-in decisions: "fail"
+AssertionError: promise resolved "'fail'" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+"fail"
+
+ ❯ packages/core/test/events/decision-contract.test.ts:26:54
+     24|   const event: AnyEvent = "model.select";
+     25|   await host.attach({ id: "invalid", setup(tessar) { tessar.hook(event…
+     26|   try { await expect(host.dispatch(event, {} as any)).rejects.toMatchO…
+       |                                                      ^
+     27|   finally { await host.dispose(); }
+     28| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/18]⎯
+
+ FAIL  packages/core/test/events/decision-contract.test.ts > rejects malformed built-in decisions: null
+AssertionError: expected TypeError: Cannot read properties of null… to match object { code: 'InvalidHookResult' }
+
+- Expected
++ Received
+
+- {
+-   "code": "InvalidHookResult",
++ TypeError {
++   "message": "Cannot read properties of null (reading 'decision')",
+  }
+
+ ❯ packages/core/test/events/decision-contract.test.ts:26:54
+     24|   const event: AnyEvent = "model.select";
+     25|   await host.attach({ id: "invalid", setup(tessar) { tessar.hook(event…
+     26|   try { await expect(host.dispatch(event, {} as any)).rejects.toMatchO…
+       |                                                      ^
+     27|   finally { await host.dispose(); }
+     28| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/18]⎯
+
+ FAIL  packages/core/test/events/decision-contract.test.ts > rejects malformed built-in decisions: "allow"
+AssertionError: promise resolved "'allow'" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+"allow"
+
+ ❯ packages/core/test/events/decision-contract.test.ts:26:54
+     24|   const event: AnyEvent = "model.select";
+     25|   await host.attach({ id: "invalid", setup(tessar) { tessar.hook(event…
+     26|   try { await expect(host.dispatch(event, {} as any)).rejects.toMatchO…
+       |                                                      ^
+     27|   finally { await host.dispose(); }
+     28| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/18]⎯
+
+ FAIL  packages/core/test/events/decision-contract.test.ts > rejects malformed built-in decisions: {"decision":"allow","reason":false}
+AssertionError: promise resolved "{ decision: 'allow', reason: false }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "decision": "allow",
++   "reason": false,
+  }
+
+ ❯ packages/core/test/events/decision-contract.test.ts:26:54
+     24|   const event: AnyEvent = "model.select";
+     25|   await host.attach({ id: "invalid", setup(tessar) { tessar.hook(event…
+     26|   try { await expect(host.dispatch(event, {} as any)).rejects.toMatchO…
+       |                                                      ^
+     27|   finally { await host.dispose(); }
+     28| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/18]⎯
+
+ FAIL  packages/core/test/events/decision-contract.test.ts > rejects malformed built-in decisions: {"decision":"select","model":{}}
+AssertionError: promise resolved "{ decision: 'select', model: {} }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "decision": "select",
++   "model": {},
+  }
+
+ ❯ packages/core/test/events/decision-contract.test.ts:26:54
+     24|   const event: AnyEvent = "model.select";
+     25|   await host.attach({ id: "invalid", setup(tessar) { tessar.hook(event…
+     26|   try { await expect(host.dispatch(event, {} as any)).rejects.toMatchO…
+       |                                                      ^
+     27|   finally { await host.dispose(); }
+     28| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/18]⎯
+
+ FAIL  packages/core/test/models/identity-parity.test.ts > rejects incorrect adapter identity in both registry and execution selection: {"providerId":"wrong","modelId":"wanted","connectionId":"connection"}
+ FAIL  packages/core/test/models/identity-parity.test.ts > rejects incorrect adapter identity in both registry and execution selection: {"providerId":"expected","modelId":"wrong","connectionId":"connection"}
+AssertionError: expected function to throw an error, but it didn't
+ ❯ packages/core/test/models/identity-parity.test.ts:23:45
+     21|   try {
+     22|     expect(() => registry.resolve(ref)).toThrowError(expect.objectCont…
+     23|     expect(() => selectAdapter(lease, ref)).toThrowError(expect.object…
+       |                                             ^
+     24|   } finally { registry.dispose(); await lease.release(); await host.di…
+     25| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/18]⎯
+
+ FAIL  packages/core/test/models/identity-parity.test.ts > validates withModel results before executing a retained adapter
+AssertionError: expected function to throw an error, but it didn't
+ ❯ packages/core/test/models/identity-parity.test.ts:32:55
+     30|   const lease = host.capture();
+     31|   try {
+     32|     expect(() => selectAdapter(lease, ref, original)).toThrowError(exp…
+       |                                                       ^
+     33|   } finally { await lease.release(); await host.dispose(); }
+     34| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/18]⎯
+
+
+ Test Files  4 failed (4)
+      Tests  18 failed | 7 passed (25)
+   Start at  23:17:50
+   Duration  7.77s (import 70%, transform 26%, tests 3%, worker 2%)
+

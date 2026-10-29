@@ -1,0 +1,48 @@
+packages/openai/test/provider-request.test.ts(68,19): error TS2345: Argument of type 'OpenAIProvider<"chat-completions" | "responses">' is not assignable to parameter of type 'OpenAIProvider<"responses">'.
+  Types of property 'options' are incompatible.
+    Type 'Readonly<OpenAIModelOptions | OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+      Type 'Readonly<OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+        Types of property 'tool_choice' are incompatible.
+          Type 'ChatCompletionToolChoiceOption | undefined' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+            Type 'ChatCompletionAllowedToolChoice' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+              Type 'ChatCompletionAllowedToolChoice' is missing the following properties from type 'ToolChoiceAllowed': mode, tools
+packages/openai/test/provider-request.test.ts(78,26): error TS2345: Argument of type 'OpenAIProvider<"chat-completions" | "responses">' is not assignable to parameter of type 'OpenAIProvider<"responses">'.
+  Types of property 'options' are incompatible.
+    Type 'Readonly<OpenAIModelOptions | OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+      Type 'Readonly<OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+        Types of property 'tool_choice' are incompatible.
+          Type 'ChatCompletionToolChoiceOption | undefined' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+            Type 'ChatCompletionAllowedToolChoice' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+              Type 'ChatCompletionAllowedToolChoice' is missing the following properties from type 'ToolChoiceAllowed': mode, tools
+packages/openai/test/provider-request.test.ts(89,26): error TS2345: Argument of type 'OpenAIProvider<"chat-completions" | "responses">' is not assignable to parameter of type 'OpenAIProvider<"responses">'.
+  Types of property 'options' are incompatible.
+    Type 'Readonly<OpenAIModelOptions | OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+      Type 'Readonly<OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+        Types of property 'tool_choice' are incompatible.
+          Type 'ChatCompletionToolChoiceOption | undefined' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+            Type 'ChatCompletionAllowedToolChoice' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+              Type 'ChatCompletionAllowedToolChoice' is missing the following properties from type 'ToolChoiceAllowed': mode, tools
+packages/openai/test/provider-request.test.ts(106,26): error TS2345: Argument of type 'OpenAIProvider<"chat-completions" | "responses">' is not assignable to parameter of type 'OpenAIProvider<"responses">'.
+  Types of property 'options' are incompatible.
+    Type 'Readonly<OpenAIModelOptions | OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+      Type 'Readonly<OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+        Types of property 'tool_choice' are incompatible.
+          Type 'ChatCompletionToolChoiceOption | undefined' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+            Type 'ChatCompletionAllowedToolChoice' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+              Type 'ChatCompletionAllowedToolChoice' is missing the following properties from type 'ToolChoiceAllowed': mode, tools
+packages/openai/test/provider-request.test.ts(130,19): error TS2345: Argument of type 'OpenAIProvider<"chat-completions" | "responses">' is not assignable to parameter of type 'OpenAIProvider<"responses">'.
+  Types of property 'options' are incompatible.
+    Type 'Readonly<OpenAIModelOptions | OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+      Type 'Readonly<OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+        Types of property 'tool_choice' are incompatible.
+          Type 'ChatCompletionToolChoiceOption | undefined' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+            Type 'ChatCompletionAllowedToolChoice' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+              Type 'ChatCompletionAllowedToolChoice' is missing the following properties from type 'ToolChoiceAllowed': mode, tools
+packages/openai/test/provider-request.test.ts(134,19): error TS2345: Argument of type 'OpenAIProvider<"chat-completions" | "responses">' is not assignable to parameter of type 'OpenAIProvider<"responses">'.
+  Types of property 'options' are incompatible.
+    Type 'Readonly<OpenAIModelOptions | OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+      Type 'Readonly<OpenAIChatModelOptions>' is not assignable to type 'Readonly<OpenAIModelOptions>'.
+        Types of property 'tool_choice' are incompatible.
+          Type 'ChatCompletionToolChoiceOption | undefined' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+            Type 'ChatCompletionAllowedToolChoice' is not assignable to type 'SpecificProgrammaticToolCallingParam | ToolChoiceAllowed | ToolChoiceApplyPatch | ToolChoiceCustom | ... 5 more ... | undefined'.
+              Type 'ChatCompletionAllowedToolChoice' is missing the following properties from type 'ToolChoiceAllowed': mode, tools

@@ -1,0 +1,59 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/core/test/models/parts.test.ts (5 tests | 5 failed) 11ms
+   × closes open parts on early consumer return without requiring another read 7ms
+   × rejects invalid provider lifecycle [ [Object] ] 2ms
+   × rejects invalid provider lifecycle [ [Object], [Object] ] 0ms
+   × rejects invalid provider lifecycle [ [Object], [Object] ] 0ms
+   × rejects invalid provider lifecycle [ [Object], [Object], [Object] ] 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/test/models/parts.test.ts > closes open parts on early consumer return without requiring another read
+AssertionError: expected [] to deeply equal [ 'text.start', 'text.end' ]
+
+- Expected
++ Received
+
+- [
+-   "text.start",
+-   "text.end",
+- ]
++ []
+
+ ❯ packages/core/test/models/parts.test.ts:16:45
+     14|   const observed: ModelChunk[] = [];
+     15|   for await (const _ of streamModel(adapter([start]), request, { signa…
+     16|   expect(observed.map(chunk => chunk.type)).toEqual(["text.start", "te…
+       |                                             ^
+     17|   expect(observed.at(-1)).toMatchObject({ status: "interrupted", text:…
+     18| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  packages/core/test/models/parts.test.ts > rejects invalid provider lifecycle [ [Object] ]
+ FAIL  packages/core/test/models/parts.test.ts > rejects invalid provider lifecycle [ [Object], [Object] ]
+ FAIL  packages/core/test/models/parts.test.ts > rejects invalid provider lifecycle [ [Object], [Object] ]
+ FAIL  packages/core/test/models/parts.test.ts > rejects invalid provider lifecycle [ [Object], [Object], [Object] ]
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ packages/core/test/models/parts.test.ts:25:138
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  23:37:06
+   Duration  196ms (transform 40%, import 40%, tests 15%, worker 5%)
+

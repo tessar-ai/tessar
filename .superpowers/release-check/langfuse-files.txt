@@ -1,0 +1,6 @@
+package/LICENSE
+package/dist/index.js
+package/package.json
+package/dist/index.js.map
+package/README.md
+package/dist/index.d.ts

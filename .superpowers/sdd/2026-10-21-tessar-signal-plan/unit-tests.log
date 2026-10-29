@@ -1,0 +1,23 @@
+$ vitest run --configLoader native --pool threads --exclude tests/integration/** "--maxWorkers" "4"
+
+ RUN  v5.0.4 D:/tessar
+
+(node:23548) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:23548) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:23548) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:23548) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:23548) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  65 passed | 1 skipped (66)
+      Tests  320 passed | 39 skipped (359)
+   Start at  17:24:11
+   Duration  27.81s (import 61%, tests 33%, transform 5%, worker 1%)
+
+    Isolate  66 workers spawned · ~227ms startup each (spawn + environment, per file)
+             at least ~3.53s faster with isolate: false — reuses workers across files instead of one per file
+

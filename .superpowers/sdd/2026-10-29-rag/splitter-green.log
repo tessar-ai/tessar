@@ -1,0 +1,59 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/rag/test/splitter.test.ts (44 tests | 2 failed) 36ms
+   × prefers paragraphs, then lines and words before falling back to characters 5ms
+   × packs whole sentences and preserves a decimal number 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > prefers paragraphs, then lines and words before falling back to characters
+AssertionError: expected 'Beta.\n\n01' to be 'Beta.\n\n' // Object.is equality
+
+- Expected
++ Received
+
+  Beta.
+
+-
++ 01
+
+ ❯ packages/rag/test/splitter.test.ts:147:27
+    145|   const chunks = splitter.chunk(content(text));
+    146|   expect(chunks[0]!.text).toBe("Alpha.\n\n");
+    147|   expect(chunks[1]!.text).toBe("Beta.\n\n");
+       |                           ^
+    148|   expect(chunks.map(chunk => chunk.text).join("")).toBe(text);
+    149|   expect(chunks.every(chunk => Array.from(chunk.text).length <= 9)).to…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/rag/test/splitter.test.ts > packs whole sentences and preserves a decimal number
+AssertionError: expected [ 'Value is 3.14. ', …(1) ] to deeply equal [ …(2) ]
+
+- Expected
++ Received
+
+  [
+-   "Value is 3.14. Next sentence. ",
+-   "Last sentence.",
++   "Value is 3.14. ",
++   "Next sentence. Last sentence.",
+  ]
+
+ ❯ packages/rag/test/splitter.test.ts:156:43
+    154|   const chunks = new rag.DocumentSplitter({ strategy: "sentence", maxS…
+    155|     .chunk(content(text));
+    156|   expect(chunks.map(chunk => chunk.text)).toEqual([
+       |                                           ^
+    157|     "Value is 3.14. Next sentence. ", "Last sentence.",
+    158|   ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 42 passed (44)
+   Start at  15:30:37
+   Duration  2.47s (import 59%, transform 39%, tests 2%)
+

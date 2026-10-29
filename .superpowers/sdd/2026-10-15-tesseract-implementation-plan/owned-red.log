@@ -1,0 +1,30 @@
+$ vitest run --configLoader native --pool threads --exclude tests/integration/**
+
+ RUN  v5.0.4 D:/Tesseract
+
+(node:12392) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ packages/core/src/state/plugin-state.test.ts (3 tests | 1 failed) 17ms
+   × offers explicit CAS access to agent-owned namespaces through the plugin state API 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/state/plugin-state.test.ts > offers explicit CAS access to agent-owned namespaces through the plugin state API
+TypeError: access.owned is not a function
+ ❯ packages/core/src/state/plugin-state.test.ts:25:21
+     23|  const backend=createMemoryBackend(),definition=definePluginState({plu…
+     24|  const access=new PluginStateAccess([definition],{type:"thread",id:"t"…
+     25|  const owned=access.owned({type:"agent",id:"assistant"});
+       |                     ^
+     26|  const first=await owned.read(definition);
+     27|  expect(first).toMatchObject({value:{count:0},revision:0});
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 22 passed (23)
+      Tests  1 failed | 57 passed (58)
+   Start at  13:56:02
+   Duration  943ms (import 45%, tests 28%, transform 22%, worker 4%)
+
+[ELIFECYCLE] Test failed. See above for more details.

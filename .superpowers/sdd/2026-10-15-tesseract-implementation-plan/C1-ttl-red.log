@@ -1,0 +1,61 @@
+$ vitest run --configLoader native --pool threads --exclude tests/integration/**
+
+ RUN  v5.0.4 D:/Tesseract
+
+(node:23652) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ packages/sdk/src/models/resolver.test.ts (2 tests | 1 failed) 12ms
+   × applies only explicit catalog aliases and retains tiered pricing conditions 6ms
+ ❯ packages/sdk/src/models/registry.test.ts (3 tests | 1 failed) 14ms
+   × marks stale snapshots and automatically refreshes a selected handle after 24 hours 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/sdk/src/models/registry.test.ts > marks stale snapshots and automatically refreshes a selected handle after 24 hours
+AssertionError: expected 1 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 1
+
+ ❯ packages/sdk/src/models/registry.test.ts:20:16
+     18|  now+=24*60*60*1000;expect(model.profile.metadata.freshness).toBe("sta…
+     19|  expect(registry.get(ref)).toBe(model);await new Promise<void>(resolve…
+     20|  expect(calls).toBe(2);registry.dispose();
+       |                ^
+     21| });
+     22| it("keeps account caches isolated and unknown models available with pa…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/sdk/src/models/resolver.test.ts > applies only explicit catalog aliases and retains tiered pricing conditions
+AssertionError: expected null to be 42 // Object.is equality
+
+- Expected:
+42
+
++ Received:
+null
+
+ ❯ packages/sdk/src/models/resolver.test.ts:19:85
+     17|  registry.registerProvider({id:"alias",catalogModelRef:()=>({providerI…
+     18|  const model=registry.get({providerId:"alias",modelId:"served-name"});
+     19|  expect(model.profile.providerId).toBe("alias");expect(model.profile.c…
+       |                                                                                     ^
+     20|  expect(model.profile.pricing!.type).toBe("tiered");expect(model.profi…
+     21|  registry.dispose();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 23 passed (25)
+      Tests  2 failed | 61 passed (63)
+   Start at  14:03:35
+   Duration  1.77s (import 48%, transform 24%, tests 24%, worker 4%)
+
+    Isolate  25 workers spawned · ~251ms startup each (spawn + environment, per file)
+             at least ~319ms faster with isolate: false — reuses workers across files instead of one per file
+
+[ELIFECYCLE] Test failed. See above for more details.

@@ -1,0 +1,12 @@
+
+ RUN  v5.0.4 D:/tessar
+
+
+ Test Files  18 passed (18)
+      Tests  206 passed (206)
+   Start at  22:27:48
+   Duration  6.76s (import 76%, tests 17%, transform 7%, worker 1%)
+
+    Isolate  18 workers spawned · ~178ms startup each (spawn + environment, per file)
+             at least ~623ms faster with isolate: false — reuses workers across files instead of one per file
+

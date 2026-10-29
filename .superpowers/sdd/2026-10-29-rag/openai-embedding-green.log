@@ -1,0 +1,38 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/openai/test/embedding.test.ts (27 tests | 1 failed) 97ms
+   × propagates native OpenAI API errors without wrapping them 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > propagates native OpenAI API errors without wrapping them
+AssertionError: expected Error: 401 Invalid key { …(7) } to match object { status: 401, …(2) }
+(9 matching properties omitted from actual)
+
+- Expected
++ Received
+
+- {
++ AuthenticationError {
+    "code": "invalid_api_key",
+-   "request_id": "request-fixture",
+    "status": 401,
+  }
+
+ ❯ packages/openai/test/embedding.test.ts:139:18
+    137|   expect(caught).toBeInstanceOf(OpenAI.AuthenticationError);
+    138|   expect(caught).not.toBeInstanceOf(TessarError);
+    139|   expect(caught).toMatchObject({ status: 401, code: "invalid_api_key",…
+       |                  ^
+    140| });
+    141|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 27 passed (28)
+   Start at  22:26:17
+   Duration  1.05s (import 65%, transform 29%, tests 6%)
+

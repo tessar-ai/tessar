@@ -1,0 +1,47 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/core/test/public-api.test.ts (3 tests | 1 failed) 24ms
+   × reads Agent defaults without initialization or changing them during execution 18ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/test/public-api.test.ts > reads Agent defaults without initialization or changing them during execution
+AssertionError: expected [ Tool{ name: 'tool', …(9) } ] to deeply equal [ Tool{ name: 'lookup', …(9) } ]
+
+- Expected
++ Received
+
+@@ -6,11 +6,11 @@
+      "jsonSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {},
+        "type": "object",
+      },
+-     "name": "lookup",
++     "name": "tool",
+      "recovery": undefined,
+      "resume": undefined,
+      "resumeJsonSchema": {},
+      "resumeSchema": undefined,
+      "schema": ZodObject {
+
+ ❯ packages/core/test/public-api.test.ts:38:30
+     36|   });
+     37|   try {
+     38|     expect(agent.listTool()).toEqual([tool]);
+       |                              ^
+     39|     expect(agent.getModel()).toBe(model);
+     40|     expect(agent.getInstruction()).toEqual(instructions);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 72 passed | 1 skipped (74)
+      Tests  1 failed | 398 passed | 39 skipped (438)
+   Start at  10:52:42
+   Duration  17.41s (import 69%, tests 28%, transform 2%, worker 1%)
+
+    Isolate  74 workers spawned · ~171ms startup each (spawn + environment, per file)
+             at least ~2.98s faster with isolate: false — reuses workers across files instead of one per file
+

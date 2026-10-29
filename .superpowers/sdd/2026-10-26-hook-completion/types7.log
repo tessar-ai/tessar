@@ -1,0 +1,2 @@
+packages/core/test/engine/part-lifecycle.test.ts(31,52): error TS2339: Property 'latest' does not exist on type 'CheckpointStore'.
+packages/core/test/engine/part-lifecycle.test.ts(32,44): error TS7006: Parameter 'message' implicitly has an 'any' type.

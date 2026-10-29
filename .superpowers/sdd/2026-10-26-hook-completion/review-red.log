@@ -1,0 +1,46 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/core/test/engine/model-observability.test.ts (6 tests | 1 failed) 154ms
+   × records auxiliary cancellation when an adapter returns silently after abort 20ms
+ ❯ packages/openai/test/error-parity.test.ts (10 tests | 2 failed) 95ms
+   × responses rejects missing tool id as a provider failure 38ms
+   × responses rejects missing tool name as a provider failure 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/openai/test/error-parity.test.ts > responses rejects missing tool id as a provider failure
+ FAIL  packages/openai/test/error-parity.test.ts > responses rejects missing tool name as a provider failure
+AssertionError: expected null not to be null
+ ❯ packages/openai/test/error-parity.test.ts:18:27
+     16|     try {
+     17|       const failure = await agent.generate("task").then(() => null, er…
+     18|       expect(failure).not.toBeNull();
+       |                           ^
+     19|       expect(errorInfo(failure)).toMatchObject({ code: "ProviderRespon…
+     20|     } finally { await agent.shutdown(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  packages/core/test/engine/model-observability.test.ts > records auxiliary cancellation when an adapter returns silently after abort
+AssertionError: expected 'interrupted' to be 'cancelled' // Object.is equality
+
+Expected: "cancelled"
+Received: "interrupted"
+
+ ❯ packages/core/test/engine/model-observability.test.ts:27:27
+     25|     const events = await h.collect(active);
+     26|     const record = (await h.records(active.id!)).attempts.find(attempt…
+     27|     expect(record.status).toBe("cancelled");
+       |                           ^
+     28|     expect(events.find(event => event.type === "model.error" && event.…
+     29|   } finally { await h.dispose(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+ Test Files  2 failed | 1 passed (3)
+      Tests  3 failed | 19 passed (22)
+   Start at  08:54:55
+   Duration  1.05s (import 54%, transform 31%, tests 14%, worker 1%)
+

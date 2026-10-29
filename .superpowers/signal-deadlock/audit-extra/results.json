@@ -1,0 +1,205 @@
+[
+  {
+    "name": "abort-self-thread-prepare",
+    "before": {
+      "status": "pending"
+    },
+    "afterAction": {
+      "status": "pending"
+    },
+    "completionAfterAction": {
+      "status": "pending"
+    },
+    "afterEscape": {
+      "status": "rejected",
+      "code": "InvalidTransition"
+    },
+    "completionAfterEscape": {
+      "status": "fulfilled"
+    },
+    "calls": 0
+  },
+  {
+    "name": "abort-self-thread-started",
+    "before": {
+      "status": "pending"
+    },
+    "afterAction": {
+      "status": "pending"
+    },
+    "completionAfterAction": {
+      "status": "pending"
+    },
+    "afterEscape": {
+      "status": "rejected",
+      "code": "InvalidTransition"
+    },
+    "completionAfterEscape": {
+      "status": "fulfilled"
+    },
+    "calls": 0
+  },
+  {
+    "name": "dispose-self-thread-prepare",
+    "before": {
+      "status": "pending"
+    },
+    "afterAction": {
+      "status": "pending"
+    },
+    "completionAfterAction": {
+      "status": "pending"
+    },
+    "disposalAfterAction": {
+      "status": "pending"
+    },
+    "afterEscape": {
+      "status": "rejected",
+      "code": "InvalidTransition"
+    },
+    "completionAfterEscape": {
+      "status": "fulfilled"
+    },
+    "calls": 0
+  },
+  {
+    "name": "abort-transient-thread-prepare",
+    "before": {
+      "status": "pending"
+    },
+    "afterAction": {
+      "status": "pending"
+    },
+    "completionAfterAction": {
+      "status": "pending"
+    },
+    "afterEscape": {
+      "status": "rejected",
+      "code": "InvalidTransition"
+    },
+    "completionAfterEscape": {
+      "status": "fulfilled"
+    },
+    "calls": 0
+  },
+  {
+    "name": "cross-stream-admission",
+    "before": [
+      {
+        "status": "pending"
+      },
+      {
+        "status": "pending"
+      }
+    ],
+    "after": [
+      {
+        "status": "fulfilled"
+      },
+      {
+        "status": "fulfilled"
+      }
+    ],
+    "callsBefore": 0,
+    "callsAfter": 2,
+    "trace": [
+      "send-to:target-b",
+      "send-to:target-a",
+      "hook-return:0",
+      "hook-return:1"
+    ]
+  },
+  {
+    "name": "external-closing-thread-target",
+    "receipt": {
+      "status": "rejected",
+      "code": "AlreadyTerminal",
+      "message": "Execution is closing"
+    },
+    "calls": 1
+  },
+  {
+    "name": "external-closing-stream-target",
+    "receipt": {
+      "status": "rejected",
+      "code": "AlreadyTerminal",
+      "message": "Execution is no longer accepting signals"
+    },
+    "calls": 1
+  },
+  {
+    "name": "persisted-receipt-blocked-by-hook",
+    "before": {
+      "status": "pending"
+    },
+    "pendingInCheckpoint": 1,
+    "completionWhileHookBlocked": {
+      "status": "pending"
+    },
+    "after": {
+      "status": "fulfilled"
+    },
+    "pendingAfterRejection": 1,
+    "calls": 2,
+    "deliveredToProvider": true
+  },
+  {
+    "name": "persisted-receipt-rejected-after-commit",
+    "before": {
+      "status": "pending"
+    },
+    "pendingInCheckpoint": 1,
+    "completionWhileHookBlocked": {
+      "status": "pending"
+    },
+    "after": {
+      "status": "rejected",
+      "code": "StorageUnavailable",
+      "message": "diagnostic notification failure after commit"
+    },
+    "pendingAfterRejection": 1,
+    "calls": 1,
+    "deliveredToProvider": false
+  },
+  {
+    "name": "sqlite-receipt-rejected-after-commit",
+    "before": {
+      "status": "pending"
+    },
+    "pendingInCheckpoint": 1,
+    "completionWhileHookBlocked": {
+      "status": "pending"
+    },
+    "after": {
+      "status": "rejected",
+      "code": "StorageUnavailable",
+      "message": "diagnostic notification failure after commit"
+    },
+    "pendingAfterRejection": 1,
+    "calls": 1,
+    "deliveredToProvider": false
+  },
+  {
+    "name": "parallel-commit-notifications-without-signals",
+    "overlapped": true,
+    "signalCalls": 0,
+    "traceBeforeRelease": [
+      "enter:10",
+      "enter:11",
+      "exit:11"
+    ]
+  },
+  {
+    "name": "idle-thread-signal-burst",
+    "first": {
+      "status": "fulfilled"
+    },
+    "second": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "historyHasFirst": true,
+    "historyHasSecond": false
+  }
+]

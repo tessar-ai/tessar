@@ -1,0 +1,30 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/core/test/engine/part-lifecycle.test.ts (3 tests | 1 failed) 59ms
+   × cancels at the shared chunk boundary even when an adapter does not inspect the abort signal 16ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/test/engine/part-lifecycle.test.ts > cancels at the shared chunk boundary even when an adapter does not inspect the abort signal
+AssertionError: expected 'succeeded' to be 'cancelled' // Object.is equality
+
+Expected: "cancelled"
+Received: "succeeded"
+
+ ❯ packages/core/test/engine/part-lifecycle.test.ts:43:63
+     41|     active = h.agent.stream("go");
+     42|     const events = await h.collect(active);
+     43|     expect((await h.records(active.id!)).attempts[0]!.status).toBe("ca…
+       |                                                               ^
+     44|     expect(events.find(event => event.type === "text.end")!.payload).t…
+     45|   } finally { await h.dispose(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed (3)
+   Start at  08:47:41
+   Duration  1.06s (import 57%, transform 36%, tests 6%, worker 1%)
+

@@ -1,0 +1,55 @@
+$ vitest run --configLoader native --pool threads --exclude tests/integration/** "--maxWorkers" "4"
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/plugins/test/index.test.ts (4 tests | 1 failed) 26051ms
+   × installs, updates and removes a real local npm plugin without activating helper dependencies 25050ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/plugins/test/index.test.ts > installs, updates and removes a real local npm plugin without activating helper dependencies
+Error: Command failed: D:\tessar\.superpowers\node-runtime\node-v24.22.1-win-x64\node.exe --input-type=module -e 
+ import assert from 'node:assert/strict';
+ import {pathToFileURL} from 'node:url';
+ import {join} from 'node:path';
+ const directory=process.argv[1],hostUrl=process.argv[3];
+ const {PluginManager}=await import(process.argv[2]);
+ const manager=new PluginManager({directory,hostUrl});
+ try {
+   const {readFile}=await import('node:fs/promises');
+   await assert.rejects(manager.install('./fixtures/plugin',{name:'fixture-helper'}),/source package/);
+   assert.deepEqual(await manager.discover(),[]);
+   await manager.install('./fixtures/plugin');
+   assert.deepEqual(await manager.discover(),['fixture-plugin']);assert.equal((await manager.load())[0].id,'installed-plugin');
+   await manager.update('fixture-plugin');
+   let manifest=JSON.parse(await readFile(join(directory,'npm/package.json'),'utf8'));
+   let config=JSON.parse(await readFile(join(directory,'plugins.json'),'utf8'));
+   assert.equal(manifest.description,'preserved');assert.equal(config.other,true);
+   assert.deepEqual(config.packages,['fixture-plugin']);assert.equal(manifest.tessar,undefined);
+   assert.ok(manifest.dependencies['fixture-helper']);assert.ok(manifest.dependencies['fixture-plugin']);
+   await assert.rejects(manager.install('./missing; unexpected-command',{name:'missing-plugin'}));
+   assert.deepEqual(await manager.discover(),['fixture-plugin']);
+   await assert.rejects(manager.install('git+https://example.invalid/repo.git'),/name/i);
+   await manager.remove('fixture-plugin');
+   assert.deepEqual(await manager.discover(),[]);
+   manifest=JSON.parse(await readFile(join(directory,'npm/package.json'),'utf8'));assert.ok(manifest.dependencies['fixture-helper']);assert.equal(manifest.dependencies['fixture-plugin'],undefined);
+   config=JSON.parse(await readFile(join(directory,'plugins.json'),'utf8'));assert.deepEqual(config.packages,[]);assert.equal(config.other,true);
+   const {existsSync}=await import('node:fs');assert.equal(existsSync(join(directory,'package.json')),false);
+   assert.ok(existsSync(join(directory,'npm/package-lock.json')));assert.equal(existsSync(join(directory,'node_modules')),false);
+   await assert.rejects(manager.update('fixture-helper'),/not.*plugin/i);
+   await assert.rejects(manager.remove('--unsafe'),/name/i);
+  } finally {manager.dispose();}
+ C:\Users\TSP\AppData\Local\Temp\tessar npm & m1nvH4 file:///D:/tessar/packages/plugins/dist/index.js file:///D:/tessar/package.json
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 94 passed | 1 skipped (96)
+      Tests  1 failed | 629 passed | 51 skipped (681)
+   Start at  15:37:46
+   Duration  48.00s (import 58%, tests 35%, transform 6%, worker 1%)
+
+    Isolate  96 workers spawned · ~241ms startup each (spawn + environment, per file)
+             at least ~5.55s faster with isolate: false — reuses workers across files instead of one per file
+
+[ELIFECYCLE] Test failed. See above for more details.

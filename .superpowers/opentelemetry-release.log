@@ -1,0 +1,44 @@
+$ tsc -p tsconfig.json && node ../../scripts/copy-license.mjs
+package: @tessar/opentelemetry@0.1.1
+Tarball Contents
+dist/adapters/laminar.d.ts
+dist/adapters/laminar.js
+dist/adapters/laminar.js.map
+dist/adapters/langfuse.d.ts
+dist/adapters/langfuse.js
+dist/adapters/langfuse.js.map
+dist/adapters/otlp.d.ts
+dist/adapters/otlp.js
+dist/adapters/otlp.js.map
+dist/attributes.d.ts
+dist/attributes.js
+dist/attributes.js.map
+dist/index.d.ts
+dist/index.js
+dist/index.js.map
+dist/lifecycle.d.ts
+dist/lifecycle.js
+dist/lifecycle.js.map
+dist/messages.d.ts
+dist/messages.js
+dist/messages.js.map
+dist/models.d.ts
+dist/models.js
+dist/models.js.map
+dist/plugin.d.ts
+dist/plugin.js
+dist/plugin.js.map
+dist/tools.d.ts
+dist/tools.js
+dist/tools.js.map
+dist/trace.d.ts
+dist/trace.js
+dist/trace.js.map
+dist/types.d.ts
+dist/types.js
+dist/types.js.map
+LICENSE
+package.json
+README.md
+Tarball Details
+D:\tessar\dist\release\tessar-opentelemetry-0.1.1.tgz

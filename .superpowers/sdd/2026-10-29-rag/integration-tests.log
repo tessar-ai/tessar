@@ -1,0 +1,32 @@
+$ vitest run --configLoader native --pool threads tests/integration "--maxWorkers" "4"
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ tests/integration/plugin-distribution.test.ts (4 tests | 1 failed) 44443ms
+   × runs a packed installed CLI from another project and discovers a plugin added after installation 35369ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/integration/plugin-distribution.test.ts > runs a packed installed CLI from another project and discovers a plugin added after installation
+Error: Command failed: D:\tessar\.superpowers\node-runtime\node-v24.22.1-win-x64\node.exe D:\tessar\.superpowers\node-runtime\node-v24.22.1-win-x64\node_modules\npm\bin\npm-cli.js pack --ignore-scripts --json --pack-destination C:\Users\TSP\AppData\Local\Temp\tessar installed host tSB4vS\packs
+
+
+
+ ❯ detailed tests/integration/plugin-distribution.test.ts:30:11
+     28|   };
+     29|   const detailed = (error: any): never => {
+     30|     throw Error(error.message + "\n" + error.stdout + "\n" + error.std…
+       |           ^
+     31|   };
+     32|   if (process.platform !== "win32")
+ ❯ tests/integration/plugin-distribution.test.ts:154:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 8 passed (9)
+      Tests  1 failed | 44 passed (45)
+   Start at  15:37:46
+   Duration  44.73s (tests 90%, import 8%, transform 2%)
+
+[ELIFECYCLE] Command failed with exit code 1.

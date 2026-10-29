@@ -1,0 +1,952 @@
+[
+  {
+    "name": "thread.prepare",
+    "before": {
+      "status": "pending"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "thread.started",
+    "before": {
+      "status": "pending"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "input.prepare",
+    "before": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-rejected:InvalidTransition",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "message.prepare",
+    "before": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-rejected:InvalidTransition",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "message.before-commit",
+    "before": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-rejected:InvalidTransition",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "checkpoint.committed",
+    "before": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-rejected:InvalidTransition",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "thread.updated",
+    "before": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-rejected:InvalidTransition",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "stream.started",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "input.received",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "stream.before",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "turn.start",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "model.select",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "tools.select",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "context.prepare",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "model.request",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "model.start",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "message.delta",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "model.usage",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "model.response",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "message.committed",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "model.end",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "turn.end",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "turn.decision",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "tool.before",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "tool.prepare",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "tool.start",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "tool.result",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "tool.end",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "stream.before-end",
+    "before": {
+      "status": "rejected",
+      "code": "AlreadyTerminal",
+      "message": "Execution is no longer accepting signals"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-rejected:AlreadyTerminal",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "rejected",
+      "code": "AlreadyTerminal",
+      "message": "Execution is no longer accepting signals"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "stream.end",
+    "before": {
+      "status": "rejected",
+      "code": "AlreadyTerminal",
+      "message": "Execution is no longer accepting signals"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-rejected:AlreadyTerminal",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "rejected",
+      "code": "AlreadyTerminal",
+      "message": "Execution is no longer accepting signals"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "message.prepare-assistant",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "message.beforeCommit-assistant",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "checkpoint.committed-after-admission",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "thread.updated-after-admission",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "session.threadCreated-await",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-fulfilled",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "session.threadCreated-timer",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "hook-returned",
+      "signal-sent",
+      "signal-fulfilled"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "input.prepare-fire-and-return-timer",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "hook-returned",
+      "signal-sent",
+      "signal-fulfilled"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "external-during-input.prepare",
+    "before": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-rejected:InvalidTransition"
+    ],
+    "after": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "external-during-thread.prepare",
+    "before": {
+      "status": "pending"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "external-during-model",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "signal-sent",
+      "signal-fulfilled"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "external-during-tool",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "signal-sent",
+      "signal-fulfilled"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "tool.execute-await",
+    "before": {
+      "status": "fulfilled"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "tool-execute-entered",
+      "signal-sent",
+      "signal-fulfilled"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 2
+  },
+  {
+    "name": "input.prepare-thread-target",
+    "before": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-rejected:InvalidTransition",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "stream.beforeEnd-thread-target",
+    "before": {
+      "status": "rejected",
+      "code": "AlreadyTerminal",
+      "message": "Execution is closing"
+    },
+    "callsBefore": 1,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-rejected:AlreadyTerminal",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "rejected",
+      "code": "AlreadyTerminal",
+      "message": "Execution is closing"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "input.prepare-transient",
+    "before": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent",
+      "signal-rejected:InvalidTransition",
+      "hook-returned"
+    ],
+    "after": {
+      "status": "rejected",
+      "code": "InvalidTransition",
+      "message": "Execution is admitting input; retry after admission"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  },
+  {
+    "name": "thread.prepare-transient",
+    "before": {
+      "status": "pending"
+    },
+    "callsBefore": 0,
+    "traceBefore": [
+      "hook-entered",
+      "signal-sent"
+    ],
+    "after": {
+      "status": "fulfilled"
+    },
+    "completion": {
+      "status": "completed"
+    },
+    "callsAfter": 1
+  }
+]

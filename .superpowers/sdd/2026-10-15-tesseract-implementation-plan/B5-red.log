@@ -1,0 +1,1538 @@
+$ vitest run --configLoader native --pool threads --exclude tests/integration/**
+
+ RUN  v5.0.4 D:/Tesseract
+
+(node:17776) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ packages/core/src/engine/plugin-continuity.test.ts (2 tests | 1 failed) 80ms
+   × rejects changed plugin configuration before consuming a pending response 45ms
+ ❯ packages/core/src/events/dispatcher.test.ts (3 tests | 1 failed) 17ms
+   × exports identity metadata without leaking runtime capabilities into event envelopes 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/engine/plugin-continuity.test.ts > rejects changed plugin configuration before consuming a pending response
+AssertionError: promise resolved "[ EventEnvelope{ …(24) }, …(18) ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.checkpoint.committed",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_7d05e39b-032d-43ad-97f2-0ce4a2c33384",
+      "revision": 4,
+    },
+    "scope": {},
+    "sequence": 1,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.198Z",
+    "turnId": null,
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.thread.updated",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_7d05e39b-032d-43ad-97f2-0ce4a2c33384",
+      "revision": 4,
+    },
+    "scope": {},
+    "sequence": 2,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.198Z",
+    "turnId": null,
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.stream.resumed",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_7d05e39b-032d-43ad-97f2-0ce4a2c33384",
+      "interruptId": "interrupt_7cfaffda-73b7-425d-85c7-2fc02f9dbf95",
+      "reason": "response",
+    },
+    "scope": {},
+    "sequence": 3,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.199Z",
+    "turnId": null,
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.checkpoint.committed",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_60f61cd0-a273-4320-9baa-3b339c966b8f",
+      "revision": 5,
+    },
+    "scope": {},
+    "sequence": 5,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.201Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.thread.updated",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_60f61cd0-a273-4320-9baa-3b339c966b8f",
+      "revision": 5,
+    },
+    "scope": {},
+    "sequence": 6,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.201Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.turn.start",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "index": 0,
+      "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+    },
+    "scope": {},
+    "sequence": 7,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.201Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.checkpoint.committed",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_b603db3d-d6a1-4f5c-b169-4e17fa6f03e7",
+      "revision": 6,
+    },
+    "scope": {},
+    "sequence": 12,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.204Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.thread.updated",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_b603db3d-d6a1-4f5c-b169-4e17fa6f03e7",
+      "revision": 6,
+    },
+    "scope": {},
+    "sequence": 13,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.204Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.model.start",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "attemptId": "attempt_8035cd27-469e-4c29-ba67-1e90ab8fd345",
+      "model": {
+        "modelId": "test",
+        "providerId": "scripted",
+      },
+    },
+    "scope": {},
+    "sequence": 14,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.204Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.message.delta",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "attemptId": "attempt_8035cd27-469e-4c29-ba67-1e90ab8fd345",
+      "delta": "done",
+      "messageId": "message_1c7631e2-d5e0-4a03-823e-308bca61da20",
+      "partId": "text-0",
+      "partKind": "text",
+      "type": "message-delta",
+    },
+    "scope": {},
+    "sequence": 15,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.204Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.model.usage",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "attemptId": "attempt_8035cd27-469e-4c29-ba67-1e90ab8fd345",
+      "usage": {
+        "cacheReadInputTokens": null,
+        "cacheWriteInputTokens": null,
+        "inputTokens": null,
+        "outputTokens": null,
+        "provenance": {
+          "cacheReadInputTokens": "unavailable",
+          "cacheWriteInputTokens": "unavailable",
+          "inputTokens": "unavailable",
+          "outputTokens": "unavailable",
+          "reasoningOutputTokens": "unavailable",
+          "totalTokens": "unavailable",
+          "uncachedInputTokens": "unavailable",
+        },
+        "reasoningOutputTokens": null,
+        "totalTokens": null,
+        "uncachedInputTokens": null,
+      },
+    },
+    "scope": {},
+    "sequence": 16,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.204Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.checkpoint.committed",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_2308c498-0d2c-4abb-acf1-365195e892bf",
+      "revision": 7,
+    },
+    "scope": {},
+    "sequence": 20,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.206Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.thread.updated",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_2308c498-0d2c-4abb-acf1-365195e892bf",
+      "revision": 7,
+    },
+    "scope": {},
+    "sequence": 21,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.206Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.message.committed",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_2308c498-0d2c-4abb-acf1-365195e892bf",
+      "message": {
+        "content": [
+          {
+            "text": "done",
+            "type": "text",
+          },
+        ],
+        "id": "message_1c7631e2-d5e0-4a03-823e-308bca61da20",
+        "role": "assistant",
+        "schemaVersion": 1,
+      },
+    },
+    "scope": {},
+    "sequence": 22,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.206Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.model.end",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "attemptId": "attempt_8035cd27-469e-4c29-ba67-1e90ab8fd345",
+      "response": {
+        "finishReason": "stop",
+        "message": {
+          "content": [
+            {
+              "text": "done",
+              "type": "text",
+            },
+          ],
+          "id": "message_1c7631e2-d5e0-4a03-823e-308bca61da20",
+          "role": "assistant",
+          "schemaVersion": 1,
+        },
+        "usage": {
+          "cacheReadInputTokens": null,
+          "cacheWriteInputTokens": null,
+          "inputTokens": null,
+          "outputTokens": null,
+          "provenance": {
+            "cacheReadInputTokens": "unavailable",
+            "cacheWriteInputTokens": "unavailable",
+            "inputTokens": "unavailable",
+            "outputTokens": "unavailable",
+            "reasoningOutputTokens": "unavailable",
+            "totalTokens": "unavailable",
+            "uncachedInputTokens": "unavailable",
+          },
+          "reasoningOutputTokens": null,
+          "totalTokens": null,
+          "uncachedInputTokens": null,
+        },
+      },
+    },
+    "scope": {},
+    "sequence": 23,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.206Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": [
+      "configured:core.stream.before:0",
+    ],
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.turn.end",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+      "usage": {
+        "metrics": {
+          "cacheReadInputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "cacheWriteInputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "inputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "outputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "reasoningOutputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "totalTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "uncachedInputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+        },
+      },
+    },
+    "scope": {},
+    "sequence": 24,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.207Z",
+    "turnId": "turn_9072ec87-6be4-4e2a-afd7-5513223d204d",
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": undefined,
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.checkpoint.committed",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_53936227-ef0b-416d-82bf-cdd7a1f4e5be",
+      "revision": 8,
+    },
+    "scope": {},
+    "sequence": 27,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.209Z",
+    "turnId": undefined,
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": undefined,
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.thread.updated",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "checkpointId": "checkpoint_53936227-ef0b-416d-82bf-cdd7a1f4e5be",
+      "revision": 8,
+    },
+    "scope": {},
+    "sequence": 28,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.209Z",
+    "turnId": undefined,
+  },
+  EventEnvelope {
+    "agentId": undefined,
+    "allowedHandlerIds": undefined,
+    "checkpointRevision": undefined,
+    "context": undefined,
+    "controllerId": undefined,
+    "definition": {
+      "id": "core.stream.end",
+      "kind": "notification",
+      "owner": "core",
+      "version": 1,
+    },
+    "effects": {
+      "execute": [Function execute],
+    },
+    "events": {
+      "emit": [Function emit],
+    },
+    "executions": {
+      "reserveChild": [Function reserveChild],
+    },
+    "handleId": "handle_3e4d5689-a978-4934-9447-4688aebd5135",
+    "initialDecision": undefined,
+    "models": {
+      "stream": [Function stream],
+    },
+    "onDecision": undefined,
+    "payload": {
+      "error": null,
+      "interrupt": null,
+      "output": [
+        {
+          "content": [
+            {
+              "text": "done",
+              "type": "text",
+            },
+          ],
+          "id": "message_1c7631e2-d5e0-4a03-823e-308bca61da20",
+          "role": "assistant",
+          "schemaVersion": 1,
+        },
+      ],
+      "reason": null,
+      "status": "completed",
+      "usage": {
+        "metrics": {
+          "cacheReadInputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "cacheWriteInputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "inputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "outputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "reasoningOutputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "totalTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+          "uncachedInputTokens": {
+            "coverage": "unavailable",
+            "knownAttempts": 0,
+            "knownTotal": null,
+            "totalAttempts": 1,
+          },
+        },
+      },
+    },
+    "scope": {},
+    "sequence": 29,
+    "signal": AbortSignal {
+      Symbol(kEvents): Map {},
+      Symbol(events.maxEventTargetListeners): 0,
+      Symbol(events.maxEventTargetListenersWarned): false,
+      Symbol(kHandlers): Map {},
+      Symbol(kAborted): false,
+      Symbol(kReason): undefined,
+      Symbol(kComposite): false,
+    },
+    "startIndex": 0,
+    "state": PluginStateAccess {
+      "definitions": [
+        {
+          "initial": {},
+          "namespace": "execution.children",
+          "pluginId": "core",
+          "schemaVersion": 1,
+        },
+      ],
+      "owner": {
+        "id": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+        "type": "thread",
+      },
+      "publish": [Function anonymous],
+      "shared": {
+        "entries": [],
+      },
+    },
+    "streamId": "stream_cc3459b4-09bb-45f7-adf6-67c2ea925c13",
+    "suspend": [Function suspend],
+    "threadId": "thread_f5865fed-74d3-49c5-96fa-dec5dee799f2",
+    "timestamp": "2026-10-15T06:51:27.209Z",
+    "turnId": undefined,
+  },
+]
+
+ ❯ packages/core/src/engine/plugin-continuity.test.ts:27:124
+     25|   const events=await harness.collect(stream),interrupt=events.find(e=>…
+     26|   await harness.registry.detach("configured");await harness.registry.a…
+     27|   await expect(harness.collect(harness.engine.start({kind:"resume",thr…
+       |                                                                                                                            ^
+     28|   expect((await harness.queries.getInterrupt(thread.id,interrupt.id))!…
+     29|  }finally{await harness.dispose();}
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/core/src/events/dispatcher.test.ts > exports identity metadata without leaking runtime capabilities into event envelopes
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ packages/core/src/events/dispatcher.test.ts:10:39
+      8|  const event=new EventEnvelope(Notice,"hello",{threadId:"t",state:{sec…
+      9|  expect(event.threadId).toBe("t");
+     10|  expect(Object.hasOwn(event,"state")).toBe(false);
+       |                                       ^
+     11|  expect(Object.hasOwn(event,"effects")).toBe(false);
+     12| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+ Test Files  2 failed | 21 passed (23)
+      Tests  2 failed | 53 passed (55)
+   Start at  13:51:26
+   Duration  907ms (import 43%, tests 28%, transform 24%, worker 5%)
+
+[ELIFECYCLE] Test failed. See above for more details.

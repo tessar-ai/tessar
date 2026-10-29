@@ -1,0 +1,38 @@
+$ tsc -p tsconfig.json && node ../../scripts/copy-license.mjs
+package: @tessar/openai@0.1.4
+Tarball Contents
+dist/adapter.d.ts
+dist/adapter.js
+dist/adapter.js.map
+dist/chat-adapter.d.ts
+dist/chat-adapter.js
+dist/chat-adapter.js.map
+dist/chat-codec.d.ts
+dist/chat-codec.js
+dist/chat-codec.js.map
+dist/codec.d.ts
+dist/codec.js
+dist/codec.js.map
+dist/embedding.d.ts
+dist/embedding.js
+dist/embedding.js.map
+dist/index.d.ts
+dist/index.js
+dist/index.js.map
+dist/parts.d.ts
+dist/parts.js
+dist/parts.js.map
+dist/plugin.d.ts
+dist/plugin.js
+dist/plugin.js.map
+dist/provider.d.ts
+dist/provider.js
+dist/provider.js.map
+dist/response-error.d.ts
+dist/response-error.js
+dist/response-error.js.map
+LICENSE
+package.json
+README.md
+Tarball Details
+D:\tessar\dist\release\tessar-openai-0.1.4.tgz

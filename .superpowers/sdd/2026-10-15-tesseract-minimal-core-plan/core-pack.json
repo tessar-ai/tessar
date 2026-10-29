@@ -1,0 +1,475 @@
+{
+  "name": "@tesseract/core",
+  "version": "0.0.0",
+  "filename": "tesseract-core-0.0.0.tgz",
+  "files": [
+    {
+      "path": "dist/agent.d.ts"
+    },
+    {
+      "path": "dist/agent.js"
+    },
+    {
+      "path": "dist/agent.js.map"
+    },
+    {
+      "path": "dist/controller.d.ts"
+    },
+    {
+      "path": "dist/controller.js"
+    },
+    {
+      "path": "dist/controller.js.map"
+    },
+    {
+      "path": "dist/engine/abort.d.ts"
+    },
+    {
+      "path": "dist/engine/abort.js"
+    },
+    {
+      "path": "dist/engine/abort.js.map"
+    },
+    {
+      "path": "dist/engine/context.d.ts"
+    },
+    {
+      "path": "dist/engine/context.js"
+    },
+    {
+      "path": "dist/engine/context.js.map"
+    },
+    {
+      "path": "dist/engine/delivery.d.ts"
+    },
+    {
+      "path": "dist/engine/delivery.js"
+    },
+    {
+      "path": "dist/engine/delivery.js.map"
+    },
+    {
+      "path": "dist/engine/interrupt.d.ts"
+    },
+    {
+      "path": "dist/engine/interrupt.js"
+    },
+    {
+      "path": "dist/engine/interrupt.js.map"
+    },
+    {
+      "path": "dist/engine/lineage.d.ts"
+    },
+    {
+      "path": "dist/engine/lineage.js"
+    },
+    {
+      "path": "dist/engine/lineage.js.map"
+    },
+    {
+      "path": "dist/engine/recovery.d.ts"
+    },
+    {
+      "path": "dist/engine/recovery.js"
+    },
+    {
+      "path": "dist/engine/recovery.js.map"
+    },
+    {
+      "path": "dist/engine/resume.d.ts"
+    },
+    {
+      "path": "dist/engine/resume.js"
+    },
+    {
+      "path": "dist/engine/resume.js.map"
+    },
+    {
+      "path": "dist/engine/tool-executor.d.ts"
+    },
+    {
+      "path": "dist/engine/tool-executor.js"
+    },
+    {
+      "path": "dist/engine/tool-executor.js.map"
+    },
+    {
+      "path": "dist/engine/tracked-effects.d.ts"
+    },
+    {
+      "path": "dist/engine/tracked-effects.js"
+    },
+    {
+      "path": "dist/engine/tracked-effects.js.map"
+    },
+    {
+      "path": "dist/errors.d.ts"
+    },
+    {
+      "path": "dist/errors.js"
+    },
+    {
+      "path": "dist/errors.js.map"
+    },
+    {
+      "path": "dist/events/catalog.d.ts"
+    },
+    {
+      "path": "dist/events/catalog.js"
+    },
+    {
+      "path": "dist/events/catalog.js.map"
+    },
+    {
+      "path": "dist/events/definition.d.ts"
+    },
+    {
+      "path": "dist/events/definition.js"
+    },
+    {
+      "path": "dist/events/definition.js.map"
+    },
+    {
+      "path": "dist/events/dispatcher.d.ts"
+    },
+    {
+      "path": "dist/events/dispatcher.js"
+    },
+    {
+      "path": "dist/events/dispatcher.js.map"
+    },
+    {
+      "path": "dist/index.d.ts"
+    },
+    {
+      "path": "dist/index.js"
+    },
+    {
+      "path": "dist/index.js.map"
+    },
+    {
+      "path": "dist/instructions/instruction.d.ts"
+    },
+    {
+      "path": "dist/instructions/instruction.js"
+    },
+    {
+      "path": "dist/instructions/instruction.js.map"
+    },
+    {
+      "path": "dist/json.d.ts"
+    },
+    {
+      "path": "dist/json.js"
+    },
+    {
+      "path": "dist/json.js.map"
+    },
+    {
+      "path": "dist/messages/codec.d.ts"
+    },
+    {
+      "path": "dist/messages/codec.js"
+    },
+    {
+      "path": "dist/messages/codec.js.map"
+    },
+    {
+      "path": "dist/messages/message.d.ts"
+    },
+    {
+      "path": "dist/messages/message.js"
+    },
+    {
+      "path": "dist/messages/message.js.map"
+    },
+    {
+      "path": "dist/messages/parts.d.ts"
+    },
+    {
+      "path": "dist/messages/parts.js"
+    },
+    {
+      "path": "dist/messages/parts.js.map"
+    },
+    {
+      "path": "dist/models/cache.d.ts"
+    },
+    {
+      "path": "dist/models/cache.js"
+    },
+    {
+      "path": "dist/models/cache.js.map"
+    },
+    {
+      "path": "dist/models/catalog.d.ts"
+    },
+    {
+      "path": "dist/models/catalog.js"
+    },
+    {
+      "path": "dist/models/catalog.js.map"
+    },
+    {
+      "path": "dist/models/catalog.snapshot.json"
+    },
+    {
+      "path": "dist/models/contract.d.ts"
+    },
+    {
+      "path": "dist/models/contract.js"
+    },
+    {
+      "path": "dist/models/contract.js.map"
+    },
+    {
+      "path": "dist/models/normalize-catalog.d.ts"
+    },
+    {
+      "path": "dist/models/normalize-catalog.js"
+    },
+    {
+      "path": "dist/models/normalize-catalog.js.map"
+    },
+    {
+      "path": "dist/models/profile.d.ts"
+    },
+    {
+      "path": "dist/models/profile.js"
+    },
+    {
+      "path": "dist/models/profile.js.map"
+    },
+    {
+      "path": "dist/models/registry.d.ts"
+    },
+    {
+      "path": "dist/models/registry.js"
+    },
+    {
+      "path": "dist/models/registry.js.map"
+    },
+    {
+      "path": "dist/models/resolver.d.ts"
+    },
+    {
+      "path": "dist/models/resolver.js"
+    },
+    {
+      "path": "dist/models/resolver.js.map"
+    },
+    {
+      "path": "dist/plugins/context.d.ts"
+    },
+    {
+      "path": "dist/plugins/context.js"
+    },
+    {
+      "path": "dist/plugins/context.js.map"
+    },
+    {
+      "path": "dist/plugins/host.d.ts"
+    },
+    {
+      "path": "dist/plugins/host.js"
+    },
+    {
+      "path": "dist/plugins/host.js.map"
+    },
+    {
+      "path": "dist/plugins/registry.d.ts"
+    },
+    {
+      "path": "dist/plugins/registry.js"
+    },
+    {
+      "path": "dist/plugins/registry.js.map"
+    },
+    {
+      "path": "dist/session-events.d.ts"
+    },
+    {
+      "path": "dist/session-events.js"
+    },
+    {
+      "path": "dist/session-events.js.map"
+    },
+    {
+      "path": "dist/session.d.ts"
+    },
+    {
+      "path": "dist/session.js"
+    },
+    {
+      "path": "dist/session.js.map"
+    },
+    {
+      "path": "dist/state/commit.d.ts"
+    },
+    {
+      "path": "dist/state/commit.js"
+    },
+    {
+      "path": "dist/state/commit.js.map"
+    },
+    {
+      "path": "dist/state/fork.d.ts"
+    },
+    {
+      "path": "dist/state/fork.js"
+    },
+    {
+      "path": "dist/state/fork.js.map"
+    },
+    {
+      "path": "dist/state/memory-backend.d.ts"
+    },
+    {
+      "path": "dist/state/memory-backend.js"
+    },
+    {
+      "path": "dist/state/memory-backend.js.map"
+    },
+    {
+      "path": "dist/state/plugin-state.d.ts"
+    },
+    {
+      "path": "dist/state/plugin-state.js"
+    },
+    {
+      "path": "dist/state/plugin-state.js.map"
+    },
+    {
+      "path": "dist/state/queries.d.ts"
+    },
+    {
+      "path": "dist/state/queries.js"
+    },
+    {
+      "path": "dist/state/queries.js.map"
+    },
+    {
+      "path": "dist/state/schema.d.ts"
+    },
+    {
+      "path": "dist/state/schema.js"
+    },
+    {
+      "path": "dist/state/schema.js.map"
+    },
+    {
+      "path": "dist/state/scope.d.ts"
+    },
+    {
+      "path": "dist/state/scope.js"
+    },
+    {
+      "path": "dist/state/scope.js.map"
+    },
+    {
+      "path": "dist/state/storage-ports.d.ts"
+    },
+    {
+      "path": "dist/state/storage-ports.js"
+    },
+    {
+      "path": "dist/state/storage-ports.js.map"
+    },
+    {
+      "path": "dist/state/threads.d.ts"
+    },
+    {
+      "path": "dist/state/threads.js"
+    },
+    {
+      "path": "dist/state/threads.js.map"
+    },
+    {
+      "path": "dist/testing/harness.d.ts"
+    },
+    {
+      "path": "dist/testing/harness.js"
+    },
+    {
+      "path": "dist/testing/harness.js.map"
+    },
+    {
+      "path": "dist/testing/index.d.ts"
+    },
+    {
+      "path": "dist/testing/index.js"
+    },
+    {
+      "path": "dist/testing/index.js.map"
+    },
+    {
+      "path": "dist/testing/scripted-provider.d.ts"
+    },
+    {
+      "path": "dist/testing/scripted-provider.js"
+    },
+    {
+      "path": "dist/testing/scripted-provider.js.map"
+    },
+    {
+      "path": "dist/testing/storage-conformance.d.ts"
+    },
+    {
+      "path": "dist/testing/storage-conformance.js"
+    },
+    {
+      "path": "dist/testing/storage-conformance.js.map"
+    },
+    {
+      "path": "dist/thread.d.ts"
+    },
+    {
+      "path": "dist/thread.js"
+    },
+    {
+      "path": "dist/thread.js.map"
+    },
+    {
+      "path": "dist/tools/input-definition.d.ts"
+    },
+    {
+      "path": "dist/tools/input-definition.js"
+    },
+    {
+      "path": "dist/tools/input-definition.js.map"
+    },
+    {
+      "path": "dist/tools/tool.d.ts"
+    },
+    {
+      "path": "dist/tools/tool.js"
+    },
+    {
+      "path": "dist/tools/tool.js.map"
+    },
+    {
+      "path": "dist/trace/records.d.ts"
+    },
+    {
+      "path": "dist/trace/records.js"
+    },
+    {
+      "path": "dist/trace/records.js.map"
+    },
+    {
+      "path": "dist/trace/usage.d.ts"
+    },
+    {
+      "path": "dist/trace/usage.js"
+    },
+    {
+      "path": "dist/trace/usage.js.map"
+    },
+    {
+      "path": "package.json"
+    },
+    {
+      "path": "src/models/catalog.LICENSE"
+    }
+  ]
+}

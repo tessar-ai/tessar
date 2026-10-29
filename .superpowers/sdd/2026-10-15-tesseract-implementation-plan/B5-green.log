@@ -1,0 +1,12 @@
+$ vitest run --configLoader native --pool threads --exclude tests/integration/**
+
+ RUN  v5.0.4 D:/Tesseract
+
+(node:14728) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  23 passed (23)
+      Tests  55 passed (55)
+   Start at  13:52:01
+   Duration  967ms (import 38%, transform 36%, tests 22%, worker 4%)
+

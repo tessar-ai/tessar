@@ -1,0 +1,28 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.9.0
+2 info using node@v24.14.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:D:\tessar\.superpowers\logger-ci-check\managed\npm\.npmrc
+5 silly config load:file:C:\Users\TSP\.npmrc
+6 silly config load:file:C:\Users\TSP\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm install ../../tessar-plugins-0.1.4.tgz
+8 verbose argv "install" "--offline" "--ignore-scripts" "--no-audit" "--no-fund" "--cache" "D:/tessar/.superpowers/logger-ci-check/cache" "../../tessar-plugins-0.1.4.tgz"
+9 verbose logfile logs-max:10 dir:D:\tessar\.superpowers\logger-ci-check\cache\_logs\2026-10-22T11_58_18_953Z-
+10 verbose logfile D:\tessar\.superpowers\logger-ci-check\cache\_logs\2026-10-22T11_58_18_953Z-debug-0.log
+11 silly logfile done cleaning log files
+12 http fetch GET https://registry.npmjs.org/npm attempt 1 failed with ECONNREFUSED
+13 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+14 silly idealTree buildDeps
+15 silly fetch manifest @tessar/plugins@file:../../tessar-plugins-0.1.4.tgz
+16 silly fetch manifest @tessar/core@^0.1.4
+17 silly packumentCache full:https://registry.npmjs.org/@tessar%2fcore cache-miss
+18 silly placeDep ROOT @tessar/plugins@0.1.4 OK for:  want: file:../../tessar-plugins-0.1.4.tgz
+19 silly reify moves {}
+20 http cache @tessar/plugins@file:D:/tessar/.superpowers/logger-ci-check/tessar-plugins-0.1.4.tgz 0ms (cache hit)
+21 silly ADD node_modules/@tessar/plugins
+22 verbose cwd D:\tessar\.superpowers\logger-ci-check\managed\npm
+23 verbose os Windows_NT 10.0.26200
+24 verbose node v24.14.0
+25 verbose npm  v11.9.0
+26 verbose exit 0
+27 info ok

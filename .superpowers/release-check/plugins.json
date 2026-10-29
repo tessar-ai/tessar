@@ -1,0 +1,56 @@
+{
+  "name": "@tessar/plugins",
+  "version": "0.1.4",
+  "license": "Apache-2.0",
+  "description": "Node plugin loading, npm package management and a built-in logger for Tessar.",
+  "keywords": [
+    "tessar",
+    "ai-agent",
+    "typescript",
+    "plugins",
+    "plugin-loader",
+    "cli",
+    "logging"
+  ],
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tessar-ai/tessar.git",
+    "directory": "packages/plugins"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./logger": {
+      "types": "./dist/build-in/logger.d.ts",
+      "import": "./dist/build-in/logger.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24.14.0"
+  },
+  "peerDependencies": {
+    "@tessar/core": "^0.1.4"
+  },
+  "peerDependenciesMeta": {
+    "@tessar/core": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@tessar/core": "0.1.4"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

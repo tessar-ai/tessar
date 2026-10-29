@@ -1,0 +1,22 @@
+
+ RUN  v5.0.4 D:/tessar
+
+(node:21456) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:21456) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:21456) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:21456) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:21456) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  51 passed (51)
+      Tests  233 passed (233)
+   Start at  19:59:56
+   Duration  19.91s (import 74%, tests 23%, transform 2%, worker 1%)
+
+    Isolate  51 workers spawned · ~298ms startup each (spawn + environment, per file)
+             at least ~3.51s faster with isolate: false — reuses workers across files instead of one per file
+

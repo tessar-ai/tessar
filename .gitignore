@@ -1,13 +1,10 @@
 node_modules/
 dist/
-.superpowers/
 .worktrees/
 .agents/
-docs/superpowers
 *.db
 *.db-shm
 *.db-wal
 .env
 .env.storage
-/packages/*/LICENSE
 .pnpm-store

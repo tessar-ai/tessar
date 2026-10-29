@@ -1,0 +1,36 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/openai/test/adapter.test.ts (7 tests | 1 failed) 32ms
+   × streams official SDK SSE, retains reasoning state and counts cumulative usage once 20ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/openai/test/adapter.test.ts > streams official SDK SSE, retains reasoning state and counts cumulative usage once
+AssertionError: expected [] to deeply equal [ 'reasoning', 'text' ]
+
+- Expected
++ Received
+
+- [
+-   "reasoning",
+-   "text",
+- ]
++ []
+
+ ❯ packages/openai/test/adapter.test.ts:96:5
+     94|   expect(
+     95|     chunks.filter((c) => c.type === "message-delta").map((c) => c.part…
+     96|   ).toEqual(["reasoning", "text"]);
+       |     ^
+     97|   const response = chunks.find((c) => c.type === "response")!;
+     98|   expect(response.type === "response" && response.response.usage).toMa…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 17 passed (18)
+   Start at  23:39:40
+   Duration  1.24s (import 59%, transform 35%, tests 5%, worker 1%)
+

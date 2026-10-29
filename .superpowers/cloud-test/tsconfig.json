@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "exactOptionalPropertyTypes": true,
+    "paths": {
+      "@tessar/core": [
+        "D:/tessar/packages/core/dist/index.d.ts"
+      ],
+      "@tessar/openai": [
+        "D:/tessar/packages/openai/dist/index.d.ts"
+      ],
+      "@tessar/plugins/logger": [
+        "D:/tessar/packages/plugins/dist/build-in/logger.d.ts"
+      ],
+      "@tessar/opentelemetry": [
+        "D:/tessar/packages/opentelemetry/dist/index.d.ts"
+      ],
+      "@tessar/core/tool": [
+        "D:/tessar/packages/core/dist/tools/index.d.ts"
+      ]
+    }
+  },
+  "include": [
+    "src/session.ts"
+  ]
+}

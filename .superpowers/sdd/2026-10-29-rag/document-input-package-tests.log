@@ -1,0 +1,13 @@
+$ vitest run --configLoader native --pool threads --exclude tests/integration/** "--maxWorkers" "4"
+
+ RUN  v5.0.4 D:/tessar
+
+
+ Test Files  96 passed | 1 skipped (97)
+      Tests  663 passed | 51 skipped (714)
+   Start at  23:07:44
+   Duration  21.82s (import 68%, tests 27%, transform 4%, worker 1%)
+
+    Isolate  97 workers spawned · ~150ms startup each (spawn + environment, per file)
+             at least ~3.48s faster with isolate: false — reuses workers across files instead of one per file
+

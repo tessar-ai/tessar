@@ -1,0 +1,80 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/core/test/events/cleanup.test.ts (3 tests | 3 failed) 43ms
+   × removes redundant event maps and handle barriers 6ms
+   × validates context-prepared tools against the actual registry 29ms
+   × publishes one Thread mutation event with already-updated Session state 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/test/events/cleanup.test.ts > removes redundant event maps and handle barriers
+AssertionError: expected '[{"prepare":"thread.prepare","started…' not to contain 'thread.updated'
+
+Expected: "thread.updated"
+Received: "[{"prepare":"thread.prepare","started":"thread.started","beforeShutdown":"thread.before-shutdown","shutdown":"thread.shutdown","updated":"thread.updated","beforeFork":"thread.before-fork","forked":"thread.forked","beforeRename":"thread.before-rename","renamed":"thread.renamed","beforeDelete":"thread.before-delete","deleted":"thread.deleted"},{"select":"tools.select"},{"created":"session.created","modelChanged":"session.model-changed","threadCreated":"session.thread-created","threadSwitched":"session.thread-switched","threadRenamed":"session.thread-renamed","threadForked":"session.thread-forked","threadDeleted":"session.thread-deleted","inputQueued":"session.input-queued","inputDiscarded":"session.input-discarded","beforeClose":"session.before-close","closed":"session.closed","model":{"beforeChange":"session.model.before-change"},"thread":{"beforeSwitch":"session.thread.before-switch"}},{"before":"stream.before","started":"stream.started","beforeEnd":"stream.before-end","end":"stream.end","error":"stream.error","suspended":"stream.suspended","resumed":"stream.resumed","cancel":"stream.cancel"},{"prepare":"message.prepare","beforeCommit":"message.before-commit","delta":"message.delta","committed":"message.committed"}]"
+
+ ❯ packages/core/test/events/cleanup.test.ts:8:24
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  packages/core/test/events/cleanup.test.ts > validates context-prepared tools against the actual registry
+AssertionError: expected { …(7) } to match object { status: 'failed', …(1) }
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "error": {
+-     "code": "UnknownTool",
+-   },
+-   "status": "failed",
++   "error": null,
++   "status": "completed",
+  }
+
+ ❯ packages/core/test/events/cleanup.test.ts:17:20
+     15|   try {
+     16|     const result = await h.agent.generate("go");
+     17|     expect(result).toMatchObject({ status: "failed", error: { code: "U…
+       |                    ^
+     18|     expect(h.provider.calls).toHaveLength(0);
+     19|   } finally { await h.dispose(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  packages/core/test/events/cleanup.test.ts > publishes one Thread mutation event with already-updated Session state
+AssertionError: expected [ 'hook:fork', 'hook:rename' ] to deeply equal [ 'hook:create', 'hook:delete', …(6) ]
+
+- Expected
++ Received
+
+  [
+-   "hook:create",
+-   "hook:delete",
+    "hook:fork",
+    "hook:rename",
+-   "ui:create",
+-   "ui:delete",
+-   "ui:fork",
+-   "ui:rename",
+  ]
+
+ ❯ packages/core/test/events/cleanup.test.ts:50:25
+     48|     expect(current.thread.getId()).toBe(created.id);
+     49|     await current.thread.delete();
+     50|     expect(seen.sort()).toEqual(["hook:create", "hook:delete", "hook:f…
+       |                         ^
+     51|   } finally { await h.dispose(); }
+     52| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  23:22:03
+   Duration  705ms (import 60%, transform 32%, tests 7%, worker 1%)
+

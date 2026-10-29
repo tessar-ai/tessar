@@ -1,0 +1,28 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/openai/test/embedding.test.ts (33 tests | 1 failed) 75ms
+   × extracts and snapshots text from document/chunk objects without sending other data 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > extracts and snapshots text from document/chunk objects without sending other data
+TessarError: Embedding documents must be strings
+ ❯ fail packages/core/src/errors.ts:55:9
+     53| }
+     54| export function fail(code: string, message: string): never {
+     55|   throw new TessarError(code, message);
+       |         ^
+     56| }
+     57| export function requireId(id: string, name = "id"): string {
+ ❯ OpenAIEmbedding.embedDocuments packages/openai/src/embedding.ts:36:7
+ ❯ packages/openai/test/embedding.test.ts:103:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 32 passed (33)
+   Start at  23:05:21
+   Duration  939ms (import 62%, transform 28%, tests 9%, worker 1%)
+

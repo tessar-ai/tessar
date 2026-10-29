@@ -1,0 +1,5 @@
+packages/rag/test/public-types.test.ts(3,15): error TS2305: Module '"../src/index.js"' has no exported member 'EmbeddingModel'.
+packages/rag/test/public-types.test.ts(9,3): error TS2578: Unused '@ts-expect-error' directive.
+packages/rag/test/public-types.test.ts(11,3): error TS2578: Unused '@ts-expect-error' directive.
+packages/rag/test/public-types.test.ts(13,3): error TS2578: Unused '@ts-expect-error' directive.
+packages/rag/test/public-types.test.ts(15,3): error TS2578: Unused '@ts-expect-error' directive.

@@ -1,0 +1,1 @@
+{"private":true,"name":"tessar-age-check","version":"1.0.0","packageManager":"pnpm@11.5.3","dependencies":{"@tessar/core":"^0.1.2","@tessar/openai":"^0.1.2","@tessar/plugins":"^0.1.2","@tessar/postgresql":"^0.1.2","@tessar/sqlite":"^0.1.2"}}

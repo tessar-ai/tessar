@@ -1,0 +1,47 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/core/test/engine/part-lifecycle.test.ts (2 tests | 1 failed) 50ms
+   × marks failed primary drafts before model.error and keeps UI status out of checkpoints 16ms
+ ❯ packages/core/test/runtime-state.test.ts (8 tests | 1 failed) 260ms
+   × restores suspended tools and resumes the same conversation without duplicate messages 16ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/test/runtime-state.test.ts > restores suspended tools and resumes the same conversation without duplicate messages
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ packages/core/test/runtime-state.test.ts:274:30
+    272|     await session.followUp("ask");
+    273|     await suspended;
+    274|     expect(session.isIdle()).toBe(true);
+       |                              ^
+    275|     expect(session.state.get().tools[0]!.status).toBe("suspended");
+    276|     const restored = await controller.getSession(session.id);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/core/test/engine/part-lifecycle.test.ts > marks failed primary drafts before model.error and keeps UI status out of checkpoints
+TypeError: h.backend.checkpoints.latest is not a function
+ ❯ packages/core/test/engine/part-lifecycle.test.ts:31:52
+     29|     const state = events.filter(event => event.type === "state_changed…
+     30|     expect(state.currentMessage!.content[0]).toMatchObject({ status: "…
+     31|     const checkpoint = await h.backend.checkpoints.latest(stream.threa…
+       |                                                    ^
+     32|     expect(checkpoint!.state.messages.some(message => message.id === "…
+     33|   } finally { await h.dispose(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 1 passed (3)
+      Tests  2 failed | 10 passed (12)
+   Start at  23:44:12
+   Duration  1.15s (import 59%, transform 29%, tests 12%, worker 1%)
+

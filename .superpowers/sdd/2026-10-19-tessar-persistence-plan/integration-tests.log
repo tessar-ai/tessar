@@ -1,0 +1,15 @@
+
+ RUN  v5.0.4 D:/tessar
+
+(node:18320) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:18320) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:18320) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  7 passed (7)
+      Tests  24 passed (24)
+   Start at  19:58:43
+   Duration  30.78s (tests 92%, import 7%, transform 1%)
+

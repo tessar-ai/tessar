@@ -1,0 +1,181 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/openai/test/embedding.test.ts (27 tests | 27 failed) 14ms
+   × exports a standalone OpenAIEmbedding and preserves native options, endpoint and ordered results 7ms
+   × retains the installed SDK's default request behavior without adding Tessar defaults 1ms
+   × snapshots constructor configuration and document arrays, and supports concurrent calls 1ms
+   × returns [] for an empty document list and rejects wrong runtime inputs 0ms
+   × decodes base64 vectors when encoding is undefined 0ms
+   × decodes base64 vectors when encoding is base64 0ms
+   × rejects malformed provider data: undefined 0ms
+   × rejects malformed provider data: null 0ms
+   × rejects malformed provider data: {} 0ms
+   × rejects malformed provider data: undefined 0ms
+   × rejects malformed provider data: {"index":0,"embedding":[1]} 0ms
+   × rejects malformed provider data: {"index":0,"embedding":[1]} 0ms
+   × rejects malformed provider data: {"index":-1,"embedding":[1]} 0ms
+   × rejects malformed provider data: {"index":0.5,"embedding":[1]} 0ms
+   × rejects malformed provider data: {"index":0,"embedding":[1]} 0ms
+   × rejects malformed provider data: {"index":0,"embedding":[]} 0ms
+   × rejects malformed provider data: {"index":0,"embedding":[1]} 0ms
+   × rejects malformed provider data: {"index":0,"embedding":[null]} 0ms
+   × rejects malformed provider data: {"index":0,"embedding":["1"]} 0ms
+   × rejects malformed provider data: {"index":0,"embedding":[1]} 0ms
+   × rejects malformed explicit base64 vectors:  0ms
+   × rejects malformed explicit base64 vectors: AAAA 0ms
+   × rejects malformed explicit base64 vectors: @@@@AACAPw== 0ms
+   × rejects malformed explicit base64 vectors: AACAfw== 0ms
+   × propagates native OpenAI API errors without wrapping them 0ms
+   × uses the SDK retry configuration for transient provider failures 0ms
+   × uses the SDK timeout error rather than replacing it with a framework error 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 27 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > exports a standalone OpenAIEmbedding and preserves native options, endpoint and ordered results
+AssertionError: expected 'undefined' to be 'function' // Object.is equality
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ packages/openai/test/embedding.test.ts:35:38
+     33|
+     34| it("exports a standalone OpenAIEmbedding and preserves native options,…
+     35|   expect(typeof sdk.OpenAIEmbedding).toBe("function");
+       |                                      ^
+     36|   const transport = fixture(() => reply([
+     37|     { index: 1, embedding: [3, 4] }, { index: 0, embedding: [1, 2] },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/27]⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > retains the installed SDK's default request behavior without adding Tessar defaults
+TypeError: OpenAIEmbedding is not a constructor
+ ❯ packages/openai/test/embedding.test.ts:59:17
+     57|   const adapterTransport = fixture();
+     58|   const directTransport = fixture();
+     59|   const model = new sdk.OpenAIEmbedding({ apiKey: "test", model: "fixt…
+       |                 ^
+     60|   const direct = new OpenAI({ apiKey: "test", fetch: directTransport.f…
+     61|   expect(await model.embedQuery("question")).toEqual([1, 2]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/27]⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > snapshots constructor configuration and document arrays, and supports concurrent calls
+TypeError: OpenAIEmbedding is not a constructor
+ ❯ packages/openai/test/embedding.test.ts:71:17
+     69|   const transport = fixture(call => reply([{ index: 0, embedding: call…
+     70|   const configuration = { apiKey: "test", model: "original", dimension…
+     71|   const model = new sdk.OpenAIEmbedding(configuration);
+       |                 ^
+     72|   configuration.model = "changed";
+     73|   configuration.dimensions = 99;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/27]⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > returns [] for an empty document list and rejects wrong runtime inputs
+TypeError: OpenAIEmbedding is not a constructor
+ ❯ packages/openai/test/embedding.test.ts:84:17
+     82| it("returns [] for an empty document list and rejects wrong runtime in…
+     83|   const transport = fixture();
+     84|   const model = new sdk.OpenAIEmbedding({ apiKey: "test", model: "fixt…
+       |                 ^
+     85|   expect(await model.embedDocuments([])).toEqual([]);
+     86|   await expect(model.embedDocuments("text" as never)).rejects.toBeInst…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/27]⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > decodes base64 vectors when encoding is undefined
+ FAIL  packages/openai/test/embedding.test.ts > decodes base64 vectors when encoding is base64
+TypeError: OpenAIEmbedding is not a constructor
+ ❯ packages/openai/test/embedding.test.ts:94:17
+     92| it.each([undefined, "base64"] as const)("decodes base64 vectors when e…
+     93|   const transport = fixture(() => reply([{ index: 0, embedding: encode…
+     94|   const model = new sdk.OpenAIEmbedding({
+       |                 ^
+     95|     apiKey: "test", model: "fixture", encoding_format, fetch: transpor…
+     96|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/27]⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: undefined
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: null
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: {}
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: undefined
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: {"index":0,"embedding":[1]}
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: {"index":0,"embedding":[1]}
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: {"index":-1,"embedding":[1]}
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: {"index":0.5,"embedding":[1]}
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: {"index":0,"embedding":[1]}
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: {"index":0,"embedding":[]}
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: {"index":0,"embedding":[1]}
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: {"index":0,"embedding":[null]}
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: {"index":0,"embedding":["1"]}
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed provider data: {"index":0,"embedding":[1]}
+TypeError: OpenAIEmbedding is not a constructor
+ ❯ packages/openai/test/embedding.test.ts:114:17
+    112| ])("rejects malformed provider data: %j", async data => {
+    113|   const transport = fixture(() => reply(data));
+    114|   const model = new sdk.OpenAIEmbedding({
+       |                 ^
+    115|     apiKey: "test", model: "fixture", encoding_format: "float", fetch:…
+    116|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/27]⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed explicit base64 vectors: 
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed explicit base64 vectors: AAAA
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed explicit base64 vectors: @@@@AACAPw==
+ FAIL  packages/openai/test/embedding.test.ts > rejects malformed explicit base64 vectors: AACAfw==
+TypeError: OpenAIEmbedding is not a constructor
+ ❯ packages/openai/test/embedding.test.ts:125:19
+    123|   "rejects malformed explicit base64 vectors: %s", async value => {
+    124|     const transport = fixture(() => reply([{ index: 0, embedding: valu…
+    125|     const model = new sdk.OpenAIEmbedding({ apiKey: "test", model: "fi…
+       |                   ^
+    126|     await expect(model.embedQuery("query")).rejects.toMatchObject({ co…
+    127|   },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/27]⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > propagates native OpenAI API errors without wrapping them
+TypeError: OpenAIEmbedding is not a constructor
+ ❯ packages/openai/test/embedding.test.ts:134:17
+    132|     error: { message: "Invalid key", type: "authentication_error", cod…
+    133|   }, { status: 401, headers: { "x-request-id": "request-fixture" } }));
+    134|   const model = new sdk.OpenAIEmbedding({ apiKey: "bad", model: "fixtu…
+       |                 ^
+    135|   let caught: unknown;
+    136|   try { await model.embedQuery("query"); } catch (error) { caught = er…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/27]⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > uses the SDK retry configuration for transient provider failures
+TypeError: OpenAIEmbedding is not a constructor
+ ❯ packages/openai/test/embedding.test.ts:147:17
+    145|     ? Response.json({ error: { message: "Busy" } }, { status: 503, hea…
+    146|     : reply([{ index: 0, embedding: [1, 2] }]));
+    147|   const model = new sdk.OpenAIEmbedding({ apiKey: "test", model: "fixt…
+       |                 ^
+    148|   expect(await model.embedQuery("query")).toEqual([1, 2]);
+    149|   expect(attempts).toBe(2);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/27]⎯
+
+ FAIL  packages/openai/test/embedding.test.ts > uses the SDK timeout error rather than replacing it with a framework error
+TypeError: OpenAIEmbedding is not a constructor
+ ❯ packages/openai/test/embedding.test.ts:153:17
+    151|
+    152| it("uses the SDK timeout error rather than replacing it with a framewo…
+    153|   const model = new sdk.OpenAIEmbedding({
+       |                 ^
+    154|     apiKey: "test", model: "fixture", maxRetries: 0, timeout: 20,
+    155|     fetch: async (_url, init) => new Promise((_resolve, reject) => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/27]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  27 failed (27)
+   Start at  22:25:09
+   Duration  1.02s (import 66%, transform 32%, tests 2%)
+

@@ -1,0 +1,2085 @@
+{
+  "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+  "otherId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+  "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+  "traceIds": [
+    "8367e2a314ce02eac914d159fc1e6d4f",
+    "77bf944fdd392383e378c12c4a541032",
+    "3b689bbbb722a2e4aed5fc47c90cc908"
+  ],
+  "rows": [
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.attemptId": "c1c519b2-9a77-4d0d-93ee-1dc6fd3427c4",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.finishReason": "stop",
+        "attributes.metadata.providerId": "scripted",
+        "attributes.metadata.purpose": "primary",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.603Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.602Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.streamId": "c69205ad-c915-4ef8-b155-e800454da703",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "attributes.metadata.turnId": "3e412f41-321e-49c2-b708-2946611dbe70",
+        "attributes.metadata.usage": "{\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"inputTokens\":20,\"outputTokens\":5,\"provenance\":{\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"inputTokens\":\"provider\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"unavailable\",\"totalTokens\":\"derived\",\"uncachedInputTokens\":\"unavailable\"},\"reasoningOutputTokens\":null,\"totalTokens\":25,\"uncachedInputTokens\":null}",
+        "end_time": "2026-10-26T01:59:07.603Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "scripted",
+        "gen_ai.request.model": "test",
+        "gen_ai.usage.input_tokens": 20,
+        "gen_ai.usage.output_tokens": 5,
+        "input.mime_type": "text/plain",
+        "input.value": "SYSTEM\nSynthetic Arize verification. Keep all earlier tool results in context.\n\nUSER\nStart a separate conversation.",
+        "latency_ms": 1,
+        "llm.input_messages": [
+          {
+            "message.content": "Synthetic Arize verification. Keep all earlier tool results in context.",
+            "message.contents": [
+              {
+                "message_content.text": "Synthetic Arize verification. Keep all earlier tool results in context.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "system"
+          },
+          {
+            "message.content": "Start a separate conversation.",
+            "message.contents": [
+              {
+                "message_content.text": "Start a separate conversation.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "user"
+          }
+        ],
+        "llm.model_name": "test",
+        "llm.output_messages": [
+          {
+            "message.content": "A separate conversation.",
+            "message.contents": [
+              {
+                "message_content.text": "A separate conversation.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "assistant"
+          }
+        ],
+        "llm.provider": "scripted",
+        "llm.system": "scripted",
+        "llm.token_count.completion": "5",
+        "llm.token_count.completion_details": {
+          "output": "5"
+        },
+        "llm.token_count.prompt": "20",
+        "llm.token_count.prompt_details": {
+          "input": "20"
+        },
+        "llm.token_count.total": "25",
+        "llm.tools": [
+          {
+            "tool.description": "Read the synthetic date",
+            "tool.json_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}",
+            "tool.name": "get_current_time"
+          },
+          {
+            "tool.description": "Read synthetic weather",
+            "tool.json_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}",
+            "tool.name": "get_weather"
+          }
+        ],
+        "metadata": {
+          "agentId": "test-agent",
+          "attemptId": "c1c519b2-9a77-4d0d-93ee-1dc6fd3427c4",
+          "controllerId": "test-controller",
+          "finishReason": "stop",
+          "parentToolExecutionId": null,
+          "providerId": "scripted",
+          "purpose": "primary",
+          "recordEndedAt": "2026-10-26T01:59:07.603Z",
+          "recordStartedAt": "2026-10-26T01:59:07.602Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "streamId": "c69205ad-c915-4ef8-b155-e800454da703",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+          "turnId": "3e412f41-321e-49c2-b708-2946611dbe70",
+          "usage": {
+            "cacheReadInputTokens": null,
+            "cacheWriteInputTokens": null,
+            "inputTokens": 20,
+            "outputTokens": 5,
+            "provenance": {
+              "cacheReadInputTokens": "unavailable",
+              "cacheWriteInputTokens": "unavailable",
+              "inputTokens": "provider",
+              "outputTokens": "provider",
+              "reasoningOutputTokens": "unavailable",
+              "totalTokens": "derived",
+              "uncachedInputTokens": "unavailable"
+            },
+            "reasoningOutputTokens": null,
+            "totalTokens": 25,
+            "uncachedInputTokens": null
+          }
+        },
+        "openinference.span.kind": "LLM",
+        "output.mime_type": "text/plain",
+        "output.value": "ASSISTANT\nA separate conversation.",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "start_time": "2026-10-26T01:59:07.602Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.completion_start_time": "2026-10-26T01:59:07.603Z",
+        "tessar.input": "{\"model\":{\"providerId\":\"scripted\",\"modelId\":\"test\"},\"instructions\":{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},\"messages\":[{\"schemaVersion\":1,\"id\":\"bd393090-5336-4cd1-9586-8d7732183481\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Start a separate conversation.\"}]}],\"tools\":[{\"name\":\"get_current_time\",\"description\":\"Read the synthetic date\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}},{\"name\":\"get_weather\",\"description\":\"Read synthetic weather\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.attemptId": "\"c1c519b2-9a77-4d0d-93ee-1dc6fd3427c4\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.finishReason": "\"stop\"",
+        "tessar.metadata.parentToolExecutionId": "null",
+        "tessar.metadata.providerId": "\"scripted\"",
+        "tessar.metadata.purpose": "\"primary\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.603Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.602Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.streamId": "\"c69205ad-c915-4ef8-b155-e800454da703\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other\"",
+        "tessar.metadata.turnId": "\"3e412f41-321e-49c2-b708-2946611dbe70\"",
+        "tessar.metadata.usage": "{\"inputTokens\":20,\"uncachedInputTokens\":null,\"outputTokens\":5,\"reasoningOutputTokens\":null,\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"totalTokens\":25,\"provenance\":{\"inputTokens\":\"provider\",\"uncachedInputTokens\":\"unavailable\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"unavailable\",\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"totalTokens\":\"derived\"}}",
+        "tessar.model.parameters": "{}",
+        "tessar.observation.type": "generation",
+        "tessar.output": "{\"schemaVersion\":1,\"id\":\"0cdd64b0-1245-4db5-84c5-2c18c53f8e7c\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"A separate conversation.\"}]}",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ],
+        "tessar.usage": "{\"inputTokens\":20,\"uncachedInputTokens\":null,\"outputTokens\":5,\"reasoningOutputTokens\":null,\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"totalTokens\":25,\"provenance\":{\"inputTokens\":\"provider\",\"uncachedInputTokens\":\"unavailable\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"unavailable\",\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"totalTokens\":\"derived\"}}"
+      },
+      "context": {
+        "span_id": "f74e38e3ce7d7fb69bef9d75",
+        "trace_id": "ddbebcf5b6db6fbdb66b67b869e7797dce3b73dd1c73dd3c"
+      },
+      "end_time": "2026-10-26T01:59:07.603Z",
+      "kind": "LLM",
+      "name": "test",
+      "parent_id": "e776dbe3bdfc79febcf5dd9a",
+      "start_time": "2026-10-26T01:59:07.602Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.inputSource": "model.request",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.605Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.600Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.status": "ended",
+        "attributes.metadata.streamId": "c69205ad-c915-4ef8-b155-e800454da703",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "attributes.metadata.turnId": "3e412f41-321e-49c2-b708-2946611dbe70",
+        "attributes.metadata.turnNumber": 1,
+        "attributes.metadata.usage": "{\"metrics\":{\"cacheReadInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"cacheWriteInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"inputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":20,\"totalAttempts\":1},\"outputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":5,\"totalAttempts\":1},\"reasoningOutputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"totalTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":25,\"totalAttempts\":1},\"uncachedInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1}}}",
+        "end_time": "2026-10-26T01:59:07.605Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "input.mime_type": "application/json",
+        "input.value": "[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Start a separate conversation.\"}]}]",
+        "latency_ms": 5,
+        "metadata": {
+          "agentId": "test-agent",
+          "controllerId": "test-controller",
+          "inputSource": "model.request",
+          "recordEndedAt": "2026-10-26T01:59:07.605Z",
+          "recordStartedAt": "2026-10-26T01:59:07.600Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "status": "ended",
+          "streamId": "c69205ad-c915-4ef8-b155-e800454da703",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+          "turnId": "3e412f41-321e-49c2-b708-2946611dbe70",
+          "turnNumber": 1,
+          "usage": {
+            "metrics": {
+              "cacheReadInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "cacheWriteInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "inputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 20,
+                "totalAttempts": 1
+              },
+              "outputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 5,
+                "totalAttempts": 1
+              },
+              "reasoningOutputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "totalTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 25,
+                "totalAttempts": 1
+              },
+              "uncachedInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              }
+            }
+          }
+        },
+        "openinference.span.kind": "CHAIN",
+        "output.mime_type": "application/json",
+        "output.value": "[{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"A separate conversation.\"}]}]",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "start_time": "2026-10-26T01:59:07.6Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "{\"model\":{\"providerId\":\"scripted\",\"modelId\":\"test\"},\"instructions\":{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},\"messages\":[{\"schemaVersion\":1,\"id\":\"bd393090-5336-4cd1-9586-8d7732183481\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Start a separate conversation.\"}]}],\"tools\":[{\"name\":\"get_current_time\",\"description\":\"Read the synthetic date\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}},{\"name\":\"get_weather\",\"description\":\"Read synthetic weather\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.inputSource": "\"model.request\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.605Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.600Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.status": "\"ended\"",
+        "tessar.metadata.streamId": "\"c69205ad-c915-4ef8-b155-e800454da703\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other\"",
+        "tessar.metadata.turnId": "\"3e412f41-321e-49c2-b708-2946611dbe70\"",
+        "tessar.metadata.turnNumber": "1",
+        "tessar.metadata.usage": "{\"metrics\":{\"inputTokens\":{\"knownTotal\":20,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"uncachedInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"outputTokens\":{\"knownTotal\":5,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"reasoningOutputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"cacheReadInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"cacheWriteInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"totalTokens\":{\"knownTotal\":25,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"}}}",
+        "tessar.observation.type": "span",
+        "tessar.output": "[{\"schemaVersion\":1,\"id\":\"0cdd64b0-1245-4db5-84c5-2c18c53f8e7c\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"A separate conversation.\"}]}]",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ]
+      },
+      "context": {
+        "span_id": "e776dbe3bdfc79febcf5dd9a",
+        "trace_id": "ddbebcf5b6db6fbdb66b67b869e7797dce3b73dd1c73dd3c"
+      },
+      "end_time": "2026-10-26T01:59:07.605Z",
+      "kind": "CHAIN",
+      "name": "turn 1",
+      "parent_id": "7badfcd3cebbdbd7bd71d6b6",
+      "start_time": "2026-10-26T01:59:07.6Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.608Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.599Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.status": "completed",
+        "attributes.metadata.streamId": "c69205ad-c915-4ef8-b155-e800454da703",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "end_time": "2026-10-26T01:59:07.608Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "gen_ai.operation.name": "invoke_agent",
+        "input.mime_type": "application/json",
+        "input.value": "[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Start a separate conversation.\"}]}]",
+        "latency_ms": 9,
+        "metadata": {
+          "agentId": "test-agent",
+          "controllerId": "test-controller",
+          "recordEndedAt": "2026-10-26T01:59:07.608Z",
+          "recordStartedAt": "2026-10-26T01:59:07.599Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "status": "completed",
+          "streamId": "c69205ad-c915-4ef8-b155-e800454da703",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other"
+        },
+        "openinference.span.kind": "AGENT",
+        "output.mime_type": "application/json",
+        "output.value": "[{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"A separate conversation.\"}]}]",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "start_time": "2026-10-26T01:59:07.599Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "[{\"schemaVersion\":1,\"id\":\"bd393090-5336-4cd1-9586-8d7732183481\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Start a separate conversation.\"}]}]",
+        "tessar.instructions": "{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.608Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.599Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.status": "\"completed\"",
+        "tessar.metadata.streamId": "\"c69205ad-c915-4ef8-b155-e800454da703\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other\"",
+        "tessar.observation.type": "agent",
+        "tessar.output": "[{\"schemaVersion\":1,\"id\":\"0cdd64b0-1245-4db5-84c5-2c18c53f8e7c\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"A separate conversation.\"}]}]",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8-other",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ]
+      },
+      "context": {
+        "span_id": "7badfcd3cebbdbd7bd71d6b6",
+        "trace_id": "ddbebcf5b6db6fbdb66b67b869e7797dce3b73dd1c73dd3c"
+      },
+      "end_time": "2026-10-26T01:59:07.608Z",
+      "kind": "AGENT",
+      "name": "test-agent",
+      "start_time": "2026-10-26T01:59:07.599Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.attemptId": "f8ea324c-eddc-4967-8f80-573c817048d7",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.finishReason": "stop",
+        "attributes.metadata.providerId": "scripted",
+        "attributes.metadata.purpose": "primary",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.589Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.586Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.streamId": "2861401f-302a-45d5-a6e3-cdd9507d2d1c",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "attributes.metadata.turnId": "d7f00c7d-f61c-45a4-b63b-7fc5ff8cfa9e",
+        "attributes.metadata.usage": "{\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"inputTokens\":120,\"outputTokens\":10,\"provenance\":{\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"inputTokens\":\"provider\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"unavailable\",\"totalTokens\":\"derived\",\"uncachedInputTokens\":\"unavailable\"},\"reasoningOutputTokens\":null,\"totalTokens\":130,\"uncachedInputTokens\":null}",
+        "end_time": "2026-10-26T01:59:07.589Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "scripted",
+        "gen_ai.request.model": "test",
+        "gen_ai.usage.input_tokens": 120,
+        "gen_ai.usage.output_tokens": 10,
+        "input.mime_type": "text/plain",
+        "input.value": "SYSTEM\nSynthetic Arize verification. Keep all earlier tool results in context.\n\nUSER\nSynthetic test: get date, then weather.\n\nASSISTANT\n[Thinking]\nCheck the synthetic tool.\n[Tool call: get_current_time]\n{}\nChecking.\n\nTOOL\n{\"date\":\"2026-10-25\"}\n\nASSISTANT\n[Thinking]\nCheck the synthetic tool.\n[Tool call: get_weather]\n{\"date\":\"2026-10-25\"}\nChecking.\n\nTOOL\n{\"date\":\"2026-10-25\",\"temperature\":30}\n\nASSISTANT\n[Thinking]\nThe synthetic weather data is sufficient.\nIt is 30 degrees.\n\nUSER\nUse the earlier result to give advice.",
+        "latency_ms": 3,
+        "llm.input_messages": [
+          {
+            "message.content": "Synthetic Arize verification. Keep all earlier tool results in context.",
+            "message.contents": [
+              {
+                "message_content.text": "Synthetic Arize verification. Keep all earlier tool results in context.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "system"
+          },
+          {
+            "message.content": "Synthetic test: get date, then weather.",
+            "message.contents": [
+              {
+                "message_content.text": "Synthetic test: get date, then weather.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "user"
+          },
+          {
+            "message.content": "Checking.",
+            "message.contents": [
+              {
+                "message_content.text": "Check the synthetic tool.",
+                "message_content.type": "reasoning"
+              },
+              {
+                "message_content.text": "Checking.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "assistant",
+            "message.tool_calls": [
+              {
+                "tool_call.function.arguments": "{}",
+                "tool_call.function.name": "get_current_time",
+                "tool_call.id": "arize-time"
+              }
+            ]
+          },
+          {
+            "message.content": "{\"date\":\"2026-10-25\"}",
+            "message.contents": [
+              {
+                "message_content.text": "{\"date\":\"2026-10-25\"}",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "tool",
+            "message.tool_call_id": "arize-time"
+          },
+          {
+            "message.content": "Checking.",
+            "message.contents": [
+              {
+                "message_content.text": "Check the synthetic tool.",
+                "message_content.type": "reasoning"
+              },
+              {
+                "message_content.text": "Checking.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "assistant",
+            "message.tool_calls": [
+              {
+                "tool_call.function.arguments": "{\"date\":\"2026-10-25\"}",
+                "tool_call.function.name": "get_weather",
+                "tool_call.id": "arize-weather"
+              }
+            ]
+          },
+          {
+            "message.content": "{\"date\":\"2026-10-25\",\"temperature\":30}",
+            "message.contents": [
+              {
+                "message_content.text": "{\"date\":\"2026-10-25\",\"temperature\":30}",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "tool",
+            "message.tool_call_id": "arize-weather"
+          },
+          {
+            "message.content": "It is 30 degrees.",
+            "message.contents": [
+              {
+                "message_content.text": "The synthetic weather data is sufficient.",
+                "message_content.type": "reasoning"
+              },
+              {
+                "message_content.text": "It is 30 degrees.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "assistant"
+          },
+          {
+            "message.content": "Use the earlier result to give advice.",
+            "message.contents": [
+              {
+                "message_content.text": "Use the earlier result to give advice.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "user"
+          }
+        ],
+        "llm.model_name": "test",
+        "llm.output_messages": [
+          {
+            "message.content": "Bring water.",
+            "message.contents": [
+              {
+                "message_content.text": "Bring water.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "assistant"
+          }
+        ],
+        "llm.provider": "scripted",
+        "llm.system": "scripted",
+        "llm.token_count.completion": "10",
+        "llm.token_count.completion_details": {
+          "output": "10"
+        },
+        "llm.token_count.prompt": "120",
+        "llm.token_count.prompt_details": {
+          "input": "120"
+        },
+        "llm.token_count.total": "130",
+        "llm.tools": [
+          {
+            "tool.description": "Read the synthetic date",
+            "tool.json_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}",
+            "tool.name": "get_current_time"
+          },
+          {
+            "tool.description": "Read synthetic weather",
+            "tool.json_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}",
+            "tool.name": "get_weather"
+          }
+        ],
+        "metadata": {
+          "agentId": "test-agent",
+          "attemptId": "f8ea324c-eddc-4967-8f80-573c817048d7",
+          "controllerId": "test-controller",
+          "finishReason": "stop",
+          "parentToolExecutionId": null,
+          "providerId": "scripted",
+          "purpose": "primary",
+          "recordEndedAt": "2026-10-26T01:59:07.589Z",
+          "recordStartedAt": "2026-10-26T01:59:07.586Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "streamId": "2861401f-302a-45d5-a6e3-cdd9507d2d1c",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+          "turnId": "d7f00c7d-f61c-45a4-b63b-7fc5ff8cfa9e",
+          "usage": {
+            "cacheReadInputTokens": null,
+            "cacheWriteInputTokens": null,
+            "inputTokens": 120,
+            "outputTokens": 10,
+            "provenance": {
+              "cacheReadInputTokens": "unavailable",
+              "cacheWriteInputTokens": "unavailable",
+              "inputTokens": "provider",
+              "outputTokens": "provider",
+              "reasoningOutputTokens": "unavailable",
+              "totalTokens": "derived",
+              "uncachedInputTokens": "unavailable"
+            },
+            "reasoningOutputTokens": null,
+            "totalTokens": 130,
+            "uncachedInputTokens": null
+          }
+        },
+        "openinference.span.kind": "LLM",
+        "output.mime_type": "text/plain",
+        "output.value": "ASSISTANT\nBring water.",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.586Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.completion_start_time": "2026-10-26T01:59:07.589Z",
+        "tessar.input": "{\"model\":{\"providerId\":\"scripted\",\"modelId\":\"test\"},\"instructions\":{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},\"messages\":[{\"schemaVersion\":1,\"id\":\"5e0b3e72-f012-4434-a9dd-e126a134a70a\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]},{\"schemaVersion\":1,\"id\":\"5e071412-344b-4c6d-87f4-9d6c5c0625a3\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"d574cc29-38f8-48b9-b279-05e3bfe16ad2\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"},{\"schemaVersion\":1,\"id\":\"4475a5de-36c9-477d-8534-5c5e7363f2a1\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_weather\",\"toolCallId\":\"arize-weather\",\"arguments\":{\"date\":\"2026-10-25\"}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"6340e5cb-b1d6-4b74-ad88-cbe86c8ee880\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"},{\"schemaVersion\":1,\"id\":\"a5265fb3-e67f-4eec-a4e7-6a67296cbf12\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"The synthetic weather data is sufficient.\"},{\"type\":\"text\",\"text\":\"It is 30 degrees.\"}]},{\"schemaVersion\":1,\"id\":\"12bb3b0a-d24b-4a24-b5f2-f110dbb4211d\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Use the earlier result to give advice.\"}]}],\"tools\":[{\"name\":\"get_current_time\",\"description\":\"Read the synthetic date\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}},{\"name\":\"get_weather\",\"description\":\"Read synthetic weather\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.attemptId": "\"f8ea324c-eddc-4967-8f80-573c817048d7\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.finishReason": "\"stop\"",
+        "tessar.metadata.parentToolExecutionId": "null",
+        "tessar.metadata.providerId": "\"scripted\"",
+        "tessar.metadata.purpose": "\"primary\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.589Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.586Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.streamId": "\"2861401f-302a-45d5-a6e3-cdd9507d2d1c\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.metadata.turnId": "\"d7f00c7d-f61c-45a4-b63b-7fc5ff8cfa9e\"",
+        "tessar.metadata.usage": "{\"inputTokens\":120,\"uncachedInputTokens\":null,\"outputTokens\":10,\"reasoningOutputTokens\":null,\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"totalTokens\":130,\"provenance\":{\"inputTokens\":\"provider\",\"uncachedInputTokens\":\"unavailable\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"unavailable\",\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"totalTokens\":\"derived\"}}",
+        "tessar.model.parameters": "{}",
+        "tessar.observation.type": "generation",
+        "tessar.output": "{\"schemaVersion\":1,\"id\":\"bcce3b19-b8de-4c53-974a-ad0fafc1e7ea\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Bring water.\"}]}",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ],
+        "tessar.usage": "{\"inputTokens\":120,\"uncachedInputTokens\":null,\"outputTokens\":10,\"reasoningOutputTokens\":null,\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"totalTokens\":130,\"provenance\":{\"inputTokens\":\"provider\",\"uncachedInputTokens\":\"unavailable\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"unavailable\",\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"totalTokens\":\"derived\"}}"
+      },
+      "context": {
+        "span_id": "71bddff1eef9d5e79d6fbdb9",
+        "trace_id": "efb6dff78e1f75ddfddb7f377b7efc735d9ce1ae78d74df6"
+      },
+      "end_time": "2026-10-26T01:59:07.589Z",
+      "kind": "LLM",
+      "name": "test",
+      "parent_id": "6fa6f571befae3bedbe9fe5c",
+      "start_time": "2026-10-26T01:59:07.586Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.inputSource": "model.request",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.592Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.584Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.status": "ended",
+        "attributes.metadata.streamId": "2861401f-302a-45d5-a6e3-cdd9507d2d1c",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "attributes.metadata.turnId": "d7f00c7d-f61c-45a4-b63b-7fc5ff8cfa9e",
+        "attributes.metadata.turnNumber": 4,
+        "attributes.metadata.usage": "{\"metrics\":{\"cacheReadInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"cacheWriteInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"inputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":120,\"totalAttempts\":1},\"outputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":10,\"totalAttempts\":1},\"reasoningOutputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"totalTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":130,\"totalAttempts\":1},\"uncachedInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1}}}",
+        "end_time": "2026-10-26T01:59:07.592Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "input.mime_type": "application/json",
+        "input.value": "[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_weather\",\"toolCallId\":\"arize-weather\",\"arguments\":{\"date\":\"2026-10-25\"}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"The synthetic weather data is sufficient.\"},{\"type\":\"text\",\"text\":\"It is 30 degrees.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Use the earlier result to give advice.\"}]}]",
+        "latency_ms": 8,
+        "metadata": {
+          "agentId": "test-agent",
+          "controllerId": "test-controller",
+          "inputSource": "model.request",
+          "recordEndedAt": "2026-10-26T01:59:07.592Z",
+          "recordStartedAt": "2026-10-26T01:59:07.584Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "status": "ended",
+          "streamId": "2861401f-302a-45d5-a6e3-cdd9507d2d1c",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+          "turnId": "d7f00c7d-f61c-45a4-b63b-7fc5ff8cfa9e",
+          "turnNumber": 4,
+          "usage": {
+            "metrics": {
+              "cacheReadInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "cacheWriteInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "inputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 120,
+                "totalAttempts": 1
+              },
+              "outputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 10,
+                "totalAttempts": 1
+              },
+              "reasoningOutputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "totalTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 130,
+                "totalAttempts": 1
+              },
+              "uncachedInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              }
+            }
+          }
+        },
+        "openinference.span.kind": "CHAIN",
+        "output.mime_type": "application/json",
+        "output.value": "[{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Bring water.\"}]}]",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.584Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "{\"model\":{\"providerId\":\"scripted\",\"modelId\":\"test\"},\"instructions\":{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},\"messages\":[{\"schemaVersion\":1,\"id\":\"5e0b3e72-f012-4434-a9dd-e126a134a70a\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]},{\"schemaVersion\":1,\"id\":\"5e071412-344b-4c6d-87f4-9d6c5c0625a3\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"d574cc29-38f8-48b9-b279-05e3bfe16ad2\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"},{\"schemaVersion\":1,\"id\":\"4475a5de-36c9-477d-8534-5c5e7363f2a1\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_weather\",\"toolCallId\":\"arize-weather\",\"arguments\":{\"date\":\"2026-10-25\"}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"6340e5cb-b1d6-4b74-ad88-cbe86c8ee880\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"},{\"schemaVersion\":1,\"id\":\"a5265fb3-e67f-4eec-a4e7-6a67296cbf12\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"The synthetic weather data is sufficient.\"},{\"type\":\"text\",\"text\":\"It is 30 degrees.\"}]},{\"schemaVersion\":1,\"id\":\"12bb3b0a-d24b-4a24-b5f2-f110dbb4211d\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Use the earlier result to give advice.\"}]}],\"tools\":[{\"name\":\"get_current_time\",\"description\":\"Read the synthetic date\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}},{\"name\":\"get_weather\",\"description\":\"Read synthetic weather\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.inputSource": "\"model.request\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.592Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.584Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.status": "\"ended\"",
+        "tessar.metadata.streamId": "\"2861401f-302a-45d5-a6e3-cdd9507d2d1c\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.metadata.turnId": "\"d7f00c7d-f61c-45a4-b63b-7fc5ff8cfa9e\"",
+        "tessar.metadata.turnNumber": "4",
+        "tessar.metadata.usage": "{\"metrics\":{\"inputTokens\":{\"knownTotal\":120,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"uncachedInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"outputTokens\":{\"knownTotal\":10,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"reasoningOutputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"cacheReadInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"cacheWriteInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"totalTokens\":{\"knownTotal\":130,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"}}}",
+        "tessar.observation.type": "span",
+        "tessar.output": "[{\"schemaVersion\":1,\"id\":\"bcce3b19-b8de-4c53-974a-ad0fafc1e7ea\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Bring water.\"}]}]",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ]
+      },
+      "context": {
+        "span_id": "6fa6f571befae3bedbe9fe5c",
+        "trace_id": "efb6dff78e1f75ddfddb7f377b7efc735d9ce1ae78d74df6"
+      },
+      "end_time": "2026-10-26T01:59:07.592Z",
+      "kind": "CHAIN",
+      "name": "turn 4",
+      "parent_id": "e76e77f7979fe5f6f569df5e",
+      "start_time": "2026-10-26T01:59:07.584Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.595Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.580Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.status": "completed",
+        "attributes.metadata.streamId": "2861401f-302a-45d5-a6e3-cdd9507d2d1c",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "end_time": "2026-10-26T01:59:07.595Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "gen_ai.operation.name": "invoke_agent",
+        "input.mime_type": "application/json",
+        "input.value": "[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Use the earlier result to give advice.\"}]}]",
+        "latency_ms": 15,
+        "metadata": {
+          "agentId": "test-agent",
+          "controllerId": "test-controller",
+          "recordEndedAt": "2026-10-26T01:59:07.595Z",
+          "recordStartedAt": "2026-10-26T01:59:07.580Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "status": "completed",
+          "streamId": "2861401f-302a-45d5-a6e3-cdd9507d2d1c",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8"
+        },
+        "openinference.span.kind": "AGENT",
+        "output.mime_type": "application/json",
+        "output.value": "[{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Bring water.\"}]}]",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.58Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "[{\"schemaVersion\":1,\"id\":\"12bb3b0a-d24b-4a24-b5f2-f110dbb4211d\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Use the earlier result to give advice.\"}]}]",
+        "tessar.instructions": "{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.595Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.580Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.status": "\"completed\"",
+        "tessar.metadata.streamId": "\"2861401f-302a-45d5-a6e3-cdd9507d2d1c\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.observation.type": "agent",
+        "tessar.output": "[{\"schemaVersion\":1,\"id\":\"bcce3b19-b8de-4c53-974a-ad0fafc1e7ea\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Bring water.\"}]}]",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ]
+      },
+      "context": {
+        "span_id": "e76e77f7979fe5f6f569df5e",
+        "trace_id": "efb6dff78e1f75ddfddb7f377b7efc735d9ce1ae78d74df6"
+      },
+      "end_time": "2026-10-26T01:59:07.595Z",
+      "kind": "AGENT",
+      "name": "test-agent",
+      "start_time": "2026-10-26T01:59:07.58Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.attemptId": "bbcea2c0-0b77-4ed7-8fc3-0874ac16357c",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.providerId": "scripted",
+        "attributes.metadata.purpose": "primary",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.569Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.566Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "attributes.metadata.turnId": "0951f78a-ef9c-4793-ace4-f123ce8e5bea",
+        "attributes.metadata.usage": "{\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"inputTokens\":100,\"outputTokens\":20,\"provenance\":{\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"inputTokens\":\"provider\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"provider\",\"totalTokens\":\"derived\",\"uncachedInputTokens\":\"unavailable\"},\"reasoningOutputTokens\":5,\"totalTokens\":120,\"uncachedInputTokens\":null}",
+        "end_time": "2026-10-26T01:59:07.569Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "scripted",
+        "gen_ai.request.model": "test",
+        "gen_ai.usage.input_tokens": 100,
+        "gen_ai.usage.output_tokens": 20,
+        "gen_ai.usage.reasoning.output_tokens": 5,
+        "input.mime_type": "text/plain",
+        "input.value": "SYSTEM\nSynthetic Arize verification. Keep all earlier tool results in context.\n\nUSER\nSynthetic test: get date, then weather.\n\nASSISTANT\n[Thinking]\nCheck the synthetic tool.\n[Tool call: get_current_time]\n{}\nChecking.\n\nTOOL\n{\"date\":\"2026-10-25\"}\n\nASSISTANT\n[Thinking]\nCheck the synthetic tool.\n[Tool call: get_weather]\n{\"date\":\"2026-10-25\"}\nChecking.\n\nTOOL\n{\"date\":\"2026-10-25\",\"temperature\":30}",
+        "latency_ms": 3,
+        "llm.input_messages": [
+          {
+            "message.content": "Synthetic Arize verification. Keep all earlier tool results in context.",
+            "message.contents": [
+              {
+                "message_content.text": "Synthetic Arize verification. Keep all earlier tool results in context.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "system"
+          },
+          {
+            "message.content": "Synthetic test: get date, then weather.",
+            "message.contents": [
+              {
+                "message_content.text": "Synthetic test: get date, then weather.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "user"
+          },
+          {
+            "message.content": "Checking.",
+            "message.contents": [
+              {
+                "message_content.text": "Check the synthetic tool.",
+                "message_content.type": "reasoning"
+              },
+              {
+                "message_content.text": "Checking.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "assistant",
+            "message.tool_calls": [
+              {
+                "tool_call.function.arguments": "{}",
+                "tool_call.function.name": "get_current_time",
+                "tool_call.id": "arize-time"
+              }
+            ]
+          },
+          {
+            "message.content": "{\"date\":\"2026-10-25\"}",
+            "message.contents": [
+              {
+                "message_content.text": "{\"date\":\"2026-10-25\"}",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "tool",
+            "message.tool_call_id": "arize-time"
+          },
+          {
+            "message.content": "Checking.",
+            "message.contents": [
+              {
+                "message_content.text": "Check the synthetic tool.",
+                "message_content.type": "reasoning"
+              },
+              {
+                "message_content.text": "Checking.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "assistant",
+            "message.tool_calls": [
+              {
+                "tool_call.function.arguments": "{\"date\":\"2026-10-25\"}",
+                "tool_call.function.name": "get_weather",
+                "tool_call.id": "arize-weather"
+              }
+            ]
+          },
+          {
+            "message.content": "{\"date\":\"2026-10-25\",\"temperature\":30}",
+            "message.contents": [
+              {
+                "message_content.text": "{\"date\":\"2026-10-25\",\"temperature\":30}",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "tool",
+            "message.tool_call_id": "arize-weather"
+          }
+        ],
+        "llm.model_name": "test",
+        "llm.output_messages": [
+          {
+            "message.content": "It is 30 degrees.",
+            "message.contents": [
+              {
+                "message_content.text": "The synthetic weather data is sufficient.",
+                "message_content.type": "reasoning"
+              },
+              {
+                "message_content.text": "It is 30 degrees.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "assistant"
+          }
+        ],
+        "llm.provider": "scripted",
+        "llm.system": "scripted",
+        "llm.token_count.completion": "20",
+        "llm.token_count.completion_details": {
+          "output": "15",
+          "reasoning": "5"
+        },
+        "llm.token_count.prompt": "100",
+        "llm.token_count.prompt_details": {
+          "input": "100"
+        },
+        "llm.token_count.total": "120",
+        "llm.tools": [
+          {
+            "tool.description": "Read the synthetic date",
+            "tool.json_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}",
+            "tool.name": "get_current_time"
+          },
+          {
+            "tool.description": "Read synthetic weather",
+            "tool.json_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}",
+            "tool.name": "get_weather"
+          }
+        ],
+        "metadata": {
+          "agentId": "test-agent",
+          "attemptId": "bbcea2c0-0b77-4ed7-8fc3-0874ac16357c",
+          "controllerId": "test-controller",
+          "parentToolExecutionId": null,
+          "providerId": "scripted",
+          "purpose": "primary",
+          "recordEndedAt": "2026-10-26T01:59:07.569Z",
+          "recordStartedAt": "2026-10-26T01:59:07.566Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+          "turnId": "0951f78a-ef9c-4793-ace4-f123ce8e5bea",
+          "usage": {
+            "cacheReadInputTokens": null,
+            "cacheWriteInputTokens": null,
+            "inputTokens": 100,
+            "outputTokens": 20,
+            "provenance": {
+              "cacheReadInputTokens": "unavailable",
+              "cacheWriteInputTokens": "unavailable",
+              "inputTokens": "provider",
+              "outputTokens": "provider",
+              "reasoningOutputTokens": "provider",
+              "totalTokens": "derived",
+              "uncachedInputTokens": "unavailable"
+            },
+            "reasoningOutputTokens": 5,
+            "totalTokens": 120,
+            "uncachedInputTokens": null
+          }
+        },
+        "openinference.span.kind": "LLM",
+        "output.mime_type": "text/plain",
+        "output.value": "ASSISTANT\n[Thinking]\nThe synthetic weather data is sufficient.\nIt is 30 degrees.",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.566Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "{\"model\":{\"providerId\":\"scripted\",\"modelId\":\"test\"},\"instructions\":{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},\"messages\":[{\"schemaVersion\":1,\"id\":\"5e0b3e72-f012-4434-a9dd-e126a134a70a\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]},{\"schemaVersion\":1,\"id\":\"5e071412-344b-4c6d-87f4-9d6c5c0625a3\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"d574cc29-38f8-48b9-b279-05e3bfe16ad2\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"},{\"schemaVersion\":1,\"id\":\"4475a5de-36c9-477d-8534-5c5e7363f2a1\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_weather\",\"toolCallId\":\"arize-weather\",\"arguments\":{\"date\":\"2026-10-25\"}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"6340e5cb-b1d6-4b74-ad88-cbe86c8ee880\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"}],\"tools\":[{\"name\":\"get_current_time\",\"description\":\"Read the synthetic date\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}},{\"name\":\"get_weather\",\"description\":\"Read synthetic weather\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.attemptId": "\"bbcea2c0-0b77-4ed7-8fc3-0874ac16357c\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.parentToolExecutionId": "null",
+        "tessar.metadata.providerId": "\"scripted\"",
+        "tessar.metadata.purpose": "\"primary\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.569Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.566Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.streamId": "\"620c8aa6-123d-4fb2-b08d-1e8a36c87cd1\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.metadata.turnId": "\"0951f78a-ef9c-4793-ace4-f123ce8e5bea\"",
+        "tessar.metadata.usage": "{\"inputTokens\":100,\"uncachedInputTokens\":null,\"outputTokens\":20,\"reasoningOutputTokens\":5,\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"totalTokens\":120,\"provenance\":{\"inputTokens\":\"provider\",\"uncachedInputTokens\":\"unavailable\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"provider\",\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"totalTokens\":\"derived\"}}",
+        "tessar.model.parameters": "{}",
+        "tessar.observation.type": "generation",
+        "tessar.output": "{\"schemaVersion\":1,\"id\":\"a5265fb3-e67f-4eec-a4e7-6a67296cbf12\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"The synthetic weather data is sufficient.\"},{\"type\":\"text\",\"text\":\"It is 30 degrees.\"}]}",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ],
+        "tessar.usage": "{\"inputTokens\":100,\"uncachedInputTokens\":null,\"outputTokens\":20,\"reasoningOutputTokens\":5,\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"totalTokens\":120,\"provenance\":{\"inputTokens\":\"provider\",\"uncachedInputTokens\":\"unavailable\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"provider\",\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"totalTokens\":\"derived\"}}"
+      },
+      "context": {
+        "span_id": "ebbe77f766b973669ee7479b",
+        "trace_id": "f37ebb7b66b7d7871ed3679a73dd78775e7d7dcd5ee9de1f"
+      },
+      "end_time": "2026-10-26T01:59:07.569Z",
+      "kind": "LLM",
+      "name": "test",
+      "parent_id": "7b96fadde776774edd779eb5",
+      "start_time": "2026-10-26T01:59:07.566Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.inputSource": "model.request",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.572Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.563Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.status": "ended",
+        "attributes.metadata.streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "attributes.metadata.turnId": "0951f78a-ef9c-4793-ace4-f123ce8e5bea",
+        "attributes.metadata.turnNumber": 3,
+        "attributes.metadata.usage": "{\"metrics\":{\"cacheReadInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"cacheWriteInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"inputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":100,\"totalAttempts\":1},\"outputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":20,\"totalAttempts\":1},\"reasoningOutputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":5,\"totalAttempts\":1},\"totalTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":120,\"totalAttempts\":1},\"uncachedInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1}}}",
+        "end_time": "2026-10-26T01:59:07.572Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "input.mime_type": "application/json",
+        "input.value": "[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_weather\",\"toolCallId\":\"arize-weather\",\"arguments\":{\"date\":\"2026-10-25\"}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"}]",
+        "latency_ms": 9,
+        "metadata": {
+          "agentId": "test-agent",
+          "controllerId": "test-controller",
+          "inputSource": "model.request",
+          "recordEndedAt": "2026-10-26T01:59:07.572Z",
+          "recordStartedAt": "2026-10-26T01:59:07.563Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "status": "ended",
+          "streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+          "turnId": "0951f78a-ef9c-4793-ace4-f123ce8e5bea",
+          "turnNumber": 3,
+          "usage": {
+            "metrics": {
+              "cacheReadInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "cacheWriteInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "inputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 100,
+                "totalAttempts": 1
+              },
+              "outputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 20,
+                "totalAttempts": 1
+              },
+              "reasoningOutputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 5,
+                "totalAttempts": 1
+              },
+              "totalTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 120,
+                "totalAttempts": 1
+              },
+              "uncachedInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              }
+            }
+          }
+        },
+        "openinference.span.kind": "CHAIN",
+        "output.mime_type": "application/json",
+        "output.value": "[{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"The synthetic weather data is sufficient.\"},{\"type\":\"text\",\"text\":\"It is 30 degrees.\"}]}]",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.563Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "{\"model\":{\"providerId\":\"scripted\",\"modelId\":\"test\"},\"instructions\":{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},\"messages\":[{\"schemaVersion\":1,\"id\":\"5e0b3e72-f012-4434-a9dd-e126a134a70a\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]},{\"schemaVersion\":1,\"id\":\"5e071412-344b-4c6d-87f4-9d6c5c0625a3\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"d574cc29-38f8-48b9-b279-05e3bfe16ad2\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"},{\"schemaVersion\":1,\"id\":\"4475a5de-36c9-477d-8534-5c5e7363f2a1\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_weather\",\"toolCallId\":\"arize-weather\",\"arguments\":{\"date\":\"2026-10-25\"}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"6340e5cb-b1d6-4b74-ad88-cbe86c8ee880\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"}],\"tools\":[{\"name\":\"get_current_time\",\"description\":\"Read the synthetic date\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}},{\"name\":\"get_weather\",\"description\":\"Read synthetic weather\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.inputSource": "\"model.request\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.572Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.563Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.status": "\"ended\"",
+        "tessar.metadata.streamId": "\"620c8aa6-123d-4fb2-b08d-1e8a36c87cd1\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.metadata.turnId": "\"0951f78a-ef9c-4793-ace4-f123ce8e5bea\"",
+        "tessar.metadata.turnNumber": "3",
+        "tessar.metadata.usage": "{\"metrics\":{\"inputTokens\":{\"knownTotal\":100,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"uncachedInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"outputTokens\":{\"knownTotal\":20,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"reasoningOutputTokens\":{\"knownTotal\":5,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"cacheReadInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"cacheWriteInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"totalTokens\":{\"knownTotal\":120,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"}}}",
+        "tessar.observation.type": "span",
+        "tessar.output": "[{\"schemaVersion\":1,\"id\":\"a5265fb3-e67f-4eec-a4e7-6a67296cbf12\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"The synthetic weather data is sufficient.\"},{\"type\":\"text\",\"text\":\"It is 30 degrees.\"}]}]",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ]
+      },
+      "context": {
+        "span_id": "7b96fadde776774edd779eb5",
+        "trace_id": "f37ebb7b66b7d7871ed3679a73dd78775e7d7dcd5ee9de1f"
+      },
+      "end_time": "2026-10-26T01:59:07.572Z",
+      "kind": "CHAIN",
+      "name": "turn 3",
+      "parent_id": "779774d9bef8d7beb471e6b7",
+      "start_time": "2026-10-26T01:59:07.563Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.550Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.548Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.status": "succeeded",
+        "attributes.metadata.streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "attributes.metadata.toolCallId": "arize-weather",
+        "attributes.metadata.toolDescription": "Read synthetic weather",
+        "attributes.metadata.toolExecutionId": "00f6e76c-4a8f-4f54-9df1-617d8d4af434",
+        "attributes.metadata.toolParameters": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"],\"type\":\"object\"}",
+        "end_time": "2026-10-26T01:59:07.55Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "gen_ai.operation.name": "execute_tool",
+        "gen_ai.tool.call.arguments": "{\"date\":\"2026-10-25\"}",
+        "gen_ai.tool.call.id": "arize-weather",
+        "gen_ai.tool.call.result": "{\"date\":\"2026-10-25\",\"temperature\":30}",
+        "gen_ai.tool.description": "Read synthetic weather",
+        "gen_ai.tool.name": "get_weather",
+        "input.mime_type": "application/json",
+        "input.value": "{\"date\":\"2026-10-25\"}",
+        "latency_ms": 2,
+        "metadata": {
+          "agentId": "test-agent",
+          "controllerId": "test-controller",
+          "recordEndedAt": "2026-10-26T01:59:07.550Z",
+          "recordStartedAt": "2026-10-26T01:59:07.548Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "status": "succeeded",
+          "streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+          "toolCallId": "arize-weather",
+          "toolDescription": "Read synthetic weather",
+          "toolExecutionId": "00f6e76c-4a8f-4f54-9df1-617d8d4af434",
+          "toolParameters": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "properties": {
+              "date": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "date"
+            ],
+            "type": "object"
+          }
+        },
+        "openinference.span.kind": "TOOL",
+        "output.mime_type": "application/json",
+        "output.value": "{\"schemaVersion\":1,\"id\":\"6340e5cb-b1d6-4b74-ad88-cbe86c8ee880\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"}",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.548Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "{\"date\":\"2026-10-25\"}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.550Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.548Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.status": "\"succeeded\"",
+        "tessar.metadata.streamId": "\"620c8aa6-123d-4fb2-b08d-1e8a36c87cd1\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.metadata.toolCallId": "\"arize-weather\"",
+        "tessar.metadata.toolDescription": "\"Read synthetic weather\"",
+        "tessar.metadata.toolExecutionId": "\"00f6e76c-4a8f-4f54-9df1-617d8d4af434\"",
+        "tessar.metadata.toolParameters": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}",
+        "tessar.observation.type": "tool",
+        "tessar.output": "{\"schemaVersion\":1,\"id\":\"6340e5cb-b1d6-4b74-ad88-cbe86c8ee880\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"}",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ],
+        "tool.description": "Read synthetic weather",
+        "tool.id": "arize-weather",
+        "tool.name": "get_weather",
+        "tool.parameters": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}"
+      },
+      "context": {
+        "span_id": "d3d6f57b6f1ef39e5f778edc",
+        "trace_id": "f37ebb7b66b7d7871ed3679a73dd78775e7d7dcd5ee9de1f"
+      },
+      "end_time": "2026-10-26T01:59:07.55Z",
+      "kind": "TOOL",
+      "name": "get_weather",
+      "parent_id": "71f79af75f5af74e76f5d6fb",
+      "start_time": "2026-10-26T01:59:07.548Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.attemptId": "8ae09b61-5801-49cd-9968-3e5c5549ffd4",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.providerId": "scripted",
+        "attributes.metadata.purpose": "primary",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.542Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.540Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "attributes.metadata.turnId": "34e67cb2-f284-4f75-81d9-128497a3ccc3",
+        "attributes.metadata.usage": "{\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"inputTokens\":100,\"outputTokens\":20,\"provenance\":{\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"inputTokens\":\"provider\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"provider\",\"totalTokens\":\"derived\",\"uncachedInputTokens\":\"unavailable\"},\"reasoningOutputTokens\":5,\"totalTokens\":120,\"uncachedInputTokens\":null}",
+        "end_time": "2026-10-26T01:59:07.542Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "scripted",
+        "gen_ai.request.model": "test",
+        "gen_ai.usage.input_tokens": 100,
+        "gen_ai.usage.output_tokens": 20,
+        "gen_ai.usage.reasoning.output_tokens": 5,
+        "input.mime_type": "text/plain",
+        "input.value": "SYSTEM\nSynthetic Arize verification. Keep all earlier tool results in context.\n\nUSER\nSynthetic test: get date, then weather.\n\nASSISTANT\n[Thinking]\nCheck the synthetic tool.\n[Tool call: get_current_time]\n{}\nChecking.\n\nTOOL\n{\"date\":\"2026-10-25\"}",
+        "latency_ms": 2,
+        "llm.input_messages": [
+          {
+            "message.content": "Synthetic Arize verification. Keep all earlier tool results in context.",
+            "message.contents": [
+              {
+                "message_content.text": "Synthetic Arize verification. Keep all earlier tool results in context.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "system"
+          },
+          {
+            "message.content": "Synthetic test: get date, then weather.",
+            "message.contents": [
+              {
+                "message_content.text": "Synthetic test: get date, then weather.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "user"
+          },
+          {
+            "message.content": "Checking.",
+            "message.contents": [
+              {
+                "message_content.text": "Check the synthetic tool.",
+                "message_content.type": "reasoning"
+              },
+              {
+                "message_content.text": "Checking.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "assistant",
+            "message.tool_calls": [
+              {
+                "tool_call.function.arguments": "{}",
+                "tool_call.function.name": "get_current_time",
+                "tool_call.id": "arize-time"
+              }
+            ]
+          },
+          {
+            "message.content": "{\"date\":\"2026-10-25\"}",
+            "message.contents": [
+              {
+                "message_content.text": "{\"date\":\"2026-10-25\"}",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "tool",
+            "message.tool_call_id": "arize-time"
+          }
+        ],
+        "llm.model_name": "test",
+        "llm.output_messages": [
+          {
+            "message.content": "Checking.",
+            "message.contents": [
+              {
+                "message_content.text": "Check the synthetic tool.",
+                "message_content.type": "reasoning"
+              },
+              {
+                "message_content.text": "Checking.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "assistant",
+            "message.tool_calls": [
+              {
+                "tool_call.function.arguments": "{\"date\":\"2026-10-25\"}",
+                "tool_call.function.name": "get_weather",
+                "tool_call.id": "arize-weather"
+              }
+            ]
+          }
+        ],
+        "llm.provider": "scripted",
+        "llm.system": "scripted",
+        "llm.token_count.completion": "20",
+        "llm.token_count.completion_details": {
+          "output": "15",
+          "reasoning": "5"
+        },
+        "llm.token_count.prompt": "100",
+        "llm.token_count.prompt_details": {
+          "input": "100"
+        },
+        "llm.token_count.total": "120",
+        "llm.tools": [
+          {
+            "tool.description": "Read the synthetic date",
+            "tool.json_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}",
+            "tool.name": "get_current_time"
+          },
+          {
+            "tool.description": "Read synthetic weather",
+            "tool.json_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}",
+            "tool.name": "get_weather"
+          }
+        ],
+        "metadata": {
+          "agentId": "test-agent",
+          "attemptId": "8ae09b61-5801-49cd-9968-3e5c5549ffd4",
+          "controllerId": "test-controller",
+          "parentToolExecutionId": null,
+          "providerId": "scripted",
+          "purpose": "primary",
+          "recordEndedAt": "2026-10-26T01:59:07.542Z",
+          "recordStartedAt": "2026-10-26T01:59:07.540Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+          "turnId": "34e67cb2-f284-4f75-81d9-128497a3ccc3",
+          "usage": {
+            "cacheReadInputTokens": null,
+            "cacheWriteInputTokens": null,
+            "inputTokens": 100,
+            "outputTokens": 20,
+            "provenance": {
+              "cacheReadInputTokens": "unavailable",
+              "cacheWriteInputTokens": "unavailable",
+              "inputTokens": "provider",
+              "outputTokens": "provider",
+              "reasoningOutputTokens": "provider",
+              "totalTokens": "derived",
+              "uncachedInputTokens": "unavailable"
+            },
+            "reasoningOutputTokens": 5,
+            "totalTokens": 120,
+            "uncachedInputTokens": null
+          }
+        },
+        "openinference.span.kind": "LLM",
+        "output.mime_type": "text/plain",
+        "output.value": "ASSISTANT\n[Thinking]\nCheck the synthetic tool.\n[Tool call: get_weather]\n{\"date\":\"2026-10-25\"}\nChecking.",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.54Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "{\"model\":{\"providerId\":\"scripted\",\"modelId\":\"test\"},\"instructions\":{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},\"messages\":[{\"schemaVersion\":1,\"id\":\"5e0b3e72-f012-4434-a9dd-e126a134a70a\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]},{\"schemaVersion\":1,\"id\":\"5e071412-344b-4c6d-87f4-9d6c5c0625a3\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"d574cc29-38f8-48b9-b279-05e3bfe16ad2\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"}],\"tools\":[{\"name\":\"get_current_time\",\"description\":\"Read the synthetic date\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}},{\"name\":\"get_weather\",\"description\":\"Read synthetic weather\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.attemptId": "\"8ae09b61-5801-49cd-9968-3e5c5549ffd4\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.parentToolExecutionId": "null",
+        "tessar.metadata.providerId": "\"scripted\"",
+        "tessar.metadata.purpose": "\"primary\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.542Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.540Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.streamId": "\"620c8aa6-123d-4fb2-b08d-1e8a36c87cd1\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.metadata.turnId": "\"34e67cb2-f284-4f75-81d9-128497a3ccc3\"",
+        "tessar.metadata.usage": "{\"inputTokens\":100,\"uncachedInputTokens\":null,\"outputTokens\":20,\"reasoningOutputTokens\":5,\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"totalTokens\":120,\"provenance\":{\"inputTokens\":\"provider\",\"uncachedInputTokens\":\"unavailable\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"provider\",\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"totalTokens\":\"derived\"}}",
+        "tessar.model.parameters": "{}",
+        "tessar.observation.type": "generation",
+        "tessar.output": "{\"schemaVersion\":1,\"id\":\"4475a5de-36c9-477d-8534-5c5e7363f2a1\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_weather\",\"toolCallId\":\"arize-weather\",\"arguments\":{\"date\":\"2026-10-25\"}},{\"type\":\"text\",\"text\":\"Checking.\"}]}",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ],
+        "tessar.usage": "{\"inputTokens\":100,\"uncachedInputTokens\":null,\"outputTokens\":20,\"reasoningOutputTokens\":5,\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"totalTokens\":120,\"provenance\":{\"inputTokens\":\"provider\",\"uncachedInputTokens\":\"unavailable\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"provider\",\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"totalTokens\":\"derived\"}}"
+      },
+      "context": {
+        "span_id": "7dcddbdf7e3b6f66f87796dd",
+        "trace_id": "f37ebb7b66b7d7871ed3679a73dd78775e7d7dcd5ee9de1f"
+      },
+      "end_time": "2026-10-26T01:59:07.542Z",
+      "kind": "LLM",
+      "name": "test",
+      "parent_id": "71f79af75f5af74e76f5d6fb",
+      "start_time": "2026-10-26T01:59:07.54Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.inputSource": "model.request",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.558Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.539Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.status": "ended",
+        "attributes.metadata.streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "attributes.metadata.turnId": "34e67cb2-f284-4f75-81d9-128497a3ccc3",
+        "attributes.metadata.turnNumber": 2,
+        "attributes.metadata.usage": "{\"metrics\":{\"cacheReadInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"cacheWriteInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"inputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":100,\"totalAttempts\":1},\"outputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":20,\"totalAttempts\":1},\"reasoningOutputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":5,\"totalAttempts\":1},\"totalTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":120,\"totalAttempts\":1},\"uncachedInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1}}}",
+        "end_time": "2026-10-26T01:59:07.558Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "input.mime_type": "application/json",
+        "input.value": "[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"}]",
+        "latency_ms": 19,
+        "metadata": {
+          "agentId": "test-agent",
+          "controllerId": "test-controller",
+          "inputSource": "model.request",
+          "recordEndedAt": "2026-10-26T01:59:07.558Z",
+          "recordStartedAt": "2026-10-26T01:59:07.539Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "status": "ended",
+          "streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+          "turnId": "34e67cb2-f284-4f75-81d9-128497a3ccc3",
+          "turnNumber": 2,
+          "usage": {
+            "metrics": {
+              "cacheReadInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "cacheWriteInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "inputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 100,
+                "totalAttempts": 1
+              },
+              "outputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 20,
+                "totalAttempts": 1
+              },
+              "reasoningOutputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 5,
+                "totalAttempts": 1
+              },
+              "totalTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 120,
+                "totalAttempts": 1
+              },
+              "uncachedInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              }
+            }
+          }
+        },
+        "openinference.span.kind": "CHAIN",
+        "output.mime_type": "application/json",
+        "output.value": "[{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_weather\",\"toolCallId\":\"arize-weather\",\"arguments\":{\"date\":\"2026-10-25\"}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"}]",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.539Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "{\"model\":{\"providerId\":\"scripted\",\"modelId\":\"test\"},\"instructions\":{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},\"messages\":[{\"schemaVersion\":1,\"id\":\"5e0b3e72-f012-4434-a9dd-e126a134a70a\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]},{\"schemaVersion\":1,\"id\":\"5e071412-344b-4c6d-87f4-9d6c5c0625a3\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"d574cc29-38f8-48b9-b279-05e3bfe16ad2\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"}],\"tools\":[{\"name\":\"get_current_time\",\"description\":\"Read the synthetic date\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}},{\"name\":\"get_weather\",\"description\":\"Read synthetic weather\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.inputSource": "\"model.request\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.558Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.539Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.status": "\"ended\"",
+        "tessar.metadata.streamId": "\"620c8aa6-123d-4fb2-b08d-1e8a36c87cd1\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.metadata.turnId": "\"34e67cb2-f284-4f75-81d9-128497a3ccc3\"",
+        "tessar.metadata.turnNumber": "2",
+        "tessar.metadata.usage": "{\"metrics\":{\"inputTokens\":{\"knownTotal\":100,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"uncachedInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"outputTokens\":{\"knownTotal\":20,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"reasoningOutputTokens\":{\"knownTotal\":5,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"cacheReadInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"cacheWriteInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"totalTokens\":{\"knownTotal\":120,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"}}}",
+        "tessar.observation.type": "span",
+        "tessar.output": "[{\"schemaVersion\":1,\"id\":\"4475a5de-36c9-477d-8534-5c5e7363f2a1\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_weather\",\"toolCallId\":\"arize-weather\",\"arguments\":{\"date\":\"2026-10-25\"}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"6340e5cb-b1d6-4b74-ad88-cbe86c8ee880\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"}]",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ]
+      },
+      "context": {
+        "span_id": "71f79af75f5af74e76f5d6fb",
+        "trace_id": "f37ebb7b66b7d7871ed3679a73dd78775e7d7dcd5ee9de1f"
+      },
+      "end_time": "2026-10-26T01:59:07.558Z",
+      "kind": "CHAIN",
+      "name": "turn 2",
+      "parent_id": "779774d9bef8d7beb471e6b7",
+      "start_time": "2026-10-26T01:59:07.539Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.522Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.519Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.status": "succeeded",
+        "attributes.metadata.streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "attributes.metadata.toolCallId": "arize-time",
+        "attributes.metadata.toolDescription": "Read the synthetic date",
+        "attributes.metadata.toolExecutionId": "1c0d0bd7-4307-4fbb-b018-2e55436e7f81",
+        "attributes.metadata.toolParameters": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{},\"type\":\"object\"}",
+        "end_time": "2026-10-26T01:59:07.522Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "gen_ai.operation.name": "execute_tool",
+        "gen_ai.tool.call.arguments": "{}",
+        "gen_ai.tool.call.id": "arize-time",
+        "gen_ai.tool.call.result": "{\"date\":\"2026-10-25\"}",
+        "gen_ai.tool.description": "Read the synthetic date",
+        "gen_ai.tool.name": "get_current_time",
+        "input.mime_type": "application/json",
+        "input.value": "{}",
+        "latency_ms": 3,
+        "metadata": {
+          "agentId": "test-agent",
+          "controllerId": "test-controller",
+          "recordEndedAt": "2026-10-26T01:59:07.522Z",
+          "recordStartedAt": "2026-10-26T01:59:07.519Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "status": "succeeded",
+          "streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+          "toolCallId": "arize-time",
+          "toolDescription": "Read the synthetic date",
+          "toolExecutionId": "1c0d0bd7-4307-4fbb-b018-2e55436e7f81",
+          "toolParameters": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "properties": {},
+            "type": "object"
+          }
+        },
+        "openinference.span.kind": "TOOL",
+        "output.mime_type": "application/json",
+        "output.value": "{\"schemaVersion\":1,\"id\":\"d574cc29-38f8-48b9-b279-05e3bfe16ad2\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"}",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.519Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "{}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.522Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.519Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.status": "\"succeeded\"",
+        "tessar.metadata.streamId": "\"620c8aa6-123d-4fb2-b08d-1e8a36c87cd1\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.metadata.toolCallId": "\"arize-time\"",
+        "tessar.metadata.toolDescription": "\"Read the synthetic date\"",
+        "tessar.metadata.toolExecutionId": "\"1c0d0bd7-4307-4fbb-b018-2e55436e7f81\"",
+        "tessar.metadata.toolParameters": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}",
+        "tessar.observation.type": "tool",
+        "tessar.output": "{\"schemaVersion\":1,\"id\":\"d574cc29-38f8-48b9-b279-05e3bfe16ad2\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"}",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ],
+        "tool.description": "Read the synthetic date",
+        "tool.id": "arize-time",
+        "tool.name": "get_current_time",
+        "tool.parameters": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}"
+      },
+      "context": {
+        "span_id": "f3a79de1fe5cf38d1c69c6da",
+        "trace_id": "f37ebb7b66b7d7871ed3679a73dd78775e7d7dcd5ee9de1f"
+      },
+      "end_time": "2026-10-26T01:59:07.522Z",
+      "kind": "TOOL",
+      "name": "get_current_time",
+      "parent_id": "e5a7bd7fbdf46f4f76dfd7da",
+      "start_time": "2026-10-26T01:59:07.519Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.attemptId": "1c7cbb3d-36a1-4449-b5c3-a7be705f9bee",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.providerId": "scripted",
+        "attributes.metadata.purpose": "primary",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.504Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.502Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "attributes.metadata.turnId": "908e8bfb-f309-4718-8e52-210dbb252c83",
+        "attributes.metadata.usage": "{\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"inputTokens\":100,\"outputTokens\":20,\"provenance\":{\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"inputTokens\":\"provider\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"provider\",\"totalTokens\":\"derived\",\"uncachedInputTokens\":\"unavailable\"},\"reasoningOutputTokens\":5,\"totalTokens\":120,\"uncachedInputTokens\":null}",
+        "end_time": "2026-10-26T01:59:07.504Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "scripted",
+        "gen_ai.request.model": "test",
+        "gen_ai.usage.input_tokens": 100,
+        "gen_ai.usage.output_tokens": 20,
+        "gen_ai.usage.reasoning.output_tokens": 5,
+        "input.mime_type": "text/plain",
+        "input.value": "SYSTEM\nSynthetic Arize verification. Keep all earlier tool results in context.\n\nUSER\nSynthetic test: get date, then weather.",
+        "latency_ms": 2,
+        "llm.input_messages": [
+          {
+            "message.content": "Synthetic Arize verification. Keep all earlier tool results in context.",
+            "message.contents": [
+              {
+                "message_content.text": "Synthetic Arize verification. Keep all earlier tool results in context.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "system"
+          },
+          {
+            "message.content": "Synthetic test: get date, then weather.",
+            "message.contents": [
+              {
+                "message_content.text": "Synthetic test: get date, then weather.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "user"
+          }
+        ],
+        "llm.model_name": "test",
+        "llm.output_messages": [
+          {
+            "message.content": "Checking.",
+            "message.contents": [
+              {
+                "message_content.text": "Check the synthetic tool.",
+                "message_content.type": "reasoning"
+              },
+              {
+                "message_content.text": "Checking.",
+                "message_content.type": "text"
+              }
+            ],
+            "message.role": "assistant",
+            "message.tool_calls": [
+              {
+                "tool_call.function.arguments": "{}",
+                "tool_call.function.name": "get_current_time",
+                "tool_call.id": "arize-time"
+              }
+            ]
+          }
+        ],
+        "llm.provider": "scripted",
+        "llm.system": "scripted",
+        "llm.token_count.completion": "20",
+        "llm.token_count.completion_details": {
+          "output": "15",
+          "reasoning": "5"
+        },
+        "llm.token_count.prompt": "100",
+        "llm.token_count.prompt_details": {
+          "input": "100"
+        },
+        "llm.token_count.total": "120",
+        "llm.tools": [
+          {
+            "tool.description": "Read the synthetic date",
+            "tool.json_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}",
+            "tool.name": "get_current_time"
+          },
+          {
+            "tool.description": "Read synthetic weather",
+            "tool.json_schema": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}",
+            "tool.name": "get_weather"
+          }
+        ],
+        "metadata": {
+          "agentId": "test-agent",
+          "attemptId": "1c7cbb3d-36a1-4449-b5c3-a7be705f9bee",
+          "controllerId": "test-controller",
+          "parentToolExecutionId": null,
+          "providerId": "scripted",
+          "purpose": "primary",
+          "recordEndedAt": "2026-10-26T01:59:07.504Z",
+          "recordStartedAt": "2026-10-26T01:59:07.502Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+          "turnId": "908e8bfb-f309-4718-8e52-210dbb252c83",
+          "usage": {
+            "cacheReadInputTokens": null,
+            "cacheWriteInputTokens": null,
+            "inputTokens": 100,
+            "outputTokens": 20,
+            "provenance": {
+              "cacheReadInputTokens": "unavailable",
+              "cacheWriteInputTokens": "unavailable",
+              "inputTokens": "provider",
+              "outputTokens": "provider",
+              "reasoningOutputTokens": "provider",
+              "totalTokens": "derived",
+              "uncachedInputTokens": "unavailable"
+            },
+            "reasoningOutputTokens": 5,
+            "totalTokens": 120,
+            "uncachedInputTokens": null
+          }
+        },
+        "openinference.span.kind": "LLM",
+        "output.mime_type": "text/plain",
+        "output.value": "ASSISTANT\n[Thinking]\nCheck the synthetic tool.\n[Tool call: get_current_time]\n{}\nChecking.",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.502Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "{\"model\":{\"providerId\":\"scripted\",\"modelId\":\"test\"},\"instructions\":{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},\"messages\":[{\"schemaVersion\":1,\"id\":\"5e0b3e72-f012-4434-a9dd-e126a134a70a\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]}],\"tools\":[{\"name\":\"get_current_time\",\"description\":\"Read the synthetic date\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}},{\"name\":\"get_weather\",\"description\":\"Read synthetic weather\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.attemptId": "\"1c7cbb3d-36a1-4449-b5c3-a7be705f9bee\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.parentToolExecutionId": "null",
+        "tessar.metadata.providerId": "\"scripted\"",
+        "tessar.metadata.purpose": "\"primary\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.504Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.502Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.streamId": "\"620c8aa6-123d-4fb2-b08d-1e8a36c87cd1\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.metadata.turnId": "\"908e8bfb-f309-4718-8e52-210dbb252c83\"",
+        "tessar.metadata.usage": "{\"inputTokens\":100,\"uncachedInputTokens\":null,\"outputTokens\":20,\"reasoningOutputTokens\":5,\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"totalTokens\":120,\"provenance\":{\"inputTokens\":\"provider\",\"uncachedInputTokens\":\"unavailable\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"provider\",\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"totalTokens\":\"derived\"}}",
+        "tessar.model.parameters": "{}",
+        "tessar.observation.type": "generation",
+        "tessar.output": "{\"schemaVersion\":1,\"id\":\"5e071412-344b-4c6d-87f4-9d6c5c0625a3\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]}",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ],
+        "tessar.usage": "{\"inputTokens\":100,\"uncachedInputTokens\":null,\"outputTokens\":20,\"reasoningOutputTokens\":5,\"cacheReadInputTokens\":null,\"cacheWriteInputTokens\":null,\"totalTokens\":120,\"provenance\":{\"inputTokens\":\"provider\",\"uncachedInputTokens\":\"unavailable\",\"outputTokens\":\"provider\",\"reasoningOutputTokens\":\"provider\",\"cacheReadInputTokens\":\"unavailable\",\"cacheWriteInputTokens\":\"unavailable\",\"totalTokens\":\"derived\"}}"
+      },
+      "context": {
+        "span_id": "efbd78f5fddae5f777777df4",
+        "trace_id": "f37ebb7b66b7d7871ed3679a73dd78775e7d7dcd5ee9de1f"
+      },
+      "end_time": "2026-10-26T01:59:07.504Z",
+      "kind": "LLM",
+      "name": "test",
+      "parent_id": "e5a7bd7fbdf46f4f76dfd7da",
+      "start_time": "2026-10-26T01:59:07.502Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.inputSource": "model.request",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.535Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.499Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.status": "ended",
+        "attributes.metadata.streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "attributes.metadata.turnId": "908e8bfb-f309-4718-8e52-210dbb252c83",
+        "attributes.metadata.turnNumber": 1,
+        "attributes.metadata.usage": "{\"metrics\":{\"cacheReadInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"cacheWriteInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1},\"inputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":100,\"totalAttempts\":1},\"outputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":20,\"totalAttempts\":1},\"reasoningOutputTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":5,\"totalAttempts\":1},\"totalTokens\":{\"coverage\":\"complete\",\"knownAttempts\":1,\"knownTotal\":120,\"totalAttempts\":1},\"uncachedInputTokens\":{\"coverage\":\"unavailable\",\"knownAttempts\":0,\"knownTotal\":null,\"totalAttempts\":1}}}",
+        "end_time": "2026-10-26T01:59:07.535Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "input.mime_type": "application/json",
+        "input.value": "[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]}]",
+        "latency_ms": 36,
+        "metadata": {
+          "agentId": "test-agent",
+          "controllerId": "test-controller",
+          "inputSource": "model.request",
+          "recordEndedAt": "2026-10-26T01:59:07.535Z",
+          "recordStartedAt": "2026-10-26T01:59:07.499Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "status": "ended",
+          "streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+          "turnId": "908e8bfb-f309-4718-8e52-210dbb252c83",
+          "turnNumber": 1,
+          "usage": {
+            "metrics": {
+              "cacheReadInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "cacheWriteInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              },
+              "inputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 100,
+                "totalAttempts": 1
+              },
+              "outputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 20,
+                "totalAttempts": 1
+              },
+              "reasoningOutputTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 5,
+                "totalAttempts": 1
+              },
+              "totalTokens": {
+                "coverage": "complete",
+                "knownAttempts": 1,
+                "knownTotal": 120,
+                "totalAttempts": 1
+              },
+              "uncachedInputTokens": {
+                "coverage": "unavailable",
+                "knownAttempts": 0,
+                "knownTotal": null,
+                "totalAttempts": 1
+              }
+            }
+          }
+        },
+        "openinference.span.kind": "CHAIN",
+        "output.mime_type": "application/json",
+        "output.value": "[{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"}]",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.499Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "{\"model\":{\"providerId\":\"scripted\",\"modelId\":\"test\"},\"instructions\":{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},\"messages\":[{\"schemaVersion\":1,\"id\":\"5e0b3e72-f012-4434-a9dd-e126a134a70a\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]}],\"tools\":[{\"name\":\"get_current_time\",\"description\":\"Read the synthetic date\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{}}},{\"name\":\"get_weather\",\"description\":\"Read synthetic weather\",\"inputSchema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"date\":{\"type\":\"string\"}},\"required\":[\"date\"]}}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.inputSource": "\"model.request\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.535Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.499Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.status": "\"ended\"",
+        "tessar.metadata.streamId": "\"620c8aa6-123d-4fb2-b08d-1e8a36c87cd1\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.metadata.turnId": "\"908e8bfb-f309-4718-8e52-210dbb252c83\"",
+        "tessar.metadata.turnNumber": "1",
+        "tessar.metadata.usage": "{\"metrics\":{\"inputTokens\":{\"knownTotal\":100,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"uncachedInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"outputTokens\":{\"knownTotal\":20,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"reasoningOutputTokens\":{\"knownTotal\":5,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"},\"cacheReadInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"cacheWriteInputTokens\":{\"knownTotal\":null,\"knownAttempts\":0,\"totalAttempts\":1,\"coverage\":\"unavailable\"},\"totalTokens\":{\"knownTotal\":120,\"knownAttempts\":1,\"totalAttempts\":1,\"coverage\":\"complete\"}}}",
+        "tessar.observation.type": "span",
+        "tessar.output": "[{\"schemaVersion\":1,\"id\":\"5e071412-344b-4c6d-87f4-9d6c5c0625a3\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"d574cc29-38f8-48b9-b279-05e3bfe16ad2\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"}]",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ]
+      },
+      "context": {
+        "span_id": "e5a7bd7fbdf46f4f76dfd7da",
+        "trace_id": "f37ebb7b66b7d7871ed3679a73dd78775e7d7dcd5ee9de1f"
+      },
+      "end_time": "2026-10-26T01:59:07.535Z",
+      "kind": "CHAIN",
+      "name": "turn 1",
+      "parent_id": "779774d9bef8d7beb471e6b7",
+      "start_time": "2026-10-26T01:59:07.499Z",
+      "status_code": "UNSET"
+    },
+    {
+      "attributes": {
+        "attributes.metadata.agentId": "test-agent",
+        "attributes.metadata.controllerId": "test-controller",
+        "attributes.metadata.recordEndedAt": "2026-10-26T01:59:07.575Z",
+        "attributes.metadata.recordStartedAt": "2026-10-26T01:59:07.492Z",
+        "attributes.metadata.scope": "{}",
+        "attributes.metadata.sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+        "attributes.metadata.status": "completed",
+        "attributes.metadata.streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+        "attributes.metadata.threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "end_time": "2026-10-26T01:59:07.575Z",
+        "gen_ai.agent.id": "test-agent",
+        "gen_ai.conversation.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "gen_ai.operation.name": "invoke_agent",
+        "input.mime_type": "application/json",
+        "input.value": "[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]}]",
+        "latency_ms": 83,
+        "metadata": {
+          "agentId": "test-agent",
+          "controllerId": "test-controller",
+          "recordEndedAt": "2026-10-26T01:59:07.575Z",
+          "recordStartedAt": "2026-10-26T01:59:07.492Z",
+          "scope": {},
+          "sessionId": "f0df092a-59e5-4e77-8d9e-1a77abc9585a",
+          "status": "completed",
+          "streamId": "620c8aa6-123d-4fb2-b08d-1e8a36c87cd1",
+          "threadId": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8"
+        },
+        "openinference.span.kind": "AGENT",
+        "output.mime_type": "application/json",
+        "output.value": "[{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_weather\",\"toolCallId\":\"arize-weather\",\"arguments\":{\"date\":\"2026-10-25\"}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"The synthetic weather data is sufficient.\"},{\"type\":\"text\",\"text\":\"It is 30 degrees.\"}]}]",
+        "session.id": "arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "start_time": "2026-10-26T01:59:07.492Z",
+        "tag.tags": [
+          "arize-verification"
+        ],
+        "tessar.input": "[{\"schemaVersion\":1,\"id\":\"5e0b3e72-f012-4434-a9dd-e126a134a70a\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic test: get date, then weather.\"}]}]",
+        "tessar.instructions": "{\"sections\":[{\"id\":\"agent:default\",\"content\":\"Synthetic Arize verification. Keep all earlier tool results in context.\"}]}",
+        "tessar.metadata.agentId": "\"test-agent\"",
+        "tessar.metadata.controllerId": "\"test-controller\"",
+        "tessar.metadata.recordEndedAt": "\"2026-10-26T01:59:07.575Z\"",
+        "tessar.metadata.recordStartedAt": "\"2026-10-26T01:59:07.492Z\"",
+        "tessar.metadata.scope": "{}",
+        "tessar.metadata.sessionId": "\"f0df092a-59e5-4e77-8d9e-1a77abc9585a\"",
+        "tessar.metadata.status": "\"completed\"",
+        "tessar.metadata.streamId": "\"620c8aa6-123d-4fb2-b08d-1e8a36c87cd1\"",
+        "tessar.metadata.threadId": "\"arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8\"",
+        "tessar.observation.type": "agent",
+        "tessar.output": "[{\"schemaVersion\":1,\"id\":\"5e071412-344b-4c6d-87f4-9d6c5c0625a3\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_current_time\",\"toolCallId\":\"arize-time\",\"arguments\":{}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"d574cc29-38f8-48b9-b279-05e3bfe16ad2\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\"}}],\"toolCallId\":\"arize-time\"},{\"schemaVersion\":1,\"id\":\"4475a5de-36c9-477d-8534-5c5e7363f2a1\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"Check the synthetic tool.\"},{\"type\":\"tool-call\",\"name\":\"get_weather\",\"toolCallId\":\"arize-weather\",\"arguments\":{\"date\":\"2026-10-25\"}},{\"type\":\"text\",\"text\":\"Checking.\"}]},{\"schemaVersion\":1,\"id\":\"6340e5cb-b1d6-4b74-ad88-cbe86c8ee880\",\"role\":\"tool\",\"content\":[{\"type\":\"data\",\"data\":{\"date\":\"2026-10-25\",\"temperature\":30}}],\"toolCallId\":\"arize-weather\"},{\"schemaVersion\":1,\"id\":\"a5265fb3-e67f-4eec-a4e7-6a67296cbf12\",\"role\":\"assistant\",\"content\":[{\"type\":\"reasoning\",\"text\":\"The synthetic weather data is sufficient.\"},{\"type\":\"text\",\"text\":\"It is 30 degrees.\"}]}]",
+        "tessar.trace.name": "test-agent / arize-check-f5a44233-1690-4326-99e5-8f6d787f63b8",
+        "tessar.trace.tags": [
+          "arize-verification"
+        ]
+      },
+      "context": {
+        "span_id": "779774d9bef8d7beb471e6b7",
+        "trace_id": "f37ebb7b66b7d7871ed3679a73dd78775e7d7dcd5ee9de1f"
+      },
+      "end_time": "2026-10-26T01:59:07.575Z",
+      "kind": "AGENT",
+      "name": "test-agent",
+      "start_time": "2026-10-26T01:59:07.492Z",
+      "status_code": "UNSET"
+    }
+  ],
+  "receipts": [
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    },
+    {
+      "code": 0,
+      "count": 1
+    }
+  ]
+}

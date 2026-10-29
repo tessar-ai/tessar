@@ -1,0 +1,223 @@
+
+ RUN  v5.0.4 D:/tessar
+
+ ❯ packages/opentelemetry/test/arize.test.ts (1 test | 1 failed) 109ms
+   × keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content 108ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+AssertionError: expected '36710fc1-7998-4b16-9cf5-37d536b1de40' to be 'arize-first' // Object.is equality
+
+Expected: "arize-first"
+Received: "36710fc1-7998-4b16-9cf5-37d536b1de40"
+
+ ❯ packages/opentelemetry/test/arize.test.ts:64:43
+     62|     const attributes = span.attributes;
+     63|     const metadata = JSON.parse(String(attributes.metadata));
+     64|     expect.soft(attributes["session.id"]).toBe(metadata.threadId);
+       |                                           ^
+     65|     expect(metadata.sessionId).toBe(session.id);
+     66|     expect.soft(attributes["tag.tags"]).toEqual(["arize-test"]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/31]⎯
+
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+AssertionError: expected undefined to deeply equal [ 'arize-test' ]
+
+- Expected:
+[
+  "arize-test",
+]
+
++ Received:
+undefined
+
+ ❯ packages/opentelemetry/test/arize.test.ts:66:41
+     64|     expect.soft(attributes["session.id"]).toBe(metadata.threadId);
+     65|     expect(metadata.sessionId).toBe(session.id);
+     66|     expect.soft(attributes["tag.tags"]).toEqual(["arize-test"]);
+       |                                         ^
+     67|   }
+     68|   expect.soft(roots.map(span => span.attributes["session.id"])).toEqua…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/31]⎯
+
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+AssertionError: expected '36710fc1-7998-4b16-9cf5-37d536b1de40' to be 'arize-second' // Object.is equality
+
+Expected: "arize-second"
+Received: "36710fc1-7998-4b16-9cf5-37d536b1de40"
+
+ ❯ packages/opentelemetry/test/arize.test.ts:64:43
+     62|     const attributes = span.attributes;
+     63|     const metadata = JSON.parse(String(attributes.metadata));
+     64|     expect.soft(attributes["session.id"]).toBe(metadata.threadId);
+       |                                           ^
+     65|     expect(metadata.sessionId).toBe(session.id);
+     66|     expect.soft(attributes["tag.tags"]).toEqual(["arize-test"]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/31]⎯
+
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+AssertionError: expected [ …(3) ] to deeply equal [ 'arize-first', 'arize-first', …(1) ]
+
+- Expected
++ Received
+
+  [
+-   "arize-first",
+-   "arize-first",
+-   "arize-second",
++   "36710fc1-7998-4b16-9cf5-37d536b1de40",
++   "36710fc1-7998-4b16-9cf5-37d536b1de40",
++   "36710fc1-7998-4b16-9cf5-37d536b1de40",
+  ]
+
+ ❯ packages/opentelemetry/test/arize.test.ts:68:65
+     66|     expect.soft(attributes["tag.tags"]).toEqual(["arize-test"]);
+     67|   }
+     68|   expect.soft(roots.map(span => span.attributes["session.id"])).toEqua…
+       |                                                                 ^
+     69|   expect.soft(roots[0]!.attributes["input.value"]).toBe("USER\nCheck w…
+     70|   expect.soft(roots[0]!.attributes["input.mime_type"]).toBe("text/plai…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/31]⎯
+
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+AssertionError: expected '[{"schemaVersion":1,"id":"73f35c83-bb…' to be 'USER\nCheck weather.' // Object.is equality
+
+- Expected
++ Received
+
+- USER
+- Check weather.
++ [{"schemaVersion":1,"id":"73f35c83-bb5a-4888-aff3-fafda596e35d","role":"user","content":[{"type":"text","text":"Check weather."}]}]
+
+ ❯ packages/opentelemetry/test/arize.test.ts:69:52
+     67|   }
+     68|   expect.soft(roots.map(span => span.attributes["session.id"])).toEqua…
+     69|   expect.soft(roots[0]!.attributes["input.value"]).toBe("USER\nCheck w…
+       |                                                    ^
+     70|   expect.soft(roots[0]!.attributes["input.mime_type"]).toBe("text/plai…
+     71|   expect.soft(roots[1]!.attributes["output.value"]).toBe("ASSISTANT\nB…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/31]⎯
+
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+AssertionError: expected 'application/json' to be 'text/plain' // Object.is equality
+
+Expected: "text/plain"
+Received: "application/json"
+
+ ❯ packages/opentelemetry/test/arize.test.ts:70:56
+     68|   expect.soft(roots.map(span => span.attributes["session.id"])).toEqua…
+     69|   expect.soft(roots[0]!.attributes["input.value"]).toBe("USER\nCheck w…
+     70|   expect.soft(roots[0]!.attributes["input.mime_type"]).toBe("text/plai…
+       |                                                        ^
+     71|   expect.soft(roots[1]!.attributes["output.value"]).toBe("ASSISTANT\nB…
+     72|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/31]⎯
+
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+AssertionError: expected '[{"schemaVersion":1,"id":"9685a751-1c…' to be 'ASSISTANT\nBring water.' // Object.is equality
+
+- Expected
++ Received
+
+- ASSISTANT
+- Bring water.
++ [{"schemaVersion":1,"id":"9685a751-1c47-4fff-8cce-70cde020f392","role":"assistant","content":[{"type":"text","text":"Bring water."}]}]
+
+ ❯ packages/opentelemetry/test/arize.test.ts:71:53
+     69|   expect.soft(roots[0]!.attributes["input.value"]).toBe("USER\nCheck w…
+     70|   expect.soft(roots[0]!.attributes["input.mime_type"]).toBe("text/plai…
+     71|   expect.soft(roots[1]!.attributes["output.value"]).toBe("ASSISTANT\nB…
+       |                                                     ^
+     72|
+     73|   const models = spans.filter(span => span.attributes["openinference.s…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/31]⎯
+
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+AssertionError: expected 'text' to be 'tool_use' // Object.is equality
+
+Expected: "tool_use"
+Received: "text"
+
+ ❯ packages/opentelemetry/test/arize.test.ts:76:87
+     74|   const first = models[0]!.attributes;
+     75|   expect(first["llm.output_messages.0.message.contents.0.message_conte…
+     76|   expect.soft(first["llm.output_messages.0.message.contents.1.message_…
+       |                                                                                       ^
+     77|   expect.soft(first["llm.output_messages.0.message.contents.1.tool_cal…
+     78|   expect.soft(first["llm.output_messages.0.message.contents.2.message_…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/31]⎯
+
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+AssertionError: expected undefined to be 'weather-1' // Object.is equality
+
+- Expected:
+"weather-1"
+
++ Received:
+undefined
+
+ ❯ packages/opentelemetry/test/arize.test.ts:77:79
+     75|   expect(first["llm.output_messages.0.message.contents.0.message_conte…
+     76|   expect.soft(first["llm.output_messages.0.message.contents.1.message_…
+     77|   expect.soft(first["llm.output_messages.0.message.contents.1.tool_cal…
+       |                                                                               ^
+     78|   expect.soft(first["llm.output_messages.0.message.contents.2.message_…
+     79|   expect(first["llm.output_messages.0.message.tool_calls.0.tool_call.f…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/31]⎯
+
+ FAIL  packages/opentelemetry/test/arize.test.ts > keeps Arize conversations per Thread with readable roots and ordered reasoning/tool content
+AssertionError: expected undefined to be 'text' // Object.is equality
+
+- Expected:
+"text"
+
++ Received:
+undefined
+
+ ❯ packages/opentelemetry/test/arize.test.ts:78:87
+     76|   expect.soft(first["llm.output_messages.0.message.contents.1.message_…
+     77|   expect.soft(first["llm.output_messages.0.message.contents.1.tool_cal…
+     78|   expect.soft(first["llm.output_messages.0.message.contents.2.message_…
+       |                                                                                       ^
+     79|   expect(first["llm.output_messages.0.message.tool_calls.0.tool_call.f…
+     80|   const followUp = models[2]!.attributes;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/31]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  15:24:19
+   Duration  1.16s (import 59%, transform 29%, tests 11%)
+

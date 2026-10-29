@@ -1,0 +1,9 @@
+
+ RUN  v5.0.4 D:/tessar
+
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+   Start at  08:55:35
+   Duration  1.08s (import 54%, transform 32%, tests 13%, worker 1%)
+

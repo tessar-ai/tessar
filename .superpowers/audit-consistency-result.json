@@ -1,0 +1,62 @@
+{
+  "alias": {
+    "configuredKey": "renamed",
+    "actualToolName": "original"
+  },
+  "options": {
+    "agentError": "UnsupportedOption",
+    "session": {
+      "type": "stream.end",
+      "status": "completed"
+    },
+    "sentOptions": {
+      "background": true
+    }
+  },
+  "connection": {
+    "direct": "completed",
+    "session": {
+      "type": "stream.error",
+      "code": "ModelContextIncompatible"
+    },
+    "providerCalls": 1
+  },
+  "events": {
+    "subscriberErrors": [
+      "RegistrationConflict"
+    ],
+    "hookErrors": [],
+    "readyAndThreadEvents": [
+      {
+        "type": "ready",
+        "timestamp": null
+      },
+      {
+        "type": "thread.started",
+        "timestamp": null
+      },
+      {
+        "type": "thread.started",
+        "timestamp": null
+      }
+    ]
+  },
+  "sessionStorageError": "tessar",
+  "commitStorageError": "storage",
+  "disposal": {
+    "controllerReady": false,
+    "sessionDisposed": false,
+    "state": "idle",
+    "disposeError": "Disposed"
+  },
+  "resumeSchema": {
+    "agent": {
+      "status": "ResumeIncompatible",
+      "originalConfigurationId": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{},\"type\":\"object\"}"
+    },
+    "plugin": {
+      "status": "completed",
+      "originalConfigurationId": null
+    }
+  }
+}

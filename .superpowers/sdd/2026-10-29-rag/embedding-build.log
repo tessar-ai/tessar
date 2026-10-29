@@ -1,0 +1,24 @@
+$ pnpm -r build
+Scope: 11 of 12 workspace projects
+packages/core build$ tsc -p tsconfig.json
+packages/core build: Done
+packages/openai build$ tsc -p tsconfig.json
+packages/mongodb build$ tsc -p tsconfig.json
+packages/opentelemetry build$ tsc -p tsconfig.json
+packages/plugins build$ tsc -p tsconfig.json
+packages/plugins build: Done
+packages/postgresql build$ tsc -p tsconfig.json
+packages/mongodb build: Done
+packages/rag build$ tsc -p tsconfig.json
+packages/openai build: Done
+packages/sqlite build$ tsc -p tsconfig.json
+packages/opentelemetry build: Done
+packages/typesafe build$ tsc -p tsconfig.json
+packages/sqlite build: Done
+tests/fixtures/apps/headless build$ tsc -p tsconfig.json
+packages/typesafe build: Done
+packages/rag build: Done
+packages/postgresql build: Done
+tests/fixtures/apps/headless build: Done
+tests/fixtures/apps/cli build$ tsc -p tsconfig.json
+tests/fixtures/apps/cli build: Done

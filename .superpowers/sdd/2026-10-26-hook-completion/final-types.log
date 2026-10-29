@@ -1,0 +1,3 @@
+$ tsc --noEmit -p tsconfig.tests.json
+packages/core/src/events/type.ts(57,9): error TS2552: Cannot find name 'ToolDescription'. Did you mean 'ToolDecision'?
+[ELIFECYCLE] Command failed with exit code 1.

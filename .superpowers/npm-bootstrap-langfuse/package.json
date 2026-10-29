@@ -1,0 +1,48 @@
+{
+  "name": "@tessar/langfuse",
+  "version": "0.0.1-bootstrap.0",
+  "license": "Apache-2.0",
+  "description": "Langfuse tracing for Tessar agent executions, model calls and tools.",
+  "keywords": [
+    "tessar",
+    "ai-agent",
+    "langfuse",
+    "tracing",
+    "observability",
+    "opentelemetry",
+    "typescript"
+  ],
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24.14.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tessar-ai/tessar.git",
+    "directory": "packages/langfuse"
+  },
+  "homepage": "https://github.com/tessar-ai/tessar#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@langfuse/otel": "^6.0.1",
+    "@langfuse/tracing": "^6.0.1",
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/core": "2.12.0",
+    "@opentelemetry/sdk-trace-base": "2.12.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.223.0",
+    "@opentelemetry/otlp-exporter-base": "0.223.0",
+    "@tessar/core": "0.1.4"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "sqlite": [
+    "SqliteStoragePlugin",
+    "createSqliteBackend"
+  ],
+  "postgresql": [
+    "PostgresqlStoragePlugin",
+    "createPostgresqlBackend"
+  ],
+  "mongodb": [
+    "MongoDBStoragePlugin",
+    "createMongoDBBackend"
+  ],
+  "plugins": [
+    "PluginManager"
+  ]
+}
