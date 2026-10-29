@@ -5,7 +5,39 @@ import {
   type ModelChunk,
   type ModelRequest,
 } from "@tessar/core";
-import { OpenAIProvider, type OpenAIProviderOptions } from "../src/index.js";
+import { OpenAIProvider, OpenAIEmbedding, type OpenAIProviderOptions, type OpenAIEmbeddingOptions } from "../src/index.js";
+import type { EmbeddingModel, Content, Chunk } from "@tessar/rag";
+
+if (false) {
+  const configuration: OpenAIEmbeddingOptions = {
+    apiKey: "test", model: "fixture", dimensions: 1024, encoding_format: "base64",
+    baseURL: "https://embedding.test/v1", defaultHeaders: { "x-custom": "value" },
+    timeout: 30000, maxRetries: 2,
+  };
+  const model: EmbeddingModel = new OpenAIEmbedding(configuration);
+  const documents: Promise<number[][]> = model.embedDocuments(["one", "two"] as const);
+  const query: Promise<number[]> = model.embedQuery("query");
+  const contents: Content[] = [{ text: "page content", format: "text", metadata: {} }];
+  const chunks: Chunk[] = [{ ...contents[0]!, position: { contentIndex: 0, start: 0, end: 12 } }];
+  const native = new OpenAIEmbedding(configuration);
+  native.embedDocuments(contents);
+  native.embedDocuments(chunks);
+  native.embedDocuments(["raw", ...contents, ...chunks]);
+  // @ts-expect-error document objects require string text
+  native.embedDocuments([{ text: 1 }]);
+  // @ts-expect-error the model is required
+  new OpenAIEmbedding({ apiKey: "test" });
+  // @ts-expect-error input belongs to the methods
+  new OpenAIEmbedding({ model: "fixture", input: "text" });
+  // @ts-expect-error chat request options are not embedding options
+  new OpenAIEmbedding({ model: "fixture", temperature: 0.3 });
+  // @ts-expect-error OpenAI embeddings have no input_type
+  new OpenAIEmbedding({ model: "fixture", input_type: "search_query" });
+  // @ts-expect-error encoding_format follows the native SDK union
+  new OpenAIEmbedding({ model: "fixture", encoding_format: "invalid" });
+  void documents;
+  void query;
+}
 
 class OtherModel implements ModelAdapter {
   readonly ref = { providerId: "other", modelId: "test" };

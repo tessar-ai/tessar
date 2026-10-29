@@ -1,4 +1,4 @@
-import { TessarError, errorInfo, fail } from "../errors.js";
+import { TessarError, errorInfo } from "../errors.js";
 import {
   EventEnvelope,
   type AnyEvent,

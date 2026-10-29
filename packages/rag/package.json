@@ -1,0 +1,55 @@
+{
+  "name": "@tessar/rag",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "Independent RAG tools: document reading and structure-aware chunking with explicit token measurement.",
+  "keywords": [
+    "tessar",
+    "rag",
+    "retrieval",
+    "document-loader",
+    "chunking",
+    "text-splitter",
+    "pdf",
+    "markdown",
+    "typescript",
+    "ai"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=24.22.1"
+  },
+  "files": [
+    "dist"
+  ],
+  "homepage": "https://github.com/tessar-ai/tessar/tree/release/packages/rag#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tessar-ai/tessar.git",
+    "directory": "packages/rag"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@tessar/core": "workspace:*",
+    "csv-parse": "^7.0.3",
+    "mammoth": "^1.13.0",
+    "markdown-it": "^15.0.3",
+    "node-html-markdown": "^2.0.0",
+    "pdfjs-dist": "^6.4.299",
+    "read-excel-file": "^9.3.13"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

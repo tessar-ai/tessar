@@ -6,6 +6,7 @@
       "node"
     ],
     "paths": {
+      "@tessar/rag": ["./packages/rag/src/index.ts"],
       "@tessar/typesafe": ["./packages/typesafe/src/index.ts"],
       "@tessar/plugins/logger": [
         "./packages/plugins/src/build-in/logger.ts"

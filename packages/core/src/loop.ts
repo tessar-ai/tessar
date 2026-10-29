@@ -2,7 +2,6 @@ import {
   turn as turnHooks,
   model as modelHooks,
   context as contextHooks,
-  message as messageHooks,
 } from "./events/type.js";
 import type { ExecutionFrame } from "./engine/frame.js";
 import { TessarError, errorInfo, fail } from "./errors.js";

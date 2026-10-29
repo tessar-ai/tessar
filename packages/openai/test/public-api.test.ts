@@ -8,8 +8,8 @@ import type {
 // @ts-expect-error The low-level adapter is an implementation detail.
 import type { OpenAIAdapter } from "../src/index.js";
 
-it("exports the provider and plugin with useful configuration types", () => {
-  expect(Object.keys(sdk).sort()).toEqual(["OpenAIPlugin", "OpenAIProvider"]);
+it("exports the provider, embedding model and plugin with useful configuration types", () => {
+  expect(Object.keys(sdk).sort()).toEqual(["OpenAIEmbedding", "OpenAIPlugin", "OpenAIProvider"]);
   const api: OpenAIAPI = "chat-completions";
   const connection: OpenAIOptions = { apiKey: "example" };
   const options: OpenAIProviderOptions<typeof api> = {
