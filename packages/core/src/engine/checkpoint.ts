@@ -4,7 +4,7 @@ import {
   stream as streamHooks,
   turn as turnHooks,
 } from "../events/type.js";
-import { errorInfo, fail, type ErrorInfo } from "../errors.js";
+import { fail, type ErrorInfo } from "../errors.js";
 import { immutable } from "../json.js";
 import { type StreamOutcome } from "../events/type.js";
 import { MessageCodec } from "../messages/codec.js";

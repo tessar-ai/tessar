@@ -306,7 +306,7 @@ export class Session {
       );
     },
     switch: (modelId: string, options?: JsonObject): Promise<void> =>
-      this.switchModel(modelId, options),
+      this.control(() => this.changeModel(modelId, options)),
     setEffort: (level: string): Promise<void> =>
       this.control(async () => {
         requireId(level, "effort level");
@@ -353,9 +353,6 @@ export class Session {
     });
     if (!thread) fail("ThreadNotFound", "Thread does not match Session scope");
     return thread;
-  }
-  private switchModel(modelId: string, options?: JsonObject): Promise<void> {
-    return this.control(() => this.changeModel(modelId, options));
   }
   private async changeModel(
     modelId: string,
