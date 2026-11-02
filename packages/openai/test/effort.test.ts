@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
-import { OpenAIProvider } from "../src/provider.js";
+import { OpenAIChat } from "../src/provider.js";
 it("maps effort per protocol without discarding other native settings", () => {
-  const responses = new OpenAIProvider({ apiKey: "fixture", model: "fixture" });
-  const chat = new OpenAIProvider({
+  const responses = new OpenAIChat({ apiKey: "fixture", model: "fixture" });
+  const chat = new OpenAIChat({
     apiKey: "fixture",
     model: "fixture",
     api: "chat-completions",

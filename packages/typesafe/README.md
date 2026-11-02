@@ -110,9 +110,9 @@ the provider's explicit `TypeSafe-Danger-Zone-Long-Context` header.
 
 ```ts
 import { TypeSafe } from "@tessar/typesafe";
-import { createSqliteBackend } from "@tessar/sqlite";
+import { createLibsqlBackend } from "@tessar/libsql";
 
-const backend = await createSqliteBackend({ filename: "./state.db" });
+const backend = await createLibsqlBackend({ filename: "./state.db" });
 const typesafe = new TypeSafe({ model: "jev-latest", records: backend.records });
 try {
   const scope = { userId: "user-1" };

@@ -2,13 +2,13 @@ import { expect, it } from "vitest";
 import { createMemoryBackend } from "@tessar/core";
 import { ThreadService } from "../../core/src/state/threads.js";
 import { ForkService } from "../../core/src/state/fork.js";
-import { createSqliteBackend } from "../src/backend.js";
+import { createLibsqlBackend } from "../src/backend.js";
 for (const name of ["memory", "sqlite"])
   it(`${name} purges only deleted, unowned, unreferenced threads`, async () => {
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createSqliteBackend({ filename: ":memory:" });
+        : await createLibsqlBackend({ filename: ":memory:" });
     try {
       const threads = new ThreadService(backend);
       const parent = await threads.create({ scope: { user: "a" } });
@@ -57,7 +57,7 @@ for (const name of ["memory", "sqlite"])
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createSqliteBackend({ filename: ":memory:" });
+        : await createLibsqlBackend({ filename: ":memory:" });
     try {
       const threads = new ThreadService(backend),
         source = await threads.create();

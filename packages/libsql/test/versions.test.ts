@@ -1,17 +1,18 @@
 import { expect, it } from "vitest";
-import { DatabaseSync } from "node:sqlite";
-import { mkdtemp, unlink, rmdir } from "node:fs/promises";
+import DatabaseSync from "libsql";
+import { mkdtemp } from "node:fs/promises";
+import { removeSqliteTestDirectory } from "../../../tests/helpers/sqlite-cleanup.js";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { HumanMessage, MessageCodec } from "@tessar/core";
 import { ThreadService } from "../../core/src/state/threads.js";
 import { CommitCoordinator } from "../../core/src/state/commit.js";
-import { createSqliteBackend } from "../src/backend.js";
+import { createLibsqlBackend } from "../src/backend.js";
 
 it("stores changed message versions once and cleans published staging without losing retry checks", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tessar-versions-")),
     filename = join(directory, "state.db");
-  const backend = await createSqliteBackend({ filename });
+  const backend = await createLibsqlBackend({ filename });
   try {
     const service = new ThreadService(backend);
     const thread = await service.create({
@@ -27,12 +28,12 @@ it("stores changed message versions once and cleans published staging without lo
     ]);
     const db = new DatabaseSync(filename);
     try {
-      expect(db.prepare("SELECT count(*) n FROM tessar_messages").get()?.n).toBe(100);
-      expect(db.prepare("SELECT count(*) n FROM tessar_staging").get()?.n).toBe(0);
+      expect((db.prepare("SELECT count(*) n FROM tessar_messages").get() as { n: number }).n).toBe(100);
+      expect((db.prepare("SELECT count(*) n FROM tessar_staging").get() as { n: number }).n).toBe(0);
       expect(
         JSON.parse(
           String(
-            db.prepare("SELECT body FROM tessar_checkpoints LIMIT 1").get()?.body,
+            (db.prepare("SELECT body FROM tessar_checkpoints LIMIT 1").get() as { body: string }).body,
           ),
         ).state,
       ).not.toHaveProperty("messages");
@@ -81,10 +82,6 @@ it("stores changed message versions once and cleans published staging without lo
     );
   } finally {
     await backend.close();
-    for (const suffix of ["", "-wal", "-shm"])
-      await unlink(filename + suffix).catch((e) => {
-        if (e.code !== "ENOENT") throw e;
-      });
-    await rmdir(directory);
+    await removeSqliteTestDirectory(directory);
   }
 });

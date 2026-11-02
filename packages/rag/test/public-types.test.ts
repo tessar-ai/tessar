@@ -4,6 +4,11 @@ import type { EmbeddingModel } from "../src/index.js";
 
 if (false) {
   const model = {} as EmbeddingModel;
+  const modelId: string = model.ref.modelId;
+  // @ts-expect-error model identity is readonly
+  model.ref.modelId = "different";
+  // @ts-expect-error model identity is readonly
+  model.ref = { providerId: "other", modelId: "different" };
   const documents: Promise<number[][]> = model.embedDocuments(["first", "second"] as const);
   const query: Promise<number[]> = model.embedQuery("question");
   const contents: Content[] = [{ text: "page content", format: "text", source: { page: 3 }, metadata: {} }];
@@ -23,6 +28,7 @@ if (false) {
   model.embedQuery("question", { input_type: "search_query" });
   void documents;
   void query;
+  void modelId;
 }
 
 it("exposes one object-input signature and method-based control", () => {

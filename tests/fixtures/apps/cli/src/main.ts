@@ -14,7 +14,7 @@ import {
 } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { z } from "zod";
-import { SqliteStoragePlugin } from "@tessar/sqlite";
+import { LibsqlStoragePlugin } from "@tessar/libsql";
 import { OpenAIPlugin } from "@tessar/openai";
 import { PluginManager } from "@tessar/plugins";
 import { resolve, isAbsolute } from "node:path";
@@ -120,7 +120,7 @@ try {
       }
     }
     const plugins: Plugin[] = [new DemoToolsPlugin()];
-    if (filename) plugins.push(new SqliteStoragePlugin({ filename }));
+    if (filename) plugins.push(new LibsqlStoragePlugin({ filename }));
     if (live) {
       if (!process.env.OPENAI_API_KEY || !process.env.OPENAI_MODEL)
         throw Error("--openai requires OPENAI_API_KEY and OPENAI_MODEL");

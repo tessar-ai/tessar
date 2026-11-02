@@ -10,7 +10,7 @@ import {
   stream,
 } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
-import { SqliteStoragePlugin } from "@tessar/sqlite";
+import { LibsqlStoragePlugin } from "@tessar/libsql";
 import { z } from "zod";
 
 const [command, filename] = process.argv.slice(2) as [string, string];
@@ -53,7 +53,7 @@ const controller = new Controller({
   id: "host",
   agent: new Agent({ id: "assistant", model, tools: { ask } }),
   plugins: [
-    new SqliteStoragePlugin({ filename }),
+    new LibsqlStoragePlugin({ filename }),
     {
       id: "crash-boundary",
       setup(tessar) {

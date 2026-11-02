@@ -1,4 +1,3 @@
-import { text } from "../../src/events/type.js";
 import { expect, it } from "vitest";
 import { z } from "zod";
 import { AgentHarness } from "../../src/testing/harness.js";

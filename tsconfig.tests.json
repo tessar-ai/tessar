@@ -24,9 +24,10 @@
       "@tessar/core/testing": [
         "./packages/core/src/testing/index.ts"
       ],
-      "@tessar/sqlite": [
-        "./packages/sqlite/src/index.ts"
+      "@tessar/libsql": [
+        "./packages/libsql/src/index.ts"
       ],
+      "@tessar/libsql/vector": ["./packages/libsql/src/vector.ts"],
       "@tessar/openai": [
         "./packages/openai/src/index.ts"
       ],

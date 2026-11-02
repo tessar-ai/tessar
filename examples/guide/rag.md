@@ -157,12 +157,14 @@ async function createVectors(
 }
 ```
 
-Supply a provider/application object implementing these two methods.
+Supply a provider/application object implementing these two methods and exposing
+a readonly `ref` (`providerId`, `modelId`, optional `connectionId`).
 `embedDocuments()` accepts strings, Content[] or Chunk[] directly and extracts
 each object's text; it returns one vector per input in the original order.
 Passing Content pages embeds per page; passing chunks embeds per chunk.
-`embedQuery()` returns a single vector. Keep chunk metadata/provenance separately
-and associate documents[i] with chunks[i].
+`embedQuery()` returns a single vector. These methods are still independently
+usable; when using a vector store, pass the model into it instead of manually
+embedding and pairing chunks/vectors.
 
 This is a type-only contract, not a built-in embedding model or pipeline runner.
 Provider-specific task options/instructions belong to the selected adapter,
@@ -177,14 +179,216 @@ const model: EmbeddingModel = new OpenAIEmbedding({
   apiKey: process.env.OPENAI_API_KEY,
   model: "text-embedding-3-small",
 });
-const documentVectors = await model.embedDocuments(chunks);
-const queryVector = await model.embedQuery("What does the handbook say?");
 ```
 
-Use the same compatible model/embedding-space configuration for both sides of a
-search. Metadata and chunk source remain application data. See the
+Pass this configured model into the store for both insertion and semantic search.
+For large input arrays, add `batchSize: 100` and `concurrency: 3` to the embedding
+constructor. The adapter splits arrays without changing text and returns vectors
+in input order. Omitting batchSize sends one request; concurrency defaults to 1.
+Provider errors propagate; no token budgeting or content truncation is added.
+The same configuration applies when the store calls embedDocuments during insert.
+The two embedding methods remain available for independent use. Metadata and
+chunk source remain application data. See the
 [OpenAI embedding guide](../../packages/openai/README.md#embeddings) for dimensions,
 connection options, SDK retry/timeout behavior and provider errors.
+
+For compatible endpoints requiring task fields, configure each method explicitly:
+
+```ts
+const gatewayEmbedding = new OpenAIEmbedding({
+  apiKey: process.env.EMBEDDING_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+  model: "your-embedding-model",
+  documentOptions: { input_type: "search_document" },
+  queryOptions: { input_type: "search_query" },
+});
+```
+
+Use the field names and values required by that endpoint/model. For example,
+some endpoints use `task` instead of `input_type`. Tessar forwards these optional
+JSON body fields unchanged; omitted options keep the SDK/server defaults.
+
+## Persist chunks and embeddings in libSQL
+
+Install `@tessar/libsql` alongside the RAG and embedding packages. RAG is an
+optional peer of libSQL: it must be installed explicitly to use the `/vector`
+entry, while state-only consumers do not need it. Continue from
+the `chunks` and configured `model` above; no additional mapping is needed:
+
+```ts
+import { LibsqlVectorStore } from "@tessar/libsql/vector";
+
+const store = new LibsqlVectorStore({
+  filename: "./vectors.db",
+  collection: "handbook", // Optional, defaults to "default".
+  embedding: model, // Configure once; dimensions are inferred from actual output.
+});
+try {
+  await store.insert(chunks);
+  console.log(await store.info()); // { collection, model: model.ref, dimensions }
+  // Works after restarting too; retaining insert's returned IDs is optional.
+  const records = await store.list({ filter: { metadata: { project: "handbook" } }, limit: 20 });
+  for (const record of records) console.log(record.id, record.createdAt, record.content);
+  const selected = records[0];
+  if (selected) {
+    const saved = await store.get(selected.id);
+    console.log(saved?.vector);
+    await store.delete({ ids: [selected.id] });
+  }
+} finally {
+  await store.close();
+}
+```
+
+The store calls embedDocuments once per nonempty insert, generates and persists
+UUIDs and UTC insertion dates, validates model output and commits each insert atomically. Complete chunk
+content is retained, including source/metadata/position. Repeated inserts create
+new records. Collections isolate data in one file; different files are separate
+databases. Model identity is saved per collection and must match when reopening.
+Dimensions come from the first successful insert, remain null beforehand, and
+survive deleting all records. Every insert/search validates output dimensions.
+No probe embedding calls are made. Old collections without a saved model ref
+reject without automatic adoption, migration or re-embedding.
+
+List uses insertion-order pagination (`limit` default 100/max 1000, `offset`
+default 0). Filters support exact source
+URI/page and exact top-level scalar metadata; combine fields with AND. Delete
+accepts either IDs or the same nonempty filter and returns a deletion count.
+You do not need to attach metadata beforehand to discover or delete saved content.
+See [libSQL vector storage](../../packages/libsql/README.md#independent-vector-storage)
+for filter limits, error handling and connection behavior.
+
+Storage needs no Agent/Controller/Session or extension. It maintains a native
+cosine index per collection in the same transactions as the saved rows. Original
+JSON vectors remain intact for readback; indexing uses float32. Missing indexes
+are built from saved rows when opening a labelled collection. Only insert and
+semantic search call the configured model; read/list/delete/info/BM25 do not.
+No document lifecycle management is added. Large batches/index
+builds run synchronously and can block the event loop. Native database errors
+propagate; validation errors use TessarRagError. The package supports RAM/local
+files through filename; remote/sync configuration has not been added.
+
+## Search for related chunks
+
+After inserting documents, pass a question directly to the same store:
+
+```ts
+const question = "What does the handbook say about configuration?";
+const results = await store.search(question, {
+  topK: 5,
+  score_threshold: 0.7, // Omit for no minimum score.
+  filter: {
+    source: { uri: "file:///manual.pdf" },
+    metadata: { project: "handbook" },
+  },
+});
+for (const result of results) {
+  console.log(result.id, result.createdAt, result.score, result.content.text);
+  console.log(result.content.source, result.content.metadata);
+}
+```
+
+Keep the store open while searching, then call `close()` in your application's
+cleanup. Nonblank question text is required; options are optional. `topK` defaults
+to 5 and must be a positive safe integer. Results contain
+`id`, `createdAt`, `content` and `score`, preserving complete chunk provenance
+without returning embedding vectors. Empty collections return [] and small
+collections can return fewer than topK items.
+
+Without a filter, libSQL searches the native approximate float32 cosine index and
+sorts candidates by descending cosine similarity (`score = 1 - cosine distance`):
+larger means nearer, typically -1 to 1, not a percentage of relevance. Floating-point
+rounding can slightly exceed those bounds. Exact global nearest neighbors and stable selection among ties
+are not guaranteed. The store calls embedQuery once and checks that its output
+matches saved dimensions, contains finite numbers and has nonzero direction.
+An empty collection returns [] without calling the provider. Invalid input rejects with
+TessarRagError/InvalidData; native engine errors are preserved.
+
+`score_threshold` is an optional finite number from -1 to 1; results at or above
+it are retained. No threshold is applied when omitted. Filter uses the same
+source and scalar metadata equality rules as list/delete, combined with AND;
+text filters are not supported. Filtering restricts the dataset before topK.
+Because libSQL's ANN function cannot prefilter these conditions, filtered
+searches compute exact scores over matching rows rather than selecting only
+global ANN candidates. This can cost more for broad filters/large collections.
+Both paths use float32 vectors and may return fewer than topK above the threshold.
+
+This method performs vector search only. No hybrid fusion, reranking or
+automatic context injection is performed. The application decides whether to
+use these chunks in a tool, `context.prepare`, or a separate flow.
+
+## Search text with BM25
+
+To find saved chunks by keywords, pass ordinary query text directly to the store:
+
+```ts
+const matches = await store.searchText("configuration Tessar", {
+  topK: 5,
+  filter: { metadata: { project: "handbook" } },
+});
+for (const match of matches) {
+  console.log(match.id, match.createdAt, match.score, match.content.text);
+}
+```
+
+`query` is required, nonblank and must not contain NUL; the whole options object can be omitted.
+`topK` defaults to 5. The optional filter uses the same source/metadata AND rules
+as list/delete and is applied before topK, with no text filter. No match returns
+[]. Query segments separated by whitespace are treated as literal phrases,
+combined with OR; matching uses the backend's default FTS5 unicode61 tokenizer.
+FTS operators, prefixes and column selectors are not exposed. Punctuation-only
+input without searchable tokens returns []. No language-specific tokenizer or
+stemming is added.
+
+libSQL maintains one FTS5 text index per collection on insert/delete, and builds
+a missing index from saved content when opening an existing collection. BM25
+uses collection-wide statistics even with a metadata/source filter. Results
+retain original Content/Chunk provenance and omit vectors. Score is `-bm25()`:
+larger means a better keyword match, not a percentage or cosine similarity.
+There is no cosine score_threshold option for this method. Do not add BM25 and
+cosine scores directly when combining results; hybrid fusion is a separate step.
+
+This method calls no embedding model. Invalid queries/options reject with
+TessarRagError/InvalidData; closed stores reject with InvalidState; native errors
+propagate. Text index backfill adds synchronous startup work and disk usage.
+Reranking, hybrid fusion and context injection remain application decisions.
+
+## Rerank candidates
+
+Install `@tessar/openai` to call the rerank model. `OpenAIReranker` calls an endpoint accepting the `model`, `query`, `documents` and
+`top_n` rerank protocol. It works independently of the store and embedding model:
+
+```ts
+import { OpenAIReranker } from "@tessar/openai";
+
+const reranker = new OpenAIReranker({
+  endpoint: "https://openrouter.ai/api/v1/rerank",
+  apiKey: process.env.OPENROUTER_API_KEY!,
+  model: "cohere/rerank-4-pro",
+});
+const candidates = await store.search("How do I run locally?", { topK: 20 });
+const ranked = await reranker.rerank("How do I run locally?", candidates, {
+  topK: 5,
+  score_threshold: 0.3,
+});
+for (const { document, score } of ranked) {
+  console.log(document.id, document.content.text, score);
+}
+```
+
+Strings, Content and Chunk arrays also work directly. Only text is sent to the
+endpoint. Each result contains the original candidate as `document` and the
+provider's rerank score as `score`; an original search score stays inside
+`document.score`. Results are sorted descending. `topK` defaults to 5 and is
+capped at the candidate count. Threshold is optional and uses the provider's
+score scale; it is not necessarily cosine similarity or a probability.
+
+For native Cohere, use `https://api.cohere.com/v2/rerank` with its API key/model.
+The endpoint must implement this protocol; Tessar does not infer it from model
+names. Empty candidates return [] without a request. Transport errors propagate;
+HTTP failures use TessarError `RerankFailed` with `details.status`, malformed
+results use `InvalidData` with source `provider`. No automatic retries are added.
+Hybrid fusion and selection of candidates remain application decisions.
 
 ## Cancel an active read
 

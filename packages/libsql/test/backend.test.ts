@@ -1,10 +1,11 @@
+import { removeSqliteTestDirectory as rm } from "../../../tests/helpers/sqlite-cleanup.js";
 import {
   createThread,
   deleteThread,
 } from "../../core/src/state/thread-operations.js";
 import { expect, it, vi } from "vitest";
-import { DatabaseSync } from "node:sqlite";
-import { mkdtemp, rm } from "node:fs/promises";
+import DatabaseSync from "libsql";
+import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -13,12 +14,12 @@ import {
 } from "@tessar/core/testing/storage-conformance";
 import { AgentHarness } from "@tessar/core/testing";
 import { CommitCoordinator } from "../../core/src/state/commit.js";
-import { createSqliteBackend } from "../src/backend.js";
+import { createLibsqlBackend } from "../src/backend.js";
 storageConformance("sqlite", async () =>
-  createSqliteBackend({ filename: ":memory:" }),
+  createLibsqlBackend({ filename: ":memory:" }),
 );
 it("rolls back publication when a lease expires during SQLite writes", async () => {
-  const backend = await createSqliteBackend({ filename: ":memory:" }),
+  const backend = await createLibsqlBackend({ filename: ":memory:" }),
     batch = initialBatch();
   await backend.commits.stage(batch);
   const lease = await backend.ownership.acquire({
@@ -30,7 +31,7 @@ it("rolls back publication when a lease expires during SQLite writes", async () 
   let reachedHeadWrite = false;
   const slow = vi
     .spyOn(DatabaseSync.prototype, "prepare")
-    .mockImplementation(function (this: DatabaseSync, sql) {
+    .mockImplementation(function (this: DatabaseSync.Database, sql) {
       if (sql.startsWith("INSERT INTO tessar_threads")) {
         reachedHeadWrite = true;
         Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 700);
@@ -58,8 +59,8 @@ it("rolls back publication when a lease expires during SQLite writes", async () 
 it("reopens committed state and fences independently connected owners", async () => {
   const path = await mkdtemp(join(tmpdir(), "tessar-"));
   const filename = join(path, "state.db"),
-    a = await createSqliteBackend({ filename }),
-    b = await createSqliteBackend({ filename });
+    a = await createLibsqlBackend({ filename }),
+    b = await createLibsqlBackend({ filename });
   try {
     const lease = await a.ownership.acquire({
       threadId: "t1",
@@ -82,7 +83,7 @@ it("reopens committed state and fences independently connected owners", async ()
     await a.close();
     await b.close();
   }
-  const reopened = await createSqliteBackend({ filename });
+  const reopened = await createLibsqlBackend({ filename });
   try {
     expect(await reopened.checkpoints.get("cp-t1")).toMatchObject({
       revision: 1,
@@ -99,7 +100,7 @@ it("reopens committed state and fences independently connected owners", async ()
 });
 
 it("persists Session CAS, validates scope/Agent identity, and clears all deleted selections", async () => {
-  const backend = await createSqliteBackend({ filename: ":memory:" });
+  const backend = await createLibsqlBackend({ filename: ":memory:" });
   const h = await AgentHarness.create({ backend });
   try {
     const a = await h.controller.createSession({ scope: { user: "a" } }),

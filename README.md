@@ -42,11 +42,11 @@ Save this as `agent.ts` in a project with `"type": "module"` in `package.json`:
 
 ```ts
 import { Agent } from "@tessar/core";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 
 const agent = new Agent({
   id: "assistant",
-  model: new OpenAIProvider({
+  model: new OpenAIChat({
     apiKey: process.env.OPENAI_API_KEY!,
     model: process.env.OPENAI_MODEL!,
   }),
@@ -149,7 +149,7 @@ Install the packages your application uses:
 | [`@tessar/plugins`](packages/plugins/README.md)       | Plugin discovery/loading, npm plugin management and the `/logger` plugin       |
 | [`@tessar/rag`](packages/rag/README.md)               | Independent document reading and structure-aware chunking                      |
 | [`@tessar/opentelemetry`](packages/opentelemetry/README.md)     | OTLP tracing with Langfuse and Laminar adapters                 |
-| [`@tessar/sqlite`](packages/sqlite/README.md)         | SQLite persistence using Node's built-in SQLite API                            |
+| [`@tessar/libsql`](packages/libsql/README.md)         | Local state/checkpoint storage; optional `/vector` entry for vector/BM25 search                 |
 | [`@tessar/postgresql`](packages/postgresql/README.md) | PostgreSQL persistence                                                         |
 | [`@tessar/mongodb`](packages/mongodb/README.md)       | MongoDB persistence                                                            |
 

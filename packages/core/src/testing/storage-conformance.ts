@@ -34,6 +34,22 @@ export function storageConformance(
   factory: () => Promise<StorageBackend>,
 ): void {
   describe(name, () => {
+    it("snapshots staged batches before asynchronous fingerprinting", async () => {
+      const backend = await factory();
+      try {
+        const batch = initialBatch();
+        const original = structuredClone(batch);
+        const lease = await backend.ownership.acquire({ threadId: "t1", ownerToken: "owner", ttlMs: 60000 });
+        const staging = backend.commits.stage(batch);
+        batch.checkpoint.revision = 99;
+        batch.checkpoint.state.metadata = { changed: true };
+        await staging;
+        const receipt = await backend.commits.publish({ commitId: original.commitId, threadId: "t1", expectedRevision: 0, lease });
+        expect(receipt.revision).toBe(1);
+        expect(await backend.checkpoints.get(original.checkpoint.id)).toEqual(original.checkpoint);
+        await expect(backend.commits.stage(original)).resolves.toBeUndefined();
+      } finally { await backend.close(); }
+    });
     it("stores independent immutable JSON records without runtime objects", async () => {
       const backend = await factory();
       try {

@@ -1,14 +1,13 @@
 import { stream as streamHooks, message as messageHooks } from "@tessar/core";
 import { z } from "zod";
-import { createSqliteBackend } from "@tessar/sqlite";
-import { DatabaseSync } from "node:sqlite";
+import { createLibsqlBackend } from "@tessar/libsql";
 import { existsSync,writeFileSync } from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { AgentHarness } from "@tessar/core/testing";
 import { AssistantMessage, HumanMessage, MessageCodec, createTool } from "@tessar/core";
 import { appendFileSync } from "node:fs";
 const filename=process.argv[2]!,participant=process.argv[3]!;
-const backend=await createSqliteBackend({filename});
+const backend=await createLibsqlBackend({filename});
 if(participant.startsWith("crash-")){
  const harness=await AgentHarness.create({backend,plugins:[
   {id:"tools",setup(tessar){tessar.tools.register(createTool({name:"write",description:"write",schema:z.object({}),execute:async()=>{appendFileSync(filename+".effects","write\n");if(participant==="crash-tool-dispatch")process.exit(0);return "done";}}));}},

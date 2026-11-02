@@ -1,0 +1,61 @@
+{
+  "name": "@tessar/libsql",
+  "version": "0.1.4",
+  "license": "Apache-2.0",
+  "description": "Local libSQL persistence for Tessar state, checkpoints and indexed vector storage.",
+  "keywords": [
+    "tessar",
+    "ai-agent",
+    "sqlite",
+    "storage",
+    "persistence",
+    "checkpoints",
+    "vector-store",
+    "rag",
+    "typescript"
+  ],
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24.22.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tessar-ai/tessar.git",
+    "directory": "packages/libsql"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./vector": {
+      "types": "./dist/vector.d.ts",
+      "import": "./dist/vector.js"
+    }
+  },
+  "dependencies": {
+    "@tessar/core": "workspace:*",
+    "libsql": "0.5.29"
+  },
+  "peerDependencies": {
+    "@tessar/rag": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@tessar/rag": { "optional": true }
+  },
+  "devDependencies": {
+    "@tessar/rag": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

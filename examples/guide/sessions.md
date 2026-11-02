@@ -85,11 +85,11 @@ Save as `conversation.ts` after the [setup](README.md).
 
 ```ts
 import { Agent, Controller, text as textEvents, stream } from "@tessar/core";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 
 const agent = new Agent({
   id: "assistant",
-  model: new OpenAIProvider({
+  model: new OpenAIChat({
     apiKey: process.env.OPENAI_API_KEY!,
     model: process.env.OPENAI_MODEL!,
   }),

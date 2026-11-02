@@ -1,5 +1,6 @@
+import { removeSqliteTestDirectory as rm } from "../helpers/sqlite-cleanup.js";
 import { expect, it, vi } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
@@ -14,7 +15,7 @@ import {
   type Session,
 } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
-import { SqliteStoragePlugin } from "@tessar/sqlite";
+import { LibsqlStoragePlugin } from "@tessar/libsql";
 
 function next(
   session: Session,
@@ -76,7 +77,7 @@ it("persists accepted suspended signals across SQLite restart without replay or 
     const controller = new Controller({
       id: "signal-persistence",
       agent,
-      plugins: [new SqliteStoragePlugin({ filename })],
+      plugins: [new LibsqlStoragePlugin({ filename })],
     });
     await controller.initialize();
     return { controller, agent, provider };

@@ -1,11 +1,12 @@
+import { rm } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { TypeSafe, TypeSafeAPIError } from "@tessar/typesafe";
 import { TessarError, errorInfo } from "@tessar/core";
-import { createSqliteBackend } from "@tessar/sqlite";
+import { createLibsqlBackend } from "@tessar/libsql";
 
 const directory = await mkdtemp(join(tmpdir(), "tessar-typesafe-"));
 const filename = join(directory, "state.db");
@@ -65,7 +66,7 @@ await new Promise<void>((done, reject) => {
 const address = server.address();
 assert.ok(address && typeof address === "object");
 try {
-  const backend = await createSqliteBackend({ filename });
+  const backend = await createLibsqlBackend({ filename });
   try {
     const client = new TypeSafe({
       apiKey: "local-test-key",
@@ -131,7 +132,7 @@ try {
   } finally {
     await backend.close();
   }
-  const reopened = await createSqliteBackend({ filename });
+  const reopened = await createLibsqlBackend({ filename });
   try {
     const stored = await reopened.records.get("typesafe.calls", "guard-1", {
       scope: { userId: "u" },
@@ -172,5 +173,8 @@ try {
     force: true,
     maxRetries: 5,
     retryDelay: 100,
+  }).catch((error: NodeJS.ErrnoException) => {
+    // shortcut: libsql 0.5.x may retain Windows test files until process exit; remove when the driver fixes close.
+    if (process.platform !== "win32" || error.code !== "EBUSY") throw error;
   });
 }

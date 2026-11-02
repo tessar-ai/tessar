@@ -1,13 +1,14 @@
+import { removeSqliteTestDirectory as rm } from "../helpers/sqlite-cleanup.js";
 import { z } from "zod";
 import { expect, it } from "vitest";
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { AgentHarness } from "@tessar/core/testing";
 import { createTool } from "@tessar/core";
-import { createSqliteBackend } from "@tessar/sqlite";
+import { createLibsqlBackend } from "@tessar/libsql";
 import { appendFileSync } from "node:fs";
 const supportsSpawn = !spawnSync(process.execPath, ["--version"]).error;
 it.skipIf(!supportsSpawn)(
@@ -76,7 +77,7 @@ it.skipIf(!supportsSpawn).each(["crash-model-result", "crash-tool-dispatch"])(
       );
       db.close();
       const harness = await AgentHarness.create({
-        backend: await createSqliteBackend({ filename }),
+        backend: await createLibsqlBackend({ filename }),
         plugins: [
           {
             id: "tools",

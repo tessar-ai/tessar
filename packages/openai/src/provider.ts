@@ -47,13 +47,13 @@ export type OpenAIChatModelOptions = Omit<
 type OptionsFor<A extends OpenAIAPI> = A extends "chat-completions"
   ? OpenAIChatModelOptions
   : OpenAIModelOptions;
-export type OpenAIProviderOptions<A extends OpenAIAPI = OpenAIAPI> =
+export type OpenAIChatOptions<A extends OpenAIAPI = OpenAIAPI> =
   OpenAIOptions & {
     model: string;
     connectionId?: string;
   } & (A extends "chat-completions"
-      ? { api: "chat-completions" } & OpenAIChatModelOptions
-      : { api?: "responses" } & OpenAIModelOptions);
+    ? { api: "chat-completions" } & OpenAIChatModelOptions
+    : { api?: "responses" } & OpenAIModelOptions);
 
 interface Connection {
   client: OpenAI;
@@ -61,7 +61,7 @@ interface Connection {
   resolver: ProfileResolver;
 }
 
-export class OpenAIProvider<
+export class OpenAIChat<
   A extends OpenAIAPI = "responses",
 > extends OpenAIAdapter {
   readonly options: Readonly<OptionsFor<A>>;
@@ -71,14 +71,14 @@ export class OpenAIProvider<
   private readonly sharedConnection: Connection;
   private readonly registration: ModelProviderRegistration;
 
-  constructor(configuration: OpenAIProviderOptions<A> & { api?: A });
+  constructor(configuration: OpenAIChatOptions<A> & { api?: A });
   /** @internal */
   constructor(
-    configuration: OpenAIProviderOptions<A> & { api?: A },
+    configuration: OpenAIChatOptions<A> & { api?: A },
     connection: Connection,
   );
   constructor(
-    configuration: OpenAIProviderOptions<A> & { api?: A },
+    configuration: OpenAIChatOptions<A> & { api?: A },
     connection?: Connection,
   ) {
     const {
@@ -179,14 +179,14 @@ export class OpenAIProvider<
     };
   }
 
-  withModel(modelId: string): OpenAIProvider<A> {
-    return new OpenAIProvider<A>(
+  withModel(modelId: string): OpenAIChat<A> {
+    return new OpenAIChat<A>(
       {
         ...this.clientOptions,
         ...this.options,
         api: this.api,
         model: modelId,
-      } as OpenAIProviderOptions<A> & { api?: A },
+      } as OpenAIChatOptions<A> & { api?: A },
       this.sharedConnection,
     );
   }
@@ -213,8 +213,8 @@ export class OpenAIProvider<
       ...options,
       reasoning: {
         ...(reasoning &&
-        typeof reasoning === "object" &&
-        !Array.isArray(reasoning)
+          typeof reasoning === "object" &&
+          !Array.isArray(reasoning)
           ? reasoning
           : {}),
         effort: level,

@@ -1,4 +1,5 @@
-import type { DatabaseSync, SQLInputValue } from "node:sqlite";
+import type DatabaseSync from "libsql";
+import type { SQLInputValue } from "./database.js";
 import {
   normalizeScope,
   immutable,
@@ -39,7 +40,7 @@ export function scopePredicate(
 }
 
 export function sqlPage<T>(
-  db: DatabaseSync,
+  db: DatabaseSync.Database,
   table: string,
   where: string,
   values: SQLInputValue[],
@@ -76,14 +77,14 @@ export function sqlPage<T>(
 }
 
 export function historyPage(
-  db: DatabaseSync,
+  db: DatabaseSync.Database,
   id: string,
   options: HistoryOptions,
   query: StateQuery = {},
 ): HistoryDataPage {
   const row = db
     .prepare("SELECT body FROM tessar_threads WHERE id=? AND deleted=0")
-    .get(id);
+    .get(id) as { body: string } | undefined;
   const head = row ? (JSON.parse(String(row.body)) as ThreadInfo) : null;
   if (!head || !matchesScope(head.scope, query.scope))
     fail("ThreadNotFound", "Thread does not match query");
@@ -96,9 +97,9 @@ export function historyPage(
     .get(
       id,
       cursor?.checkpointId ??
-        options.atCheckpointId ??
-        head.currentCheckpointId,
-    );
+      options.atCheckpointId ??
+      head.currentCheckpointId,
+    ) as { id: string; revision: number; message_count: number } | undefined;
   if (!cp) fail("CheckpointNotFound", "No checkpoint for history");
   const end = cursor?.end ?? Number(cp.message_count);
   if (end > Number(cp.message_count))
@@ -110,7 +111,7 @@ export function historyPage(
       "SELECT body FROM tessar_messages WHERE thread_id=? AND position>=? AND position<? AND from_revision<=? AND (to_revision IS NULL OR ?<to_revision) ORDER BY position LIMIT ?",
     )
     .all(id, begin, end, revision, revision, limit)
-    .map((row) => immutable(JSON.parse(String(row.body))) as MessageData);
+    .map((row) => immutable(JSON.parse(String((row as { body: string }).body))) as MessageData);
   return {
     items,
     checkpointId: String(cp.id),
@@ -122,7 +123,7 @@ export function historyPage(
 }
 
 export function checkpointPage(
-  db: DatabaseSync,
+  db: DatabaseSync.Database,
   threadId: string,
   options: PageOptions,
 ): Page<CheckpointInfo> {

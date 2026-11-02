@@ -9,6 +9,37 @@ interface Call {
   headers: Headers;
 }
 
+it("forwards separate provider options without inferring task names", async () => {
+  const transport = fixture();
+  const documentOptions = { input_type: "search_document", task: "retrieval.passage" };
+  const model = new sdk.OpenAIEmbedding({
+    apiKey: "test", model: "fixture", fetch: transport.fetch,
+    documentOptions, queryOptions: { input_type: "search_query", task: "retrieval.query" },
+  });
+  documentOptions.task = "changed";
+  await model.embedDocuments(["document"]);
+  await model.embedQuery("query");
+  expect(transport.calls.map(call => call.body)).toEqual([
+    expect.objectContaining({ input: ["document"], input_type: "search_document", task: "retrieval.passage" }),
+    expect.objectContaining({ input: "query", input_type: "search_query", task: "retrieval.query" }),
+  ]);
+  expect(transport.calls.every(call => !("documentOptions" in call.body) && !("queryOptions" in call.body))).toBe(true);
+});
+
+it.each(["input", "model", "apiKey", "baseURL", "fetch", "documentOptions", "queryOptions"])(
+  "rejects overriding owned option %s", key => {
+    expect(() => new sdk.OpenAIEmbedding({
+      apiKey: "test", model: "fixture", documentOptions: { [key]: "bad" },
+    })).toThrow(TessarError);
+  },
+);
+
+it.each([null, [], { task: NaN }, { task: () => "query" }])("rejects invalid method options %#", options => {
+  expect(() => new sdk.OpenAIEmbedding({
+    apiKey: "test", model: "fixture", queryOptions: options as never,
+  })).toThrow(TessarError);
+});
+
 function reply(data: unknown): Response {
   return Response.json({ object: "list", model: "fixture", data, usage: { prompt_tokens: 3, total_tokens: 3 } });
 }
@@ -41,6 +72,8 @@ it("exports a standalone OpenAIEmbedding and preserves native options, endpoint 
     defaultHeaders: { "x-custom": "value" }, dimensions: 2, user: "user-a",
     encoding_format: "float", timeout: 1000, maxRetries: 0, fetch: transport.fetch,
   });
+  expect(model.ref).toEqual({ providerId: "openai", modelId: "fixture" });
+  expect(Object.isFrozen(model.ref)).toBe(true);
   expect(await model.embedDocuments(["first\nline", "second"])).toEqual([[1, 2], [3, 4]]);
   expect(transport.calls).toHaveLength(1);
   const call = transport.calls[0]!;

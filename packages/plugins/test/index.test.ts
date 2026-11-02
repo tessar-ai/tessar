@@ -1,4 +1,3 @@
-import { tool as toolHooks } from "@tessar/core";
 import { expect, it } from "vitest";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";

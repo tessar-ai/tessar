@@ -16,23 +16,27 @@ these tables inside the configured schema; MongoDB collections already use this
 prefix. Public API names such as `threads` and `model_attempts` are unchanged.
 The current physical layouts are the initial schema v1 for each backend.
 
-## SQLite: restore a Session after restart
+## libSQL: restore a Session after restart
 
 ```sh
-npm install @tessar/sqlite
+npm install @tessar/libsql
 ```
+
+The root entry provides state/checkpoint storage without requiring RAG.
+Vector storage uses `@tessar/libsql/vector` and requires explicitly installing
+the optional peer `@tessar/rag`; see the [RAG guide](./rag.md).
 
 Save as `storage.ts`. The same database, Agent ID and model connection identity
 are used each time the application starts.
 
 ```ts
 import { Agent, Controller, text as textEvents, stream } from "@tessar/core";
-import { OpenAIProvider } from "@tessar/openai";
-import { SqliteStoragePlugin } from "@tessar/sqlite";
+import { OpenAIChat } from "@tessar/openai";
+import { LibsqlStoragePlugin } from "@tessar/libsql";
 
 const agent = new Agent({
   id: "assistant",
-  model: new OpenAIProvider({
+  model: new OpenAIChat({
     connectionId: "primary-openai",
     apiKey: process.env.OPENAI_API_KEY!,
     model: process.env.OPENAI_MODEL!,
@@ -41,7 +45,7 @@ const agent = new Agent({
 const controller = new Controller({
   id: "my-app",
   agent,
-  plugins: [new SqliteStoragePlugin({ filename: "./state.db" })],
+  plugins: [new LibsqlStoragePlugin({ filename: "./state.db" })],
 });
 
 try {
@@ -98,7 +102,7 @@ completed execution differs from recovering work interrupted by a crash.
 
 ## Choose another backend
 
-Replace the SQLite import and the plugin instance in the preceding example with
+Replace the libSQL import and the plugin instance in the preceding example with
 one of these alternatives; do not register several storage backends together.
 
 PostgreSQL (`npm install @tessar/postgresql`):
@@ -161,9 +165,9 @@ for example, the input and result of a classifier or guardrail. No Agent,
 Controller, Session, Thread or checkpoint is required.
 
 ```ts
-import { createSqliteBackend } from "@tessar/sqlite";
+import { createLibsqlBackend } from "@tessar/libsql";
 
-const backend = await createSqliteBackend({ filename: "./state.db" });
+const backend = await createLibsqlBackend({ filename: "./state.db" });
 try {
   const scope = { userId: "demo-user" };
   const record = await backend.records.append({
@@ -187,7 +191,7 @@ try {
 ```
 
 PostgreSQL, MongoDB and the memory backend have the same `records` contract.
-SQLite/PostgreSQL use one `tessar_records` table; MongoDB uses one collection.
+libSQL/PostgreSQL use one `tessar_records` table; MongoDB uses one collection.
 Each append inserts a record; it does not create another table. Initialization
 adds this structure to an existing database without resetting runtime state.
 

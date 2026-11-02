@@ -1,18 +1,17 @@
-import type { DatabaseSync } from "node:sqlite";
+import type DatabaseSync from "libsql";
 import { setTimeout } from "node:timers/promises";
 import { recordTables } from "./versions.js";
 export { recordTables };
-export async function initializeSchema(db: DatabaseSync): Promise<void> {
-  db.exec("PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;");
+export async function initializeSchema(db: DatabaseSync.Database): Promise<void> {
   const deadline = Date.now() + 5000;
-  for (;;) {
+  for (; ;) {
     try {
       db.exec("PRAGMA journal_mode=WAL;");
       break;
     } catch (error) {
       // SQLite can return BUSY immediately while concurrent connections enable WAL.
       if (
-        ![5, 6].includes((error as { errcode?: number }).errcode ?? 0) ||
+        !["SQLITE_BUSY", "SQLITE_LOCKED"].includes((error as { code?: string }).code ?? "") ||
         Date.now() >= deadline
       )
         throw error;
@@ -24,12 +23,12 @@ export async function initializeSchema(db: DatabaseSync): Promise<void> {
     createSchema(db);
     db.exec("PRAGMA user_version=1; COMMIT");
   } catch (error) {
-    db.exec("ROLLBACK");
+    try { db.exec("ROLLBACK"); } catch { /* Preserve the original driver error. */ }
     throw error;
   }
 }
 
-export function createSchema(db: DatabaseSync): void {
+export function createSchema(db: DatabaseSync.Database): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS tessar_threads(id TEXT PRIMARY KEY,body TEXT NOT NULL,created_at TEXT NOT NULL,deleted INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS tessar_checkpoints(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL REFERENCES tessar_threads(id) DEFERRABLE INITIALLY DEFERRED,revision INTEGER NOT NULL,created_at TEXT NOT NULL,cause TEXT NOT NULL,message_count INTEGER NOT NULL,forkable INTEGER NOT NULL,unsafe_reason TEXT,body TEXT NOT NULL,UNIQUE(thread_id,revision));

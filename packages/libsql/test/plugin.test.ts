@@ -2,8 +2,8 @@ import { expect, it, vi } from "vitest";
 import type { StorageBackend } from "@tessar/core";
 import { PluginHost } from "../../core/src/plugins/host.js";
 const { open } = vi.hoisted(() => ({ open: vi.fn() }));
-vi.mock("../src/backend.js", () => ({ createSqliteBackend: open }));
-import { SqliteStoragePlugin } from "../src/index.js";
+vi.mock("../src/backend.js", () => ({ createLibsqlBackend: open }));
+import { LibsqlStoragePlugin } from "../src/index.js";
 
 it("registers a backend whose connection is closed by plugin disposal", async () => {
   const close = vi.fn().mockResolvedValue(undefined);
@@ -11,7 +11,7 @@ it("registers a backend whose connection is closed by plugin disposal", async ()
   open.mockResolvedValueOnce(backend);
   const host = new PluginHost();
   try {
-    await host.initialize([new SqliteStoragePlugin({ filename: ":memory:" })]);
+    await host.initialize([new LibsqlStoragePlugin({ filename: ":memory:" })]);
     expect(host.registrations()).toMatchObject([
       { kind: "storage", id: "primary", value: { close: expect.any(Function) } },
     ]);
@@ -43,7 +43,7 @@ it.each([false, true])(
         },
       ]);
       await expect(
-        host.attach(new SqliteStoragePlugin({ filename: ":memory:" })),
+        host.attach(new LibsqlStoragePlugin({ filename: ":memory:" })),
       ).rejects.toMatchObject({ code: "RegistrationConflict" });
       expect(close).toHaveBeenCalledOnce();
       expect(existingClose).not.toHaveBeenCalled();

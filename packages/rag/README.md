@@ -206,6 +206,7 @@ async function prepareVectors(
 
 ```ts
 interface EmbeddingModel {
+  readonly ref: Readonly<ModelRef>; // providerId, modelId, optional connectionId
   embedDocuments(input: readonly (string | { text: string })[]): Promise<number[][]>;
   embedQuery(input: string): Promise<number[]>;
 }
@@ -227,6 +228,86 @@ for every model. This contract alone makes no network calls, changes no input
 text and adds no batching, retry or cancellation behavior. For the OpenAI
 embeddings protocol, install `@tessar/openai` and supply its `OpenAIEmbedding`
 class. Connection and native request options are documented in that package.
+
+## Vector storage contract
+
+The `VectorStore`, `VectorCollectionInfo`, `VectorRecord`, `VectorFilter`,
+`VectorListOptions` and `VectorDelete` exports are TypeScript contracts. There is
+no vector store runtime class in this package. `@tessar/libsql/vector` implements them as
+`LibsqlVectorStore`, independently of agent state or a Controller:
+
+```ts
+import { LibsqlVectorStore } from "@tessar/libsql/vector";
+
+const store = new LibsqlVectorStore({ filename: "./vectors.db", embedding: model });
+try {
+  await store.insert(chunks);
+  const records = await store.list({ filter: { metadata: { project: "handbook" } } });
+  console.log(records); // { id, createdAt, content, vector }[]
+} finally {
+  await store.close();
+}
+```
+
+No manual mapping, caller IDs or caller timestamps are needed. Content/Chunk
+objects retain their data and are embedded by the configured model. IDs/dates
+are stored persistently, so list/get can rediscover them without retaining the
+insert result. `get(id)` returns a record or null; `delete({ids})` or
+`delete({filter})` returns the deleted count. List is paginated by limit/offset;
+filters inspect stored source/scalar metadata, not text or embedding similarity.
+See [libSQL storage](../libsql/README.md#independent-vector-storage) for exact
+parameters, filter/transaction rules and errors. The implementation automatically
+maintains a native cosine vector index; original JSON vectors remain unchanged.
+Vector search accepts question text and embeds it with the configured model:
+
+```ts
+const results = await store.search("What does the handbook say?", {
+  topK: 5,
+  score_threshold: 0.7,
+  filter: { metadata: { project: "handbook" } },
+});
+```
+
+The `VectorStore` contract exposes `search(query, options?: VectorSearchOptions)` returning
+`Promise<VectorSearchResult[]>`. Each result contains `id`, `createdAt`, `content`
+and cosine similarity `score` (`1 - cosine distance`, larger is nearer), without
+the stored vector. The score is not a relevance percentage. `topK`
+defaults to 5; an empty collection returns []. Optional `score_threshold` is an
+inclusive minimum cosine similarity (-1..1), omitted for no threshold. Optional
+`filter` supports source/metadata, like list/delete, and restricts records before
+topK. libSQL uses its native approximate float32 cosine index without filters;
+with filters it scores matching rows exactly, which can be slower for large sets.
+The store embeds the question, validates dimensions and does not inject context.
+Use the independent OpenAIReranker below to rerank candidates; hybrid fusion remains
+application code.
+
+Pass an EmbeddingModel with a readonly `ref` into the store once. Model identity
+is saved per collection; `info()` returns `{ collection, model, dimensions }`.
+Dimensions are inferred on the first successful insert, null before that and
+retained after deletion. Empty inserts and searches on empty collections make
+no model call. Read/list/delete/info/BM25 do not call embedding either. A different
+model ref rejects at open; malformed/incompatible vectors reject before writes.
+Legacy collections without identity are rejected without adoption or migration.
+`embedDocuments`/`embedQuery` remain independently usable; the store has no raw
+vector insert/search overload. No automatic re-embedding or document lifecycle.
+
+For keyword retrieval over the same saved chunks, use native backend BM25:
+
+```ts
+const matches = await store.searchText("configuration Tessar", {
+  topK: 5,
+  filter: { metadata: { project: "handbook" } },
+});
+```
+
+`TextSearchOptions` contains optional `topK` (default 5) and source/metadata
+`filter`. `TextSearchResult` contains `id`, `createdAt`, `content` and `score`.
+With libSQL, score is `-bm25()` (larger is better), not normalized cosine or a
+percentage, so there is no cosine `score_threshold`. Query is nonblank plain
+text; whitespace-separated literal segments are OR-matched through FTS5's
+default tokenizer, without exposing query operators. No embedding call is made.
+FTS indexes are collection-specific and kept atomic with insert/delete. See the
+[BM25 guide](../libsql/README.md#bm25-text-search) for query/ranking semantics.
 
 ## Task identity and cancellation
 
@@ -262,6 +343,13 @@ reader-owned cancellation uses the Tessar cancellation error. Failures are not
 returned as empty content or error items.
 Non-success HTTP responses reject with `SourceReadFailed`, with the HTTP status
 and response URL in the error's `details`.
+
+## Rerank candidates
+
+Install `@tessar/openai` and use its `OpenAIReranker` with search results,
+Content/Chunk objects or strings. The model adapter owns the HTTP request;
+RAG does not import it or install it automatically. See the
+[reranker API](../openai/README.md#rerank-candidates) for configuration and results.
 
 ## Identify RAG errors
 

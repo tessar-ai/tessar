@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type DatabaseSync from "libsql";
 import {
   canonicalJson,
   immutable,
@@ -19,7 +19,7 @@ export type VersionTable = RecordKind | "messages";
 type VersionInput = { id: string; body: string; position?: number };
 
 export function writeVersions(
-  db: DatabaseSync,
+  db: DatabaseSync.Database,
   table: VersionTable,
   threadId: string,
   revision: number,
@@ -33,10 +33,10 @@ export function writeVersions(
           `SELECT id,body,position FROM tessar_${table} WHERE thread_id=? AND to_revision IS NULL`,
         )
         .all(threadId) as {
-        id: string;
-        body: string;
-        position: number | null;
-      }[]
+          id: string;
+          body: string;
+          position: number | null;
+        }[]
     ).map((row) => [row.id, row]),
   );
   for (const entry of entries) {
@@ -75,7 +75,7 @@ export function writeVersions(
 }
 
 export function readVersions<T>(
-  db: DatabaseSync,
+  db: DatabaseSync.Database,
   table: VersionTable,
   threadId: string,
   revision: number,
@@ -89,7 +89,7 @@ export function readVersions<T>(
   ).map((row) => immutable(JSON.parse(row.body)) as T);
 }
 
-export function writeCheckpoint(db: DatabaseSync, cp: Checkpoint): void {
+export function writeCheckpoint(db: DatabaseSync.Database, cp: Checkpoint): void {
   writeVersions(
     db,
     "messages",
@@ -119,7 +119,7 @@ export function writeCheckpoint(db: DatabaseSync, cp: Checkpoint): void {
   );
 }
 
-export function hydrateCheckpoint(db: DatabaseSync, body: string): Checkpoint {
+export function hydrateCheckpoint(db: DatabaseSync.Database, body: string): Checkpoint {
   const cp = JSON.parse(body) as Checkpoint;
   return immutable({
     ...cp,

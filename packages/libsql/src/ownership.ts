@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type DatabaseSync from "libsql";
 import { fail, type Lease, type OwnershipPort } from "@tessar/core";
 type LeaseRow = {
   thread_id: string;
@@ -6,7 +6,7 @@ type LeaseRow = {
   fencing_token: number;
   expires_at: number;
 };
-export function databaseNow(db: DatabaseSync): number {
+export function databaseNow(db: DatabaseSync.Database): number {
   return (
     db
       .prepare(
@@ -15,18 +15,18 @@ export function databaseNow(db: DatabaseSync): number {
       .get() as { now: number }
   ).now;
 }
-export function transaction<T>(db: DatabaseSync, action: () => T): T {
+export function transaction<T>(db: DatabaseSync.Database, action: () => T): T {
   db.exec("BEGIN IMMEDIATE");
   try {
     const result = action();
     db.exec("COMMIT");
     return result;
   } catch (error) {
-    db.exec("ROLLBACK");
+    try { db.exec("ROLLBACK"); } catch { /* Preserve the original driver error. */ }
     throw error;
   }
 }
-export function assertOwnership(db: DatabaseSync, lease: Lease): void {
+export function assertOwnership(db: DatabaseSync.Database, lease: Lease): void {
   const row = db
     .prepare("SELECT * FROM tessar_leases WHERE thread_id=?")
     .get(lease.threadId) as LeaseRow | undefined;
@@ -44,15 +44,15 @@ const toLease = (row: LeaseRow): Lease => ({
   fencingToken: row.fencing_token,
   expiresAt: new Date(row.expires_at).toISOString(),
 });
-export function createOwnership(db: DatabaseSync): OwnershipPort {
+export function createOwnership(db: DatabaseSync.Database): OwnershipPort {
   return {
     acquire: async (request) =>
       transaction(db, () => {
         if (!Number.isFinite(request.ttlMs) || request.ttlMs <= 0)
           fail("InvalidConfiguration", "Invalid lease duration");
         const previous = db
-            .prepare("SELECT * FROM tessar_leases WHERE thread_id=?")
-            .get(request.threadId) as LeaseRow | undefined,
+          .prepare("SELECT * FROM tessar_leases WHERE thread_id=?")
+          .get(request.threadId) as LeaseRow | undefined,
           now = databaseNow(db);
         if (previous && previous.expires_at > now)
           fail("OwnerActive", "Thread has active owner");

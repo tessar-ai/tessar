@@ -35,7 +35,7 @@ conditional approval, UI integration and persistence boundaries.
 ```ts
 import { Agent, Controller, HumanMessage, ToolMessage } from "@tessar/core";
 import { createTool } from "@tessar/core/tool";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 import { z } from "zod";
 
 const addTool = createTool({
@@ -47,7 +47,7 @@ const addTool = createTool({
 
 const agent = new Agent({
   id: "assistant",
-  model: new OpenAIProvider({
+  model: new OpenAIChat({
     apiKey: process.env.OPENAI_API_KEY!,
     model: process.env.OPENAI_MODEL!,
   }),
@@ -130,7 +130,7 @@ behavior. Core adds no cache markers or history breakpoint API.
 
 Built-in and custom plugins use classes instantiated with `new`, implementing
 the same `Plugin` instance contract. Provider adapters are separate packages,
-such as `@tessar/openai`; persistence backends such as `@tessar/sqlite` attach
+such as `@tessar/openai`; persistence backends such as `@tessar/libsql` attach
 through Controller plugins.
 
 All hooks share `tessar.hook` and one typed EventMap. Import event groups directly:

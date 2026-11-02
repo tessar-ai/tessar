@@ -1,4 +1,4 @@
-import { DatabaseSync } from "node:sqlite";
+import { openDatabase, type LibsqlStorageOptions } from "./database.js";
 import {
   canonicalJson,
   buildThreadInfo,
@@ -39,13 +39,11 @@ import {
   createOwnership,
   transaction,
 } from "./ownership.js";
-export interface SqliteStorageOptions {
-  filename: string;
-}
-export async function createSqliteBackend(
-  options: SqliteStorageOptions,
+export type { LibsqlStorageOptions } from "./database.js";
+export async function createLibsqlBackend(
+  options: LibsqlStorageOptions,
 ): Promise<StorageBackend> {
-  const db = new DatabaseSync(options.filename);
+  const db = openDatabase(options);
   try {
     await initializeSchema(db);
   } catch (error) {
@@ -68,8 +66,8 @@ export async function createSqliteBackend(
         "SELECT thread_id,revision,body FROM tessar_checkpoints WHERE id=?",
       )
       .get(id) as
-      | { thread_id: string; revision: number; body: string }
-      | undefined;
+    | { thread_id: string; revision: number; body: string }
+    | undefined;
   const records = (kind: RecordKind, threadId: string, cp?: string) => {
     const row = checkpointRow(cp ?? head(threadId)?.currentCheckpointId ?? "");
     return row && row.thread_id === threadId
@@ -129,7 +127,7 @@ export async function createSqliteBackend(
           );
         }),
     },
-    id: "sqlite",
+    id: "libsql",
     capabilities: {
       durable: true,
       atomicPublish: true,
@@ -269,15 +267,15 @@ export async function createSqliteBackend(
           return (
             row
               ? (records(kind, row.thread_id, query.atCheckpointId).find(
-                  (r) => r.id === id,
-                ) ?? null)
+                (r) => r.id === id,
+              ) ?? null)
               : null
           ) as RecordTypes[K] | null;
         }
         return getJson<RecordTypes[K]>(
           "SELECT r.body FROM tessar_" +
-            kind +
-            " r JOIN tessar_threads t ON r.thread_id=t.id WHERE r.id=? AND r.to_revision IS NULL AND t.deleted=0",
+          kind +
+          " r JOIN tessar_threads t ON r.thread_id=t.id WHERE r.id=? AND r.to_revision IS NULL AND t.deleted=0",
           id,
         );
       },
@@ -318,12 +316,13 @@ export async function createSqliteBackend(
     ownership: createOwnership(db),
     commits: {
       stage: async (batch) => {
+        batch = immutable(batch);
         validateBatch(batch);
         const fingerprint = await commitFingerprint(batch);
         transaction(db, () => {
           const published = db
             .prepare("SELECT fingerprint FROM tessar_commits WHERE id=?")
-            .get(batch.commitId);
+            .get(batch.commitId) as { fingerprint: string } | undefined;
           if (published) {
             if (published.fingerprint !== fingerprint)
               fail("CommitConflict", "commitId payload mismatch");
@@ -381,7 +380,7 @@ export async function createSqliteBackend(
               !parent ||
               parent.deleted ||
               checkpointRow(batch.lineage.sourceCheckpointId)?.thread_id !==
-                parent.id
+              parent.id
             )
               fail("ThreadNotFound", "Fork source is no longer available");
           }
@@ -429,7 +428,7 @@ export async function createSqliteBackend(
             );
           const stream = cp.execution
             ? (merged.get("streams:" + cp.execution.streamId)
-                ?.data as RecordTypes["streams"])
+              ?.data as RecordTypes["streams"])
             : null;
           const info = buildThreadInfo(batch, old, stream);
           db.prepare(
@@ -447,7 +446,7 @@ export async function createSqliteBackend(
               )
               .all(info.id);
             for (const row of selections) {
-              const session = JSON.parse(String(row.body)) as SessionRecord;
+              const session = JSON.parse(String((row as { body: string }).body)) as SessionRecord;
               const next = {
                 ...session,
                 selectedThreadId: null,
@@ -474,9 +473,9 @@ export async function createSqliteBackend(
             batch.commitId,
             canonicalJson(receipt),
             String(
-              db
+              (db
                 .prepare("SELECT fingerprint FROM tessar_staging WHERE id=?")
-                .get(batch.commitId)!.fingerprint,
+                .get(batch.commitId) as { fingerprint: string }).fingerprint,
             ),
             cp.threadId,
           );

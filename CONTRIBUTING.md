@@ -102,7 +102,7 @@ compatible published internal dependencies before attempting publication.
 
 Publish changed dependencies first and wait for their release to succeed before
 tagging dependents. For the current release, publish `core@0.1.5` first, then
-`plugins@0.1.5`, `openai@0.1.4`, `sqlite@0.1.4`, `postgresql@0.1.4` and
+`plugins@0.1.5`, `openai@0.1.4`, `libsql@0.1.4`, `postgresql@0.1.4` and
 `mongodb@0.1.4`. Packed workspace dependencies use the new Core version.
 When releasing multiple versions of the same package, finish the earlier
 release first so the `latest` npm tag cannot race backwards.

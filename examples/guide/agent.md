@@ -12,9 +12,9 @@ Save as `agent.ts` after completing the [setup](README.md).
 
 ```ts
 import { Agent, buildInstruction } from "@tessar/core";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 
-const model = new OpenAIProvider({
+const model = new OpenAIChat({
   apiKey: process.env.OPENAI_API_KEY!,
   model: process.env.OPENAI_MODEL!,
 });
@@ -196,7 +196,7 @@ To change endpoint, credentials or protocol, pass another model instance:
 ```ts
 if (process.env.COMPATIBLE_API_KEY && process.env.COMPATIBLE_MODEL &&
     process.env.COMPATIBLE_BASE_URL) {
-  const compatible = new OpenAIProvider({
+  const compatible = new OpenAIChat({
     api: "chat-completions",
     apiKey: process.env.COMPATIBLE_API_KEY,
     baseURL: process.env.COMPATIBLE_BASE_URL,

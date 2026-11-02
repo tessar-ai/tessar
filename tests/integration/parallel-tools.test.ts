@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
+import { removeSqliteTestDirectory as rm } from "../helpers/sqlite-cleanup.js";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { z } from "zod";
@@ -12,11 +13,11 @@ import {
   ToolMessage,
   createTool,
 } from "@tessar/core";
-import { createSqliteBackend } from "@tessar/sqlite";
+import { createLibsqlBackend } from "@tessar/libsql";
 
 it("recovers SQLite tool results committed before their messages without repeating external work", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tessar-parallel-"));
-  const backend = await createSqliteBackend({
+  const backend = await createLibsqlBackend({
     filename: join(directory, "state.db"),
   });
   const originalStage = backend.commits.stage;

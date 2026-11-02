@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type DatabaseSync from "libsql";
 import {
   canonicalJson,
   fail,
@@ -10,7 +10,7 @@ import {
 } from "@tessar/core";
 import { scopePredicate, sqlPage } from "./queries.js";
 
-export function createRecordStore(db: DatabaseSync): RecordStore {
+export function createRecordStore(db: DatabaseSync.Database): RecordStore {
   return {
     append: async (options) => {
       const value = prepareStoredRecord(options);
@@ -33,7 +33,7 @@ export function createRecordStore(db: DatabaseSync): RecordStore {
         )
         .get(namespace, id, ...scope.values);
       return row
-        ? (immutable(JSON.parse(String(row.body))) as StoredRecord)
+        ? (immutable(JSON.parse(String((row as { body: string }).body))) as StoredRecord)
         : null;
     },
     list: async (query) => {

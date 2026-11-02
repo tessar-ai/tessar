@@ -1,4 +1,4 @@
-import { DatabaseSync } from "node:sqlite";
+import DatabaseSync from "libsql";
 import { initializeSchema } from "../src/schema.js";
 import { AgentHarness } from "@tessar/core/testing";
 import { expect, it } from "vitest";
@@ -10,14 +10,14 @@ import {
 } from "@tessar/core";
 import { ThreadService } from "../../core/src/state/threads.js";
 import { StateQueries } from "../../core/src/state/queries.js";
-import { createSqliteBackend } from "../src/backend.js";
+import { createLibsqlBackend } from "../src/backend.js";
 
 for (const name of ["memory", "sqlite"]) {
   it(`${name} pages history without full snapshots and keeps scalar scope types`, async () => {
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createSqliteBackend({ filename: ":memory:" });
+        : await createLibsqlBackend({ filename: ":memory:" });
     try {
       const service = new ThreadService(backend),
         queries = new StateQueries(backend);
@@ -55,7 +55,7 @@ for (const name of ["memory", "sqlite"]) {
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createSqliteBackend({ filename: ":memory:" });
+        : await createLibsqlBackend({ filename: ":memory:" });
     try {
       const ids = ["中", "é", "z", "_", "A", "a", "😀", "!"],
         queries = new StateQueries(backend);
@@ -118,7 +118,7 @@ for (const name of ["memory", "sqlite"])
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createSqliteBackend({ filename: ":memory:" });
+        : await createLibsqlBackend({ filename: ":memory:" });
     const h = await AgentHarness.create({
       backend,
       modelScripts: [{ text: "answer" }],
