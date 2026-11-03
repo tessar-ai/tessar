@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs\assets\logo.png" alt="Tessar" width="160" />
+<img src="docs\assets\tessar.png" alt="Tessar" width="400" />
 
 <h1>Tessar</h1>
 
@@ -149,7 +149,7 @@ Install the packages your application uses:
 | [`@tessar/plugins`](packages/plugins/README.md)       | Plugin discovery/loading, npm plugin management and the `/logger` plugin       |
 | [`@tessar/rag`](packages/rag/README.md)               | Independent document reading and structure-aware chunking                      |
 | [`@tessar/opentelemetry`](packages/opentelemetry/README.md)     | OTLP tracing with Langfuse and Laminar adapters                 |
-| [`@tessar/libsql`](packages/libsql/README.md)         | Local state/checkpoint storage; optional `/vector` entry for vector/BM25 search                 |
+| [`@tessar/libsql`](packages/libsql/README.md)         | State/checkpoint storage using a borrowed libSQL database; optional `/vector` entry for vector/BM25 search                 |
 | [`@tessar/postgresql`](packages/postgresql/README.md) | PostgreSQL persistence                                                         |
 | [`@tessar/mongodb`](packages/mongodb/README.md)       | MongoDB persistence                                                            |
 
