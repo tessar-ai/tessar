@@ -1,4 +1,4 @@
-import type DatabaseSync from "libsql";
+import type { Database } from "./database.js";
 import type { SQLInputValue } from "./database.js";
 import {
   normalizeScope,
@@ -40,7 +40,7 @@ export function scopePredicate(
 }
 
 export function sqlPage<T>(
-  db: DatabaseSync.Database,
+  db: Database,
   table: string,
   where: string,
   values: SQLInputValue[],
@@ -58,7 +58,7 @@ export function sqlPage<T>(
     : "";
   const rows = db
     .prepare(
-      `SELECT ${columns},${dateColumn} AS page_date FROM tessar_${table} WHERE ${where}${filter} ORDER BY ${dateColumn},id COLLATE BINARY LIMIT ?`,
+      `SELECT ${columns},${dateColumn} AS page_date FROM ${db.prefix}tessar_${table} WHERE ${where}${filter} ORDER BY ${dateColumn},id COLLATE BINARY LIMIT ?`,
     )
     .all(
       ...values,
@@ -77,13 +77,13 @@ export function sqlPage<T>(
 }
 
 export function historyPage(
-  db: DatabaseSync.Database,
+  db: Database,
   id: string,
   options: HistoryOptions,
   query: StateQuery = {},
 ): HistoryDataPage {
   const row = db
-    .prepare("SELECT body FROM tessar_threads WHERE id=? AND deleted=0")
+    .prepare(`SELECT body FROM ${db.prefix}tessar_threads WHERE id=? AND deleted=0`)
     .get(id) as { body: string } | undefined;
   const head = row ? (JSON.parse(String(row.body)) as ThreadInfo) : null;
   if (!head || !matchesScope(head.scope, query.scope))
@@ -92,7 +92,7 @@ export function historyPage(
     limit = limitOf(options.limit);
   const cp = db
     .prepare(
-      "SELECT id,revision,message_count FROM tessar_checkpoints WHERE thread_id=? AND id=?",
+      `SELECT id,revision,message_count FROM ${db.prefix}tessar_checkpoints WHERE thread_id=? AND id=?`,
     )
     .get(
       id,
@@ -108,7 +108,7 @@ export function historyPage(
     revision = Number(cp.revision);
   const items = db
     .prepare(
-      "SELECT body FROM tessar_messages WHERE thread_id=? AND position>=? AND position<? AND from_revision<=? AND (to_revision IS NULL OR ?<to_revision) ORDER BY position LIMIT ?",
+      `SELECT body FROM ${db.prefix}tessar_messages WHERE thread_id=? AND position>=? AND position<? AND from_revision<=? AND (to_revision IS NULL OR ?<to_revision) ORDER BY position LIMIT ?`,
     )
     .all(id, begin, end, revision, revision, limit)
     .map((row) => immutable(JSON.parse(String((row as { body: string }).body))) as MessageData);
@@ -123,7 +123,7 @@ export function historyPage(
 }
 
 export function checkpointPage(
-  db: DatabaseSync.Database,
+  db: Database,
   threadId: string,
   options: PageOptions,
 ): Page<CheckpointInfo> {

@@ -1,3 +1,4 @@
+import { openDatabase } from "../src/database.js";
 import { expect, it } from "vitest";
 import DatabaseSync from "libsql";
 import { initializeSchema } from "../src/schema.js";
@@ -5,8 +6,8 @@ import { initializeSchema } from "../src/schema.js";
 it("initializes the current schema as v1 with tessar_ tables and indexes", async () => {
   const db = new DatabaseSync(":memory:");
   try {
-    await initializeSchema(db);
-    expect((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(1);
+    await initializeSchema(openDatabase({ database: db }));
+    expect((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(0);
     const tables = db
       .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
       .all() as { name: string }[];
@@ -19,6 +20,7 @@ it("initializes the current schema as v1 with tessar_ tables and indexes", async
       "tessar_model_attempts",
       "tessar_owned_states",
       "tessar_records",
+      "tessar_schema",
       "tessar_sessions",
       "tessar_staging",
       "tessar_streams",
@@ -33,8 +35,8 @@ it("initializes the current schema as v1 with tessar_ tables and indexes", async
     for (const index of indexes) expect(index.name).toMatch(/^tessar_/);
 
     db.prepare("INSERT INTO tessar_owned_states VALUES(?,?,?)").run("saved", 1, "{}");
-    await initializeSchema(db);
-    expect((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(1);
+    await initializeSchema(openDatabase({ database: db }));
+    expect((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(0);
     expect((db.prepare("SELECT body FROM tessar_owned_states WHERE owner_key=?").get("saved") as { body: string }).body).toBe("{}");
   } finally {
     db.close();

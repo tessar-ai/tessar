@@ -1,3 +1,5 @@
+import { openDatabase } from "../src/database.js";
+import { createTestDatabase } from "./database-fixture.js";
 import DatabaseSync from "libsql";
 import { initializeSchema } from "../src/schema.js";
 import { AgentHarness } from "@tessar/core/testing";
@@ -17,7 +19,7 @@ for (const name of ["memory", "sqlite"]) {
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createLibsqlBackend({ filename: ":memory:" });
+        : await createLibsqlBackend({ database: createTestDatabase(":memory:")});
     try {
       const service = new ThreadService(backend),
         queries = new StateQueries(backend);
@@ -55,7 +57,7 @@ for (const name of ["memory", "sqlite"]) {
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createLibsqlBackend({ filename: ":memory:" });
+        : await createLibsqlBackend({ database: createTestDatabase(":memory:")});
     try {
       const ids = ["中", "é", "z", "_", "A", "a", "😀", "!"],
         queries = new StateQueries(backend);
@@ -118,7 +120,7 @@ for (const name of ["memory", "sqlite"])
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createLibsqlBackend({ filename: ":memory:" });
+        : await createLibsqlBackend({ database: createTestDatabase(":memory:")});
     const h = await AgentHarness.create({
       backend,
       modelScripts: [{ text: "answer" }],
@@ -153,7 +155,7 @@ for (const name of ["memory", "sqlite"])
 it("has indexed history-position and parent-record query plans", async () => {
   const db = new DatabaseSync(":memory:");
   try {
-    await initializeSchema(db);
+    await initializeSchema(openDatabase({ database: db }));
     const history = db
       .prepare(
         "EXPLAIN QUERY PLAN SELECT body FROM tessar_messages WHERE thread_id=? AND position>=? AND position<? AND from_revision<=? AND (to_revision IS NULL OR ?<to_revision) ORDER BY position LIMIT ?",

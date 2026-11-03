@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./database-fixture.js";
 import { expect, it, vi } from "vitest";
 import type { StorageBackend } from "@tessar/core";
 import { PluginHost } from "../../core/src/plugins/host.js";
@@ -11,7 +12,7 @@ it("registers a backend whose connection is closed by plugin disposal", async ()
   open.mockResolvedValueOnce(backend);
   const host = new PluginHost();
   try {
-    await host.initialize([new LibsqlStoragePlugin({ filename: ":memory:" })]);
+    await host.initialize([new LibsqlStoragePlugin({ database: createTestDatabase(":memory:")})]);
     expect(host.registrations()).toMatchObject([
       { kind: "storage", id: "primary", value: { close: expect.any(Function) } },
     ]);
@@ -43,7 +44,7 @@ it.each([false, true])(
         },
       ]);
       await expect(
-        host.attach(new LibsqlStoragePlugin({ filename: ":memory:" })),
+        host.attach(new LibsqlStoragePlugin({ database: createTestDatabase(":memory:")})),
       ).rejects.toMatchObject({ code: "RegistrationConflict" });
       expect(close).toHaveBeenCalledOnce();
       expect(existingClose).not.toHaveBeenCalled();

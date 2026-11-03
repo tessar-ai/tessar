@@ -1,3 +1,4 @@
+import { createTestDatabase } from "../../packages/libsql/test/database-fixture.js";
 import { removeSqliteTestDirectory as rm } from "../helpers/sqlite-cleanup.js";
 import { expect, it, vi } from "vitest";
 import { mkdtemp } from "node:fs/promises";
@@ -77,7 +78,7 @@ it("persists accepted suspended signals across SQLite restart without replay or 
     const controller = new Controller({
       id: "signal-persistence",
       agent,
-      plugins: [new LibsqlStoragePlugin({ filename })],
+      plugins: [new LibsqlStoragePlugin({ database: createTestDatabase(filename)})],
     });
     await controller.initialize();
     return { controller, agent, provider };

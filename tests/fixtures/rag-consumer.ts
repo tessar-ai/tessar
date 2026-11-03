@@ -1,3 +1,4 @@
+import Database from "libsql";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -9,7 +10,11 @@ import * as rag from "@tessar/rag";
 import type { EmbeddingModel } from "@tessar/rag";
 import { OpenAIEmbedding, OpenAIReranker } from "@tessar/openai";
 import { LibsqlVectorStore } from "@tessar/libsql/vector";
+import { PostgresqlVectorStore } from "@tessar/postgresql/vector";
+import { MongoDBVectorStore } from "@tessar/mongodb/vector";
 
+assert.equal(typeof PostgresqlVectorStore, "function");
+assert.equal(typeof MongoDBVectorStore, "function");
 assert.deepEqual(Object.keys(rag).sort(), ["DocumentReader", "DocumentSplitter", "TessarRagError"]);
 const reader = new rag.DocumentReader();
 const metadata = { project: "handbook", nested: { revision: 1 } };
@@ -60,7 +65,8 @@ const pageVectors = await embedding.embedDocuments(contents);
 assert.deepEqual(pageVectors, contents.map(content => [content.text.length, 1]));
 const documentVectors = await embedding.embedDocuments(chunks);
 assert.deepEqual(documentVectors, chunks.map(chunk => [chunk.text.length, 1]));
-const vectorStore = new LibsqlVectorStore({ filename: ":memory:", embedding });
+const database = new Database(":memory:");
+const vectorStore = new LibsqlVectorStore({ database, embedding });
 try {
   const ids = await vectorStore.insert(chunks);
   const stored = await vectorStore.list();
@@ -78,7 +84,7 @@ try {
   });
   assert.equal(filtered.length, 1);
   assert.ok(filtered[0]!.score >= 0.9);
-  const textMatches = await vectorStore.searchText("Setup Run", {
+  const textMatches = await vectorStore.searchBM25("Setup Run", {
     topK: 1, filter: { metadata: { project: "handbook" } },
   });
   assert.equal(textMatches.length, 1);
@@ -88,9 +94,10 @@ try {
   assert.equal(await vectorStore.delete({ ids }), ids.length);
   assert.deepEqual(await vectorStore.list(), []);
   assert.deepEqual(await vectorStore.search("question"), []);
-  assert.deepEqual(await vectorStore.searchText("Setup Run"), []);
+  assert.deepEqual(await vectorStore.searchBM25("Setup Run"), []);
 } finally {
   await vectorStore.close();
+  database.close();
 }
 assert.deepEqual(await embedding.embedQuery("search"), [6, 1]);
 assert.equal(embeddingRequests.length, 6);

@@ -131,7 +131,9 @@ behavior. Core adds no cache markers or history breakpoint API.
 Built-in and custom plugins use classes instantiated with `new`, implementing
 the same `Plugin` instance contract. Provider adapters are separate packages,
 such as `@tessar/openai`; persistence backends such as `@tessar/libsql` attach
-through Controller plugins.
+through Controller plugins. Applications supply and own the native database
+connections for durable adapters; dispose the Controller before closing those
+connections.
 
 All hooks share `tessar.hook` and one typed EventMap. Import event groups directly:
 

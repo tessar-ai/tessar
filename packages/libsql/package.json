@@ -41,17 +41,23 @@
     }
   },
   "dependencies": {
-    "@tessar/core": "workspace:*",
-    "libsql": "0.5.29"
+    "@tessar/core": "workspace:*"
   },
   "peerDependencies": {
-    "@tessar/rag": "workspace:^"
+    "@tessar/rag": "workspace:^",
+    "libsql": "0.5.29"
   },
   "peerDependenciesMeta": {
-    "@tessar/rag": { "optional": true }
+    "@tessar/rag": {
+      "optional": true
+    },
+    "libsql": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@tessar/rag": "workspace:*"
+    "@tessar/rag": "workspace:*",
+    "libsql": "0.5.29"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

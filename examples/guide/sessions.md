@@ -34,6 +34,9 @@ const session = await controller.createSession({
 `await session.thread.create({ id: threadId })`. Existing IDs fail; use
 `session.thread.switch(id)` to select an existing Thread. Without `threadId`,
 create or select a Thread before calling `followUp()`.
+Await thread/model control operations before submitting a follow-up. Input submitted
+while a control operation is pending is rejected with `SessionBusy`, so it cannot
+be admitted against a thread selection that is changing.
 
 ## Render snapshots
 

@@ -37,9 +37,11 @@
       "@tessar/postgresql": [
         "./packages/postgresql/src/index.ts"
       ],
+      "@tessar/postgresql/vector": ["./packages/postgresql/src/vector.ts"],
       "@tessar/mongodb": [
         "./packages/mongodb/src/index.ts"
-      ]
+      ],
+      "@tessar/mongodb/vector": ["./packages/mongodb/src/vector.ts"]
     }
   },
   "include": [

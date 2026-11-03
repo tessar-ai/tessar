@@ -13,6 +13,8 @@ import {
   writeCheckpoint,
 } from "./versions.js";
 import type { ClientSession } from "mongodb";
+import { initializeSchema } from "./schema.js";
+import { storageTransaction as transaction } from "./transaction.js";
 import {
   buildThreadInfo,
   canonicalJson,
@@ -58,7 +60,8 @@ export type { MongoDBStorageOptions } from "./database.js";
 export async function createMongoDBBackend(
   options: MongoDBStorageOptions,
 ): Promise<StorageBackend> {
-  const db = await openDatabase(options);
+  const db = openDatabase(options);
+  const collections = await initializeSchema(db);
   const {
     threads,
     checkpoints,
@@ -69,8 +72,7 @@ export async function createMongoDBBackend(
     commits,
     staging,
     pieces,
-    transaction,
-  } = db;
+  } = collections;
   const head = async (id: string, session?: ClientSession) =>
     decode<ThreadInfo>(await threads.findOne({ _id: id }, { session }));
   const cpRow = (id: string, session?: ClientSession) =>
@@ -95,7 +97,7 @@ export async function createMongoDBBackend(
     >,
   ) => key(value.ownerType, value.ownerId, value.pluginId, value.namespace);
   return {
-    records: createRecordStore(db.records),
+    records: createRecordStore(collections.records),
     id: "mongodb",
     capabilities: {
       durable: true,
@@ -118,7 +120,7 @@ export async function createMongoDBBackend(
         value = immutable(value);
         if (value.selectedThreadId)
           await ensureThread(leases, value.selectedThreadId);
-        await transaction(async (session) => {
+        await transaction(db, async (session) => {
           if (value.selectedThreadId)
             await touchThread(leases, value.selectedThreadId, session);
           const old = decode<SessionRecord>(
@@ -155,7 +157,7 @@ export async function createMongoDBBackend(
         ),
       compareAndSet: (value, expected) => {
         value = immutable(value);
-        return transaction(async (session) => {
+        return transaction(db, async (session) => {
           if (!["agent", "session"].includes(value.ownerType))
             fail(
               "InvalidConfiguration",
@@ -201,7 +203,7 @@ export async function createMongoDBBackend(
         ),
       purge: async (id, query = {}) => {
         await ensureThread(leases, id);
-        await transaction(async (session) => {
+        await transaction(db, async (session) => {
           const free = await leases.updateOne(
             { _id: id, $expr: { $lte: ["$expiresAt", "$$NOW"] } },
             { $inc: { serial: 1 } },
@@ -239,12 +241,12 @@ export async function createMongoDBBackend(
     },
     checkpoints: {
       get: (id) =>
-        transaction(async (session) => {
+        transaction(db, async (session) => {
           const row = await cpRow(id, session);
           return row ? hydrateCheckpoint(versions, row, session) : null;
         }),
       list: (threadId) =>
-        transaction(async (session) => {
+        transaction(db, async (session) => {
           const rows = await checkpoints
               .find({ threadId }, { session })
               .sort({ revision: 1 })
@@ -272,7 +274,7 @@ export async function createMongoDBBackend(
           }),
         ),
       history: (threadId, options, query = {}) =>
-        transaction(async (session) => {
+        transaction(db, async (session) => {
           const info = await head(threadId, session);
           if (!info || info.deleted || !matchesScope(info.scope, query.scope))
             fail("ThreadNotFound", "Thread does not match query");
@@ -320,7 +322,7 @@ export async function createMongoDBBackend(
     },
     executions: {
       page: (kind, threadId, query) =>
-        transaction(async (session) => {
+        transaction(db, async (session) => {
           validKind(kind);
           const cp = await recordCheckpoint(
             threadId,
@@ -344,7 +346,7 @@ export async function createMongoDBBackend(
         threadId: string,
         query?: { atCheckpointId?: string },
       ) =>
-        transaction(async (session) => {
+        transaction(db, async (session) => {
           validKind(kind);
           const cp = await recordCheckpoint(
             threadId,
@@ -366,7 +368,7 @@ export async function createMongoDBBackend(
         id: string,
         query?: { threadId?: string; atCheckpointId?: string },
       ) =>
-        transaction(async (session) => {
+        transaction(db, async (session) => {
           validKind(kind);
           if (query?.threadId || query?.atCheckpointId) {
             const cp = query.threadId
@@ -404,7 +406,7 @@ export async function createMongoDBBackend(
         for (const record of batch.records) validKind(record.kind);
         const fingerprint = await commitFingerprint(batch);
         await ensureThread(leases, batch.threadId);
-        await transaction(async (session) => {
+        await transaction(db, async (session) => {
           await touchThread(leases, batch.threadId, session);
           const old =
             (await commits.findOne({ _id: batch.commitId }, { session })) ??
@@ -457,7 +459,7 @@ export async function createMongoDBBackend(
       },
       publish: (request) => {
         request = immutable(request);
-        return transaction(async (session) => {
+        return transaction(db, async (session) => {
           const prior = decode<CommitReceipt>(
             await commits.findOne({ _id: request.commitId }, { session }),
           );
@@ -619,6 +621,6 @@ export async function createMongoDBBackend(
         });
       },
     },
-    close: db.close,
+    close: async () => { },
   };
 }

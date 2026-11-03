@@ -1,3 +1,4 @@
+import { createTestDatabase } from "../../packages/libsql/test/database-fixture.js";
 import { expect, it } from "vitest";
 import { mkdtemp } from "node:fs/promises";
 import { removeSqliteTestDirectory as rm } from "../helpers/sqlite-cleanup.js";
@@ -18,7 +19,7 @@ import { createLibsqlBackend } from "@tessar/libsql";
 it("recovers SQLite tool results committed before their messages without repeating external work", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tessar-parallel-"));
   const backend = await createLibsqlBackend({
-    filename: join(directory, "state.db"),
+    database: createTestDatabase(join(directory, "state.db")),
   });
   const originalStage = backend.commits.stage;
   let failed = false,

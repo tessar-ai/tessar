@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./database-fixture.js";
 import { expect, it } from "vitest";
 import { createMemoryBackend } from "@tessar/core";
 import { ThreadService } from "../../core/src/state/threads.js";
@@ -8,7 +9,7 @@ for (const name of ["memory", "sqlite"])
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createLibsqlBackend({ filename: ":memory:" });
+        : await createLibsqlBackend({ database: createTestDatabase(":memory:")});
     try {
       const threads = new ThreadService(backend);
       const parent = await threads.create({ scope: { user: "a" } });
@@ -57,7 +58,7 @@ for (const name of ["memory", "sqlite"])
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createLibsqlBackend({ filename: ":memory:" });
+        : await createLibsqlBackend({ database: createTestDatabase(":memory:")});
     try {
       const threads = new ThreadService(backend),
         source = await threads.create();

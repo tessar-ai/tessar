@@ -1,3 +1,4 @@
+import { createTestDatabase } from "../../packages/libsql/test/database-fixture.js";
 import { removeSqliteTestDirectory as rm } from "../helpers/sqlite-cleanup.js";
 import {
   createThread,
@@ -118,7 +119,7 @@ for (const api of ["responses", "chat-completions"] as const)
       const controller = new Controller({
         id: "app",
         agent: new Agent({ id: "assistant", model }),
-        plugins: [new LibsqlStoragePlugin({ filename })],
+        plugins: [new LibsqlStoragePlugin({ database: createTestDatabase(filename)})],
       });
       await controller.initialize();
       return controller;
@@ -251,7 +252,7 @@ it("reopens a suspended Session with summary state and does not replay its compl
   });
   async function open(resumed = false, configurationId = "v1") {
     return AgentHarness.create({
-      backend: await createLibsqlBackend({ filename }),
+      backend: await createLibsqlBackend({ database: createTestDatabase(filename)}),
       plugins: [plugin(configurationId)],
       modelScripts: resumed
         ? [{ text: "finished" }]
@@ -419,7 +420,7 @@ it.each(["endpoint", "protocol"])(
         id: "app",
         agent: new Agent({ id: "app", model }),
         plugins: [
-          new LibsqlStoragePlugin({ filename }),
+          new LibsqlStoragePlugin({ database: createTestDatabase(filename)}),
           {
             id: "approval",
             setup(tessar) {

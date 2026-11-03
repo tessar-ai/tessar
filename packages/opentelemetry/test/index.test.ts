@@ -1,3 +1,4 @@
+import { createTestDatabase } from "../../libsql/test/database-fixture.js";
 import { removeSqliteTestDirectory as rm } from "../../../tests/helpers/sqlite-cleanup.js";
 import { expect, it, onTestFinished } from "vitest";
 import { mkdtemp } from "node:fs/promises";
@@ -456,7 +457,7 @@ it("gives restart/resume a fresh Agent trace grouped with the suspended segment"
     execute: (_input, context) => context.suspend({ question: "Continue?" }),
   });
   const first = await AgentHarness.create({
-    backend: await createLibsqlBackend({ filename }),
+    backend: await createLibsqlBackend({ database: createTestDatabase(filename)}),
     tools: { ask },
     modelScripts: [response("ask")],
     plugins: [createTracing()],
@@ -482,7 +483,7 @@ it("gives restart/resume a fresh Agent trace grouped with the suspended segment"
     await first.dispose();
   }
   const second = await AgentHarness.create({
-    backend: await createLibsqlBackend({ filename }),
+    backend: await createLibsqlBackend({ database: createTestDatabase(filename)}),
     tools: { ask },
     modelScripts: [{ text: "resumed" }],
     plugins: [createTracing()],
@@ -576,7 +577,7 @@ it("captures saved tool publication before stream.resumed after SQLite recovery 
     recursive: true, force: true, maxRetries: 5, retryDelay: 100,
   }));
   const filename = join(directory, "state.db");
-  const backend = await createLibsqlBackend({ filename });
+  const backend = await createLibsqlBackend({ database: createTestDatabase(filename)});
   const originalStage = backend.commits.stage;
   let failed = false, executed = 0;
   backend.commits.stage = async (batch) => {
@@ -612,7 +613,7 @@ it("captures saved tool publication before stream.resumed after SQLite recovery 
     expect(saved.messages.some((message) => message.role === "tool")).toBe(false);
   } finally { await first.dispose(); }
   const second = await AgentHarness.create({
-    backend: await createLibsqlBackend({ filename }), tools: { work },
+    backend: await createLibsqlBackend({ database: createTestDatabase(filename)}), tools: { work },
     modelScripts: [{ text: "recovered" }], plugins: [createTracing()],
   });
   try {
@@ -912,7 +913,7 @@ it("restores Thread grouping and Turn counters with a fresh Agent trace after re
   let sessionId: string;
   for (const index of [0, 1]) {
     const harness = await AgentHarness.create({
-      backend: await createLibsqlBackend({ filename }),
+      backend: await createLibsqlBackend({ database: createTestDatabase(filename)}),
       modelScripts: [{ text: `answer ${index}` }],
       plugins: [createTracing()],
     });

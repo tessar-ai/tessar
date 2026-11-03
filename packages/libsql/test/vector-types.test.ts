@@ -1,3 +1,4 @@
+import type Database from "libsql";
 import { expect, it } from "vitest";
 import { LibsqlVectorStore, type LibsqlVectorStoreOptions } from "@tessar/libsql/vector";
 import * as storage from "../src/index.js";
@@ -7,7 +8,7 @@ it("exposes independent vector storage with generated identity and dates", () =>
   expect(typeof LibsqlVectorStore).toBe("function");
   if (false) {
     const embedding = {} as EmbeddingModel;
-    const config: LibsqlVectorStoreOptions = { filename: "vectors.db", embedding };
+    const config: LibsqlVectorStoreOptions = { database: {} as Database.Database, embedding };
     // @ts-expect-error vector store belongs to the vector entry, not state storage
     storage.LibsqlVectorStore;
     void config;
@@ -25,16 +26,16 @@ it("exposes independent vector storage with generated identity and dates", () =>
     store.search("question");
     store.search("question", {});
     const textOptions: TextSearchOptions = { topK: 5, filter: { source: { page: 3 } } };
-    const textResults: Promise<TextSearchResult[]> = store.searchText("manual", textOptions);
-    store.searchText("manual");
+    const textResults: Promise<TextSearchResult[]> = store.searchBM25("manual", textOptions);
+    store.searchBM25("manual");
     // @ts-expect-error text query must be a string
-    store.searchText([1, 2]);
+    store.searchBM25([1, 2]);
     // @ts-expect-error required query is positional
-    store.searchText({ query: "manual" });
+    store.searchBM25({ query: "manual" });
     // @ts-expect-error cosine threshold does not apply to BM25
-    store.searchText("manual", { score_threshold: 0.7 });
+    store.searchBM25("manual", { score_threshold: 0.7 });
     // @ts-expect-error text is not a metadata/source filter
-    store.searchText("manual", { filter: { text: "manual" } });
+    store.searchBM25("manual", { filter: { text: "manual" } });
     // @ts-expect-error search embeds text, not raw vector input
     store.search([1, 2]);
     // @ts-expect-error options must be an object

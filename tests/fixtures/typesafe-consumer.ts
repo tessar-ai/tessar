@@ -1,3 +1,4 @@
+import Database from "libsql";
 import { rm } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -43,13 +44,13 @@ const server = createServer(async (request, response) => {
         answers: body.questions.allowed
           ? { allowed: { type: "noul", noul: 0.1 } }
           : {
-              route: {
-                type: "choice",
-                choice: "billing",
-                confidence: 0.9,
-                probabilities: { billing: 0.9, engineering: 0.1 },
-              },
+            route: {
+              type: "choice",
+              choice: "billing",
+              confidence: 0.9,
+              probabilities: { billing: 0.9, engineering: 0.1 },
             },
+          },
         usage: { input_tokens: 20, output_tokens: 5 },
       }),
     );
@@ -66,7 +67,8 @@ await new Promise<void>((done, reject) => {
 const address = server.address();
 assert.ok(address && typeof address === "object");
 try {
-  const backend = await createLibsqlBackend({ filename });
+  const database = new Database(filename);
+  const backend = await createLibsqlBackend({ database });
   try {
     const client = new TypeSafe({
       apiKey: "local-test-key",
@@ -131,8 +133,10 @@ try {
     );
   } finally {
     await backend.close();
+    database.close();
   }
-  const reopened = await createLibsqlBackend({ filename });
+  const reopenedDatabase = new Database(filename);
+  const reopened = await createLibsqlBackend({ database: reopenedDatabase });
   try {
     const stored = await reopened.records.get("typesafe.calls", "guard-1", {
       scope: { userId: "u" },
@@ -160,6 +164,7 @@ try {
     );
   } finally {
     await reopened.close();
+    reopenedDatabase.close();
   }
   if (serverFailure) throw serverFailure;
 } finally {

@@ -10,16 +10,20 @@ Automatically generated IDs are plain UUIDs, without prefixes such as `session_`
 or `thread_`. Explicit IDs supplied by applications and IDs already stored are
 preserved.
 
-Physical storage names use the `tessar_` prefix, for example `tessar_sessions`,
-`tessar_threads`, `tessar_checkpoints` and `tessar_messages`. PostgreSQL keeps
-these tables inside the configured schema; MongoDB collections already use this
-prefix. Public API names such as `threads` and `model_attempts` are unchanged.
+Physical storage names default to `tessar_*`. For MongoDB and libSQL, optional
+`namespace: "app"` produces names such as `app_tessar_threads`, including scoped
+indexes and metadata. MongoDB namespaces must match
+`[A-Za-z_][A-Za-z0-9_]{0,62}`; libSQL requires lowercase ASCII
+`[a-z_][a-z0-9_]{0,62}` to prevent case-insensitive identifier aliases.
+PostgreSQL uses its native schema: `schema: "agent_state"` creates
+`agent_state.tessar_threads`; its default schema is `tessar`. Public API names
+such as `threads` and `model_attempts` are unchanged.
 The current physical layouts are the initial schema v1 for each backend.
 
 ## libSQL: restore a Session after restart
 
 ```sh
-npm install @tessar/libsql
+npm install @tessar/libsql libsql@0.5.29
 ```
 
 The root entry provides state/checkpoint storage without requiring RAG.
@@ -32,6 +36,7 @@ are used each time the application starts.
 ```ts
 import { Agent, Controller, text as textEvents, stream } from "@tessar/core";
 import { OpenAIChat } from "@tessar/openai";
+import Database from "libsql";
 import { LibsqlStoragePlugin } from "@tessar/libsql";
 
 const agent = new Agent({
@@ -42,10 +47,11 @@ const agent = new Agent({
     model: process.env.OPENAI_MODEL!,
   }),
 });
+const database = new Database("./state.db");
 const controller = new Controller({
   id: "my-app",
   agent,
-  plugins: [new LibsqlStoragePlugin({ filename: "./state.db" })],
+  plugins: [new LibsqlStoragePlugin({ database })],
 });
 
 try {
@@ -79,7 +85,11 @@ try {
     unsubscribe();
   }
 } finally {
-  await controller.dispose();
+  try {
+    await controller.dispose();
+  } finally {
+    database.close();
+  }
 }
 ```
 
@@ -102,37 +112,53 @@ completed execution differs from recovering work interrupted by a crash.
 
 ## Choose another backend
 
-Replace the libSQL import and the plugin instance in the preceding example with
-one of these alternatives; do not register several storage backends together.
+Replace the libSQL import, database creation, plugin and native cleanup in the
+preceding example with one of these alternatives; do not register several
+storage backends together.
 
-PostgreSQL (`npm install @tessar/postgresql`):
+PostgreSQL (`npm install @tessar/postgresql pg@^8.16.3`; TypeScript users also
+install `@types/pg` as a development dependency):
 
 ```ts
+import { Pool } from "pg";
 import { PostgresqlStoragePlugin } from "@tessar/postgresql";
 
-const storage = new PostgresqlStoragePlugin({
-  connectionString: process.env.POSTGRES_URL!,
-  schema: "tessar",
-  driverOptions: { max: 10 },
-});
+const pool = new Pool({ connectionString: process.env.POSTGRES_URL!, max: 10 });
+const storage = new PostgresqlStoragePlugin({ pool, schema: "agent_state" });
 // In Controller options: plugins: [storage]
+// After disposing the Controller, await pool.end().
 ```
 
-MongoDB (`npm install @tessar/mongodb`):
+MongoDB (`npm install @tessar/mongodb mongodb@^6.21.0`):
 
 ```ts
+import { MongoClient } from "mongodb";
 import { MongoDBStoragePlugin } from "@tessar/mongodb";
 
+const client = new MongoClient(process.env.MONGODB_URL!, { maxPoolSize: 10 });
+await client.connect();
 const storage = new MongoDBStoragePlugin({
-  uri: process.env.MONGODB_URL!,
-  databaseName: "my_agent",
-  clientOptions: { maxPoolSize: 10 },
+  database: client.db("my_agent"),
+  namespace: "app",
 });
 // In Controller options: plugins: [storage]
+// After disposing the Controller, await client.close().
 ```
 
-MongoDB needs a replica set or sharded deployment supporting transactions. The
-Controller owns storage plugin cleanup, including database connections.
+MongoDB needs a replica set or sharded deployment supporting transactions.
+Native drivers are optional peer dependencies installed explicitly by consumers,
+and development dependencies for adapter tests; core remains a runtime dependency.
+The application configures, owns and closes its database/client/pool, including
+after initialization failure. Controller disposal cleans up the storage plugin;
+backend `close()` is a no-op for these borrowed connections. Per-operation
+MongoDB transaction sessions and borrowed PostgreSQL pool clients are still
+cleaned up. Keep native connections open until all users finish.
+
+Configure remote libSQL authentication and replicas on the native `Database`;
+call its `sync()` directly. Tessar does not override `journal_mode` or
+`busy_timeout` or write global `PRAGMA user_version`. It enables foreign keys
+and records schema v1 in a namespaced `tessar_schema` table, retaining existing
+data. Live remote deployments have not been verified.
 
 ## Read state through public APIs
 
@@ -165,28 +191,34 @@ for example, the input and result of a classifier or guardrail. No Agent,
 Controller, Session, Thread or checkpoint is required.
 
 ```ts
+import Database from "libsql";
 import { createLibsqlBackend } from "@tessar/libsql";
 
-const backend = await createLibsqlBackend({ filename: "./state.db" });
+const database = new Database("./state.db");
 try {
-  const scope = { userId: "demo-user" };
-  const record = await backend.records.append({
-    namespace: "decisions",
-    scope,
-    // id: "application-call-id", // optional; omitted IDs are UUIDs
-    data: {
-      request: { state: "Deploy failed twice", question: "Escalate?" },
-      response: { escalate: true, confidence: 0.97 },
-    },
-  });
-  console.log(await backend.records.get("decisions", record.id, { scope }));
-  const page = await backend.records.list({ namespace: "decisions", scope, limit: 20 });
-  console.log(page.items);
-  if (page.nextCursor) console.log(await backend.records.list({
-    namespace: "decisions", scope, limit: 20, cursor: page.nextCursor,
-  }));
+  const backend = await createLibsqlBackend({ database });
+  try {
+    const scope = { userId: "demo-user" };
+    const record = await backend.records.append({
+      namespace: "decisions",
+      scope,
+      // id: "application-call-id", // optional; omitted IDs are UUIDs
+      data: {
+        request: { state: "Deploy failed twice", question: "Escalate?" },
+        response: { escalate: true, confidence: 0.97 },
+      },
+    });
+    console.log(await backend.records.get("decisions", record.id, { scope }));
+    const page = await backend.records.list({ namespace: "decisions", scope, limit: 20 });
+    console.log(page.items);
+    if (page.nextCursor) console.log(await backend.records.list({
+      namespace: "decisions", scope, limit: 20, cursor: page.nextCursor,
+    }));
+  } finally {
+    await backend.close();
+  }
 } finally {
-  await backend.close();
+  database.close();
 }
 ```
 
@@ -232,5 +264,6 @@ class StartupAuditPlugin implements Plugin {
 Capture the storage handle during setup, then call it from a ready hook, a tool,
 or application callbacks after initialization. Calling record operations during
 setup rejects with `ControllerNotReady`; no storage-plugin registration order is
-required. The Controller owns backend cleanup. Without a durable storage plugin,
+required. The Controller owns backend cleanup; applications close borrowed native
+connections afterward. Without a durable storage plugin,
 records use the default memory backend and disappear when it closes.

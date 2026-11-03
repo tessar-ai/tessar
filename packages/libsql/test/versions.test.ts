@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./database-fixture.js";
 import { expect, it } from "vitest";
 import DatabaseSync from "libsql";
 import { mkdtemp } from "node:fs/promises";
@@ -12,7 +13,7 @@ import { createLibsqlBackend } from "../src/backend.js";
 it("stores changed message versions once and cleans published staging without losing retry checks", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tessar-versions-")),
     filename = join(directory, "state.db");
-  const backend = await createLibsqlBackend({ filename });
+  const backend = await createLibsqlBackend({ database: createTestDatabase(filename)});
   try {
     const service = new ThreadService(backend);
     const thread = await service.create({

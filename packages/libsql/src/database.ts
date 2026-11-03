@@ -1,18 +1,27 @@
-import Libsql from "libsql";
+import type Libsql from "libsql";
+import { fail } from "@tessar/core";
 
 export interface LibsqlStorageOptions {
-    filename: string;
+  database: Libsql.Database;
+  namespace?: string;
 }
 
 export type SQLInputValue = string | number | bigint | Uint8Array | null;
+export interface Database {
+  readonly prefix: string;
+  readonly prepare: Libsql.Database["prepare"];
+  readonly exec: Libsql.Database["exec"];
+}
 
-export function openDatabase(options: LibsqlStorageOptions): Libsql.Database {
-    const db = new Libsql(options.filename);
-    try {
-        db.exec("PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;");
-        return db;
-    } catch (error) {
-        try { db.close(); } catch { /* Preserve the initialization error. */ }
-        throw error;
-    }
+/** SQL names and connection access for one Tessar namespace; never owns the driver. */
+export function openDatabase({ database, namespace }: LibsqlStorageOptions): Database {
+  if (!database || typeof database.prepare !== "function" || typeof database.exec !== "function")
+    fail("InvalidConfiguration", "database must be a libsql Database");
+  if (namespace !== undefined && (typeof namespace !== "string" || !/^[a-z_][a-z0-9_]{0,62}$/.test(namespace)))
+    fail("InvalidConfiguration", "libSQL namespace must be a lowercase ASCII identifier of at most 63 characters");
+  const prefix = namespace === undefined ? "" : namespace + "_";
+  const prepare = database.prepare.bind(database);
+  const exec = database.exec.bind(database);
+  exec("PRAGMA foreign_keys=ON");
+  return { prefix, prepare, exec };
 }

@@ -52,7 +52,9 @@ Danh mục gồm API ứng dụng, API viết plugin/provider/storage và các s
 | `@tessar/libsql` | LibsqlStoragePlugin, createLibsqlBackend, LibsqlStorageOptions |
 | `@tessar/libsql/vector` | LibsqlVectorStore, LibsqlVectorStoreOptions (requires optional RAG peer) |
 | `@tessar/postgresql` | PostgresqlStoragePlugin, createPostgresqlBackend, PostgresqlStorageOptions |
+| `@tessar/postgresql/vector` | PostgresqlVectorStore, PostgresqlVectorStoreOptions (requires optional RAG peer) |
 | `@tessar/mongodb` | MongoDBStoragePlugin, createMongoDBBackend, MongoDBStorageOptions |
+| `@tessar/mongodb/vector` | MongoDBVectorStore, MongoDBVectorStoreOptions (requires optional RAG peer) |
 
 ### Phạm vi đã đối chiếu
 
@@ -579,7 +581,7 @@ Không có protocol child reservation/admission trong core. Plugin tự kết h�
 | `.discover()` | Không có | `Promise<string[]>` |
 | `.load(sources?)` | `readonly string[]`; bỏ qua thì discover | `Promise<Plugin[]>`; chưa attach vào Controller |
 | `.install(source, options?)` | `source: string`, `{ name?: string }` | `Promise<string>` tên package đã cài/đăng ký |
-| `.update(name?)` | `name?: string`; bỏ qua để cập nhật package đã cấu hình | `Promise<void>` |
+| `.update(name?)` | `name?: string`; bỏ qua để cập nhật plugin đã cấu hình. Version registry cố định lên `latest` rồi pin lại; nguồn khác giữ cách cập nhật native npm | `Promise<void>` |
 | `.remove(name)` | `name: string` | `Promise<void>` |
 | `.dispose()` | Không có | `void` |
 
@@ -606,15 +608,31 @@ Mỗi invocation/followUp có trace mới với Agent root. Langfuse Session nh�
 
 | API | Parameter | Trả về |
 | --- | --- | --- |
-| `new LibsqlStoragePlugin(options)` | `{ filename: string }` | Plugin, id `storage.libsql` |
-| `createLibsqlBackend(options)` | `{ filename: string }` | `Promise<StorageBackend>` |
-| `new PostgresqlStoragePlugin(options)` | `{ connectionString: string; schema?: string; driverOptions?: Omit<PoolConfig, "connectionString"> }` | Plugin, id `storage.postgresql` |
+| `new LibsqlStoragePlugin(options)` | `{ database: libsql.Database; namespace?: string }` | Plugin, id `storage.libsql` |
+| `createLibsqlBackend(options)` | `{ database: libsql.Database; namespace?: string }` | `Promise<StorageBackend>` |
+| `new PostgresqlStoragePlugin(options)` | `{ pool: pg.Pool; schema?: string }` | Plugin, id `storage.postgresql` |
 | `createPostgresqlBackend(options)` | Cùng options PostgreSQL | `Promise<StorageBackend>` |
-| `new MongoDBStoragePlugin(options)` | `{ uri: string; databaseName: string; clientOptions?: MongoClientOptions }` | Plugin, id `storage.mongodb` |
+| `new MongoDBStoragePlugin(options)` | `{ database: mongodb.Db; namespace?: string }` | Plugin, id `storage.mongodb` |
 | `createMongoDBBackend(options)` | Cùng options MongoDB | `Promise<StorageBackend>` |
 | `createMemoryBackend(options?)` | `{ clock?: Clock }` | `StorageBackend`, đồng bộ |
 
-Mỗi plugin có `.setup(tessar: PluginContext): Promise<void>`. PostgreSQL schema mặc định `tessar`; tên schema phải hợp lệ. libSQL dùng driver libsql cho RAM/file local. MongoDB cần transaction support. Không truyền thêm `tables` hay migration option qua constructor này. `PoolConfig` và `MongoClientOptions` thuộc driver, không phải một tập field Tessar định nghĩa lại.
+Each plugin has `.setup(tessar: PluginContext): Promise<void>`. Applications
+install native drivers explicitly: `libsql@0.5.29`, `pg@^8.16.3` (plus
+`@types/pg` as a TypeScript development dependency), or `mongodb@^6.21.0`. Drivers
+are optional peers and test development dependencies; core is a runtime dependency.
+Applications configure, own and close native databases/pools/clients, including
+after initialization failure. Backend `close()` is a no-op for borrowed state
+connections; per-operation MongoDB sessions and PostgreSQL pool clients are still
+cleaned up. PostgreSQL defaults to schema `tessar`; `agent_state` produces
+`agent_state.tessar_threads` using native quoted schema semantics. MongoDB
+namespaces must match `[A-Za-z_][A-Za-z0-9_]{0,62}`; libSQL requires lowercase
+ASCII `[a-z_][a-z0-9_]{0,62}` to prevent case-insensitive identifier aliases.
+Omitted namespace retains `tessar_*` names; `app` produces
+`app_tessar_threads` and scopes every index and metadata object. libSQL records
+version 1 in namespaced `tessar_schema`, retains existing data, enables foreign
+keys, and does not override `journal_mode`, `busy_timeout` or global
+`PRAGMA user_version`. Configure remote/replica options and call `sync()` on the
+native database; no Tessar sync wrapper or live remote verification is claimed.
 
 ### API cho tác giả backend
 
@@ -3060,7 +3078,8 @@ Nguồn: [packages/libsql/src/backend.ts](packages/libsql/src/backend.ts).
 
 ```ts
 export interface LibsqlStorageOptions {
-    filename: string;
+    database: libsql.Database;
+    namespace?: string;
 }
 
 export declare function createLibsqlBackend(options: LibsqlStorageOptions): Promise<StorageBackend>;
@@ -3072,9 +3091,8 @@ Nguồn: [packages/postgresql/src/database.ts](packages/postgresql/src/database.
 
 ```ts
 export interface PostgresqlStorageOptions {
-    connectionString: string;
+    pool: pg.Pool;
     schema?: string;
-    driverOptions?: Omit<PoolConfig, "connectionString">;
 }
 ```
 
@@ -3084,9 +3102,8 @@ Nguồn: [packages/mongodb/src/database.ts](packages/mongodb/src/database.ts).
 
 ```ts
 export interface MongoDBStorageOptions {
-    uri: string;
-    databaseName: string;
-    clientOptions?: MongoClientOptions;
+    database: mongodb.Db;
+    namespace?: string;
 }
 ```
 
@@ -3695,14 +3712,17 @@ class LibsqlVectorStore implements VectorStore {
   get(id: string): Promise<VectorRecord | null>;
   list(options?: VectorListOptions): Promise<VectorRecord[]>;
   search(query: string, options?: VectorSearchOptions): Promise<VectorSearchResult[]>;
-  searchText(query: string, options?: TextSearchOptions): Promise<TextSearchResult[]>;
+  searchBM25(query: string, options?: TextSearchOptions): Promise<TextSearchResult[]>;
   delete(selector: VectorDelete): Promise<number>;
   close(): Promise<void>;
 }
 ```
 
-Constructor requires filename and embedding; collection defaults
-to `default`. It creates separate vector tables without initializing agent state.
+Constructor requires `database: libsql.Database` and `embedding`; optional
+`namespace` scopes tables/indexes/metadata and `collection` defaults to `default`.
+A collection is a logical group within a namespace, not a schema. The application
+owns the native database; store `close()` marks the store closed without closing
+it. It creates separate vector tables without initializing agent state.
 Existing collection model refs must match. info returns collection/model/dimensions
 (null before first successful insert). No Controller, plugin or extension.
 
@@ -3730,7 +3750,7 @@ approximate index without filters; source/metadata filters restrict records befo
 topK using exact scoring over matching rows, potentially scanning a large subset.
 score_threshold is an inclusive finite cosine similarity bound (-1..1), omitted
 for no threshold. Query vectors must match dimensions, be finite and nonzero.
-searchText uses native FTS5 BM25 over saved content.text with optional topK
+searchBM25 uses native FTS5 BM25 over saved content.text with optional topK
 (default 5) and source/metadata filter before topK. Its score is -bm25 (larger is
 better), not cosine; there is no cosine threshold. Query is plain nonblank text:
 whitespace-separated segments are literal quoted phrases joined with OR, using
@@ -3740,6 +3760,117 @@ semantics. Per-collection text indexes/statistics are isolated, built if missing
 and maintained in insert/delete transactions without modifying saved records.
 No automatic re-embedding of saved data, reranking, retries or document lifecycle.
 SQLite methods return promises but perform synchronous work internally.
+
+## PostgreSQL vector storage (`@tessar/postgresql/vector`)
+
+`PostgresqlVectorStore` and `PostgresqlVectorStoreOptions` are separate from the
+root state-storage entry. Install `@tessar/postgresql`, `@tessar/rag` and `pg`
+explicitly, with `@types/pg` for TypeScript. RAG is an optional peer; state-only
+root imports do not require it.
+
+```ts
+interface PostgresqlVectorStoreOptions {
+  pool: import("pg").Pool;
+  embedding: EmbeddingModel;
+  schema?: string; // "tessar"
+  collection?: string; // "default"
+}
+```
+
+The public methods are `insert`, `info`, `get`, `list`, `delete`, `search`,
+`searchBM25`, `searchNative` and `close`, using shared RAG record/filter/search
+types for the shared operations. Constructor
+validation is synchronous; first asynchronous use initializes tables/metadata
+and rejects on database/network initialization failure. The pool is borrowed:
+closing the facade or failing initialization never calls pool.end(). Borrowed
+clients are released on success and failure. Configure native connection/TLS
+options on the pool and close it after all consumers finish.
+
+An administrator must install and enable pgvector with `CREATE EXTENSION vector;`.
+Tessar checks availability without installing it. Content/source/metadata/position
+and original vectors are retained in JSONB, with generated UUIDs/UTC timestamps.
+Model identity is saved per collection. Dimensions are null until the first
+successful insert, inferred from actual output and retained after deletion.
+Identity/dimension mismatches reject without automatic re-embedding. Provider
+calls run outside transactions; insert records, first dimensions and the native
+per-collection HNSW cosine index commit atomically.
+
+Native pgvector float32 HNSW vector indexes support at most 2000 dimensions;
+larger vectors reject without halfvec conversion or dimension reduction. Get/list
+retain original vectors. List pagination and delete selectors follow the shared
+RAG contract. Filters use exact source URI/page and top-level metadata scalar
+equality combined with AND; text filters are unsupported.
+
+`search(query, { topK = 5, score_threshold?, filter? }?)` requires nonblank text.
+Threshold is an inclusive cosine minimum in [-1, 1]. Results preserve
+id/createdAt/content and return a descending cosine score without vectors.
+Unfiltered search is approximate; filtered search scores the matching subset
+exactly before topK. Empty collections return [] without a provider call.
+No agent/context lifecycle or live remote verification is claimed. See
+[adapter setup](../packages/postgresql/README.md#independent-vector-storage).
+
+`searchBM25(query, { topK?, filter? }?)` uses `pg_search` BM25. An administrator
+must separately install the server extension and enable it in the database with
+`CREATE EXTENSION pg_search;`, following its server setup requirements. Tessar
+never installs extensions or changes server configuration. Missing pg_search
+rejects only BM25 calls, leaving CRUD/vector/native search available. Its native
+index is created/backfilled on the first BM25 call and maintains later writes.
+Initial indexing needs index creation permissions and adds latency/disk usage.
+
+`searchNative(query, { topK?, filter? }?)` uses built-in PostgreSQL text search
+with explicit `simple` configuration and `ts_rank`; no BM25 extension is needed.
+Native lookup uses a GIN index, without stemming or automatic language inference.
+Both keyword methods use nonblank plain literal OR terms, call no embedding
+model, default topK to 5 and filter source/metadata with AND before topK. Results
+contain id/createdAt/content/score without vectors. No matches return []. Native
+rank and BM25 scores use different scales, neither cosine nor percentages;
+neither keyword method accepts score_threshold. Hybrid fusion is application code.
+
+## MongoDB vector storage (`@tessar/mongodb/vector`)
+
+`MongoDBVectorStore` accepts `{ database: Db, embedding: EmbeddingModel,
+namespace?: string, collection?: string }`. Collection defaults to `"default"`;
+omitting namespace retains Tessar naming. Install `@tessar/mongodb`, `@tessar/rag`
+and `mongodb` explicitly. The root state-storage entry remains independent of
+the optional RAG peer. The application owns connecting/closing MongoClient and
+native driver options; store close only invalidates its facade, including after
+initialization failure. A replica set/sharded deployment is required for atomic
+bulk insertion, with model calls outside transactions and sessions always ended.
+
+Public methods are insert/info/get/list/delete/search/searchBM25/searchNative/close.
+Shared CRUD retains original Content/Chunk/vector data, generated UUIDs and UTC
+timestamps. Model identity is frozen per collection; dimensions come from the
+first successful insert, remain null beforehand and survive deletion. No automatic
+re-embedding is performed. Filters use source URI/page and top-level scalar
+metadata equality with AND; types are distinct and null differs from missing.
+Dynamic canonical tokens need no filterFields/indexName/dimensions options.
+Tokens exceeding 32766 bytes reject before model I/O to prevent silent index
+omission. No MongoDB query operators or text filters are exposed.
+
+`search(query, { topK = 5, score_threshold?, filter? }?)` uses native exact
+`$vectorSearch`, without inferred ANN tuning. Convert MongoDB cosine [0, 1] to
+shared [-1, 1]; optional threshold is an inclusive minimum in that shared range.
+`searchBM25(query, { topK = 5, filter? }?)` uses MongoDB Search with explicit
+BM25 similarity. MongoDB-specific `searchNative` takes the same keyword options
+and uses ordinary `$text`/textScore with language `none`, without mongot,
+stemming or language inference. Keyword methods accept plain literal OR terms,
+call no embedding model and have no score_threshold. Their score scales differ
+from cosine and each other. Filters restrict records before topK; results retain
+id/createdAt/content and descending score, without vectors.
+
+Vector/BM25 require developer-provisioned Atlas or compatible self-managed
+Search/mongot; Tessar installs no services or server configuration. CRUD/native
+text need no mongot. Tessar creates only its own collections/indexes, each search
+index lazily on its corresponding first search. Vector/BM25 queryable state is
+checked on each call: building rejects InvalidState with no hidden polling;
+incompatible definitions reject InvalidConfiguration with no automatic update.
+Native service errors propagate. Index visibility is eventual: immediate get/list
+visibility does not guarantee search-after-insert visibility.
+
+Tests use TESSAR_TEST_MONGODB_URL for ordinary storage/native text and optional
+TESSAR_TEST_MONGODB_SEARCH_URL for Search. Skips do not verify a deployment;
+no live verification claim is made here. See the
+[MongoDB adapter](../packages/mongodb/README.md#independent-vector-storage).
 
 ## Compatible embedding options and reranker
 

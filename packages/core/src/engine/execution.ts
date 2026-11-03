@@ -18,7 +18,6 @@ import {
 } from "./delivery.js";
 import {
   createFrame,
-  loadRecords,
   watchLease,
   type ExecutionContext,
   type ExecutionFrame,
@@ -149,7 +148,6 @@ export async function execute(
       directUsage: usage,
       outputMessageIds: [],
     };
-    const records = await loadRecords(execution, request.threadId);
     frame = createFrame(execution, {
       request,
       sink,
@@ -157,7 +155,7 @@ export async function execute(
       lease,
       cp,
       stream,
-      records,
+      records: new Map(),
       admitted: false,
     });
     execution.put(frame, "streams", stream);

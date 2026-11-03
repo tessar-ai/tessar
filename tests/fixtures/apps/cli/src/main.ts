@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import Database from "libsql";
 import { tool as toolHooks, stream as streamHooks } from "@tessar/core";
 import {
   Agent,
@@ -32,6 +33,7 @@ const manager = new PluginManager({
   directory: resolve(option("--plugin-dir") ?? ".tessar"),
   hostUrl: import.meta.url,
 });
+let database: Database.Database | undefined;
 let controller: Controller | undefined;
 try {
   if (args[0] === "plugins") {
@@ -83,22 +85,22 @@ try {
     const scripted = new ScriptedProvider(
       approval && !interruptId
         ? [
-            {
-              response: {
-                message: MessageCodec.encode(
-                  new AssistantMessage([
-                    {
-                      type: "tool-call",
-                      toolCallId: "demo-call",
-                      name: "echo",
-                      arguments: {},
-                    },
-                  ]),
-                ),
-              },
+          {
+            response: {
+              message: MessageCodec.encode(
+                new AssistantMessage([
+                  {
+                    type: "tool-call",
+                    toolCallId: "demo-call",
+                    name: "echo",
+                    arguments: {},
+                  },
+                ]),
+              ),
             },
-            { text: "fixture answer" },
-          ]
+          },
+          { text: "fixture answer" },
+        ]
         : [{ text: "fixture answer" }],
     );
     class DemoToolsPlugin implements Plugin {
@@ -120,7 +122,11 @@ try {
       }
     }
     const plugins: Plugin[] = [new DemoToolsPlugin()];
-    if (filename) plugins.push(new LibsqlStoragePlugin({ filename }));
+    if (filename) {
+      database = new Database(filename);
+      database.exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000");
+      plugins.push(new LibsqlStoragePlugin({ database }));
+    }
     if (live) {
       if (!process.env.OPENAI_API_KEY || !process.env.OPENAI_MODEL)
         throw Error("--openai requires OPENAI_API_KEY and OPENAI_MODEL");
@@ -222,6 +228,7 @@ try {
   try {
     await controller?.dispose();
   } finally {
+    database?.close();
     manager.dispose();
   }
 }

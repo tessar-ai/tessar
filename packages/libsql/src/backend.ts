@@ -21,6 +21,7 @@ import {
 } from "@tessar/core";
 import { initializeSchema, recordTables } from "./schema.js";
 import { createRecordStore } from "./records.js";
+import { transaction } from "./transaction.js";
 import {
   sqlPage,
   scopePredicate,
@@ -37,20 +38,13 @@ import {
   databaseNow,
   assertOwnership,
   createOwnership,
-  transaction,
 } from "./ownership.js";
 export type { LibsqlStorageOptions } from "./database.js";
 export async function createLibsqlBackend(
   options: LibsqlStorageOptions,
 ): Promise<StorageBackend> {
   const db = openDatabase(options);
-  try {
-    await initializeSchema(db);
-  } catch (error) {
-    db.close();
-    throw error;
-  }
-  let closed = false;
+  await initializeSchema(db);
   const getJson = <T>(
     sql: string,
     ...values: (string | number)[]
@@ -59,11 +53,11 @@ export async function createLibsqlBackend(
     return row ? (immutable(JSON.parse(row.body)) as T) : null;
   };
   const head = (id: string) =>
-    getJson<ThreadInfo>("SELECT body FROM tessar_threads WHERE id=?", id);
+    getJson<ThreadInfo>(`SELECT body FROM ${db.prefix}tessar_threads WHERE id=?`, id);
   const checkpointRow = (id: string) =>
     db
       .prepare(
-        "SELECT thread_id,revision,body FROM tessar_checkpoints WHERE id=?",
+        `SELECT thread_id,revision,body FROM ${db.prefix}tessar_checkpoints WHERE id=?`,
       )
       .get(id) as
     | { thread_id: string; revision: number; body: string }
@@ -85,7 +79,7 @@ export async function createLibsqlBackend(
     sessions: {
       get: async (id, query = {}) => {
         const row = getJson<SessionRecord>(
-          "SELECT body FROM tessar_sessions WHERE id=?",
+          `SELECT body FROM ${db.prefix}tessar_sessions WHERE id=?`,
           id,
         );
         return row && matchesScope(row.scope, query.scope) ? row : null;
@@ -105,7 +99,7 @@ export async function createLibsqlBackend(
       compareAndSet: async (value, expected) =>
         transaction(db, () => {
           const old = getJson<SessionRecord>(
-            "SELECT body FROM tessar_sessions WHERE id=?",
+            `SELECT body FROM ${db.prefix}tessar_sessions WHERE id=?`,
             value.id,
           );
           validateSession(
@@ -115,7 +109,7 @@ export async function createLibsqlBackend(
             value.selectedThreadId ? head(value.selectedThreadId) : null,
           );
           db.prepare(
-            "INSERT INTO tessar_sessions VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET selected_thread_id=excluded.selected_thread_id,revision=excluded.revision,updated_at=excluded.updated_at,body=excluded.body",
+            `INSERT INTO ${db.prefix}tessar_sessions VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET selected_thread_id=excluded.selected_thread_id,revision=excluded.revision,updated_at=excluded.updated_at,body=excluded.body`,
           ).run(
             value.id,
             value.agentId,
@@ -145,7 +139,7 @@ export async function createLibsqlBackend(
             info.activeStreamId ||
             db
               .prepare(
-                "SELECT 1 FROM tessar_leases WHERE thread_id=? AND expires_at>?",
+                `SELECT 1 FROM ${db.prefix}tessar_leases WHERE thread_id=? AND expires_at>?`,
               )
               .get(id, databaseNow(db))
           )
@@ -153,7 +147,7 @@ export async function createLibsqlBackend(
           if (
             db
               .prepare(
-                "SELECT 1 FROM tessar_threads WHERE json_extract(body,'$.parentThreadId')=? OR json_extract(body,'$.sourceCheckpointId') IN (SELECT id FROM tessar_checkpoints WHERE thread_id=?) LIMIT 1",
+                `SELECT 1 FROM ${db.prefix}tessar_threads WHERE json_extract(body,'$.parentThreadId')=? OR json_extract(body,'$.sourceCheckpointId') IN (SELECT id FROM ${db.prefix}tessar_checkpoints WHERE thread_id=?) LIMIT 1`,
               )
               .get(id, id)
           )
@@ -165,12 +159,12 @@ export async function createLibsqlBackend(
             "commits",
           ])
             db.prepare(
-              "DELETE FROM tessar_" + table + " WHERE thread_id=?",
+              `DELETE FROM ${db.prefix}tessar_` + table + " WHERE thread_id=?",
             ).run(id);
           db.prepare(
-            "DELETE FROM tessar_staging WHERE json_extract(body,'$.threadId')=?",
+            `DELETE FROM ${db.prefix}tessar_staging WHERE json_extract(body,'$.threadId')=?`,
           ).run(id);
-          db.prepare("DELETE FROM tessar_threads WHERE id=?").run(id);
+          db.prepare(`DELETE FROM ${db.prefix}tessar_threads WHERE id=?`).run(id);
         }),
       page: async (query) => {
         const scope = scopePredicate(query.scope);
@@ -192,7 +186,7 @@ export async function createLibsqlBackend(
       },
       list: async (query) =>
         (
-          db.prepare("SELECT body FROM tessar_threads").all() as {
+          db.prepare(`SELECT body FROM ${db.prefix}tessar_threads`).all() as {
             body: string;
           }[]
         )
@@ -202,22 +196,23 @@ export async function createLibsqlBackend(
     checkpoints: {
       page: async (threadId, options) => checkpointPage(db, threadId, options),
       history: async (threadId, options, query) =>
-        historyPage(db, threadId, options, query),
+        transaction(db, () => historyPage(db, threadId, options, query), "read"),
       get: async (id) =>
-        checkpointRow(id)
-          ? hydrateCheckpoint(db, checkpointRow(id)!.body)
-          : null,
+        transaction(db, () => {
+          const row = checkpointRow(id);
+          return row ? hydrateCheckpoint(db, row.body) : null;
+        }, "read"),
       list: async (threadId) =>
-        (
+        transaction(db, () => (
           db
             .prepare(
-              "SELECT body FROM tessar_checkpoints WHERE thread_id=? ORDER BY revision",
+              `SELECT body FROM ${db.prefix}tessar_checkpoints WHERE thread_id=? ORDER BY revision`,
             )
             .all(threadId) as { body: string }[]
-        ).map((r) => hydrateCheckpoint(db, r.body)),
+        ).map((r) => hydrateCheckpoint(db, r.body)), "read"),
     },
     executions: {
-      page: async (kind, threadId, query) => {
+      page: async (kind, threadId, query) => transaction(db, () => {
         if (!recordTables.includes(kind))
           fail("InvalidConfiguration", "Unknown record kind");
         const cp = checkpointRow(
@@ -250,12 +245,12 @@ export async function createLibsqlBackend(
           recordBinding(kind, threadId, query),
           "sort_date",
         );
-      },
+      }, "read"),
       get: async <K extends RecordKind>(
         kind: K,
         id: string,
         query?: { threadId?: string; atCheckpointId?: string },
-      ) => {
+      ) => transaction(db, () => {
         if (!recordTables.includes(kind))
           fail("InvalidConfiguration", "Unknown record kind");
         if (query?.threadId)
@@ -273,22 +268,22 @@ export async function createLibsqlBackend(
           ) as RecordTypes[K] | null;
         }
         return getJson<RecordTypes[K]>(
-          "SELECT r.body FROM tessar_" +
+          `SELECT r.body FROM ${db.prefix}tessar_` +
           kind +
-          " r JOIN tessar_threads t ON r.thread_id=t.id WHERE r.id=? AND r.to_revision IS NULL AND t.deleted=0",
+          ` r JOIN ${db.prefix}tessar_threads t ON r.thread_id=t.id WHERE r.id=? AND r.to_revision IS NULL AND t.deleted=0`,
           id,
         );
-      },
+      }, "read"),
       listRecords: async <K extends RecordKind>(
         kind: K,
         threadId: string,
         query?: { atCheckpointId?: string },
-      ) => records(kind, threadId, query?.atCheckpointId) as RecordTypes[K][],
+      ) => transaction(db, () => records(kind, threadId, query?.atCheckpointId) as RecordTypes[K][], "read"),
     },
     ownedState: {
       get: async (key) =>
         getJson<PluginStateSnapshot>(
-          "SELECT body FROM tessar_owned_states WHERE owner_key=?",
+          `SELECT body FROM ${db.prefix}tessar_owned_states WHERE owner_key=?`,
           ownerKey(key),
         ),
       compareAndSet: async (state, expected) =>
@@ -300,7 +295,7 @@ export async function createLibsqlBackend(
             );
           const key = ownerKey(state),
             old = getJson<PluginStateSnapshot>(
-              "SELECT body FROM tessar_owned_states WHERE owner_key=?",
+              `SELECT body FROM ${db.prefix}tessar_owned_states WHERE owner_key=?`,
               key,
             );
           if (
@@ -309,7 +304,7 @@ export async function createLibsqlBackend(
           )
             fail("CommitConflict", "Owned state revision changed");
           db.prepare(
-            "INSERT INTO tessar_owned_states VALUES(?,?,?) ON CONFLICT(owner_key) DO UPDATE SET revision=excluded.revision,body=excluded.body",
+            `INSERT INTO ${db.prefix}tessar_owned_states VALUES(?,?,?) ON CONFLICT(owner_key) DO UPDATE SET revision=excluded.revision,body=excluded.body`,
           ).run(key, state.revision, canonicalJson(state));
         }),
     },
@@ -321,7 +316,7 @@ export async function createLibsqlBackend(
         const fingerprint = await commitFingerprint(batch);
         transaction(db, () => {
           const published = db
-            .prepare("SELECT fingerprint FROM tessar_commits WHERE id=?")
+            .prepare(`SELECT fingerprint FROM ${db.prefix}tessar_commits WHERE id=?`)
             .get(batch.commitId) as { fingerprint: string } | undefined;
           if (published) {
             if (published.fingerprint !== fingerprint)
@@ -329,13 +324,13 @@ export async function createLibsqlBackend(
             return;
           }
           const old = getJson<CommitBatch>(
-            "SELECT body FROM tessar_staging WHERE id=?",
+            `SELECT body FROM ${db.prefix}tessar_staging WHERE id=?`,
             batch.commitId,
           );
           if (old && canonicalJson(old) !== canonicalJson(batch))
             fail("CommitConflict", "commitId payload mismatch");
           if (!old)
-            db.prepare("INSERT INTO tessar_staging VALUES(?,?,?)").run(
+            db.prepare(`INSERT INTO ${db.prefix}tessar_staging VALUES(?,?,?)`).run(
               batch.commitId,
               canonicalJson(batch),
               fingerprint,
@@ -344,13 +339,13 @@ export async function createLibsqlBackend(
       },
       lookupCommit: async (id) =>
         getJson<CommitReceipt>(
-          "SELECT body FROM tessar_commits WHERE id=?",
+          `SELECT body FROM ${db.prefix}tessar_commits WHERE id=?`,
           id,
         ),
       publish: async (request) =>
         transaction(db, () => {
           const prior = getJson<CommitReceipt>(
-            "SELECT body FROM tessar_commits WHERE id=?",
+            `SELECT body FROM ${db.prefix}tessar_commits WHERE id=?`,
             request.commitId,
           );
           if (prior) {
@@ -365,7 +360,7 @@ export async function createLibsqlBackend(
             fail("OwnershipLost", "Lease belongs to another thread");
           assertOwnership(db, request.lease);
           const batch = getJson<CommitBatch>(
-            "SELECT body FROM tessar_staging WHERE id=?",
+            `SELECT body FROM ${db.prefix}tessar_staging WHERE id=?`,
             request.commitId,
           );
           if (
@@ -432,7 +427,7 @@ export async function createLibsqlBackend(
             : null;
           const info = buildThreadInfo(batch, old, stream);
           db.prepare(
-            "INSERT INTO tessar_threads VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body,created_at=excluded.created_at,deleted=excluded.deleted",
+            `INSERT INTO ${db.prefix}tessar_threads VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body,created_at=excluded.created_at,deleted=excluded.deleted`,
           ).run(
             info.id,
             canonicalJson(info),
@@ -442,7 +437,7 @@ export async function createLibsqlBackend(
           if (info.deleted) {
             const selections = db
               .prepare(
-                "SELECT body FROM tessar_sessions WHERE selected_thread_id=?",
+                `SELECT body FROM ${db.prefix}tessar_sessions WHERE selected_thread_id=?`,
               )
               .all(info.id);
             for (const row of selections) {
@@ -454,7 +449,7 @@ export async function createLibsqlBackend(
                 updatedAt: cp.createdAt,
               };
               db.prepare(
-                "UPDATE tessar_sessions SET selected_thread_id=NULL,revision=?,updated_at=?,body=? WHERE id=?",
+                `UPDATE ${db.prefix}tessar_sessions SET selected_thread_id=NULL,revision=?,updated_at=?,body=? WHERE id=?`,
               ).run(
                 next.revision,
                 next.updatedAt,
@@ -469,28 +464,23 @@ export async function createLibsqlBackend(
             revision: cp.revision,
             checkpointId: cp.id,
           };
-          db.prepare("INSERT INTO tessar_commits VALUES(?,?,?,?)").run(
+          db.prepare(`INSERT INTO ${db.prefix}tessar_commits VALUES(?,?,?,?)`).run(
             batch.commitId,
             canonicalJson(receipt),
             String(
               (db
-                .prepare("SELECT fingerprint FROM tessar_staging WHERE id=?")
+                .prepare(`SELECT fingerprint FROM ${db.prefix}tessar_staging WHERE id=?`)
                 .get(batch.commitId) as { fingerprint: string }).fingerprint,
             ),
             cp.threadId,
           );
-          db.prepare("DELETE FROM tessar_staging WHERE id=?").run(
+          db.prepare(`DELETE FROM ${db.prefix}tessar_staging WHERE id=?`).run(
             batch.commitId,
           );
           assertOwnership(db, request.lease);
           return receipt;
         }),
     },
-    close: async () => {
-      if (!closed) {
-        closed = true;
-        db.close();
-      }
-    },
+    close: async () => { },
   };
 }

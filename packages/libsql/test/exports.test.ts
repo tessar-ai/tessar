@@ -13,4 +13,7 @@ it("offers vector as a separate entry and RAG only as an optional peer", async (
   expect(manifest.peerDependencies?.["@tessar/rag"]).toBe("workspace:^");
   expect(manifest.peerDependenciesMeta?.["@tessar/rag"]).toEqual({ optional: true });
   expect(manifest.devDependencies?.["@tessar/rag"]).toBe("workspace:*");
+  expect(manifest.dependencies.libsql).toBeUndefined();
+  expect(manifest.peerDependencies.libsql).toBe("0.5.29");
+  expect(manifest.peerDependenciesMeta.libsql).toEqual({ optional: true });
 });

@@ -1,3 +1,4 @@
+import { storageTransaction } from "./transaction.js";
 import type { PoolClient } from "pg";
 import {
   canonicalJson,
@@ -41,12 +42,7 @@ export async function createPostgresqlBackend(
 ): Promise<StorageBackend> {
   const db = openDatabase(options),
     table = db.table;
-  try {
-    await initializeSchema(db);
-  } catch (error) {
-    await db.close().catch(() => {});
-    throw error;
-  }
+  await initializeSchema(db);
   const get = async <T>(
     client: PoolClient,
     sql: string,
@@ -101,10 +97,10 @@ export async function createPostgresqlBackend(
       atomicPublish: true,
       coordination: "multi-process",
     },
-    close: db.close,
+    close: async () => {},
     sessions: {
       get: (id, query = {}) =>
-        db.transaction(async (client) => {
+        storageTransaction(db, async (client) => {
           const value = await get<SessionRecord>(
             client,
             `SELECT body FROM ${table("sessions")} WHERE id=$1`,
@@ -113,7 +109,7 @@ export async function createPostgresqlBackend(
           return value && matchesScope(value.scope, query.scope) ? value : null;
         }),
       page: (query) =>
-        db.transaction(async (client) => {
+        storageTransaction(db, async (client) => {
           const values: unknown[] = [query.agentId];
           return page<SessionRecord>(
             client,
@@ -127,7 +123,7 @@ export async function createPostgresqlBackend(
         }),
       compareAndSet: async (value, expected) => {
         value = immutable(value);
-        return db.transaction(
+        return storageTransaction(db,
           async (client) => {
             const old = await get<SessionRecord>(
               client,
@@ -166,7 +162,7 @@ export async function createPostgresqlBackend(
     },
     ownedState: {
       get: (key) =>
-        db.transaction((client) =>
+        storageTransaction(db, (client) =>
           get<PluginStateSnapshot>(
             client,
             `SELECT body FROM ${table("owned_states")} WHERE owner_key=$1`,
@@ -175,7 +171,7 @@ export async function createPostgresqlBackend(
         ),
       compareAndSet: async (state, expected) => {
         state = immutable(state);
-        return db.transaction(
+        return storageTransaction(db,
           async (client) => {
             if (!["agent", "session"].includes(state.ownerType))
               fail(
@@ -204,14 +200,14 @@ export async function createPostgresqlBackend(
     },
     threads: {
       get: (id, options) =>
-        db.transaction(async (client) => {
+        storageTransaction(db, async (client) => {
           const value = await head(client, id);
           return value && (!value.deleted || options?.includeDeleted)
             ? value
             : null;
         }),
       page: (query) =>
-        db.transaction(async (client) => {
+        storageTransaction(db, async (client) => {
           const values: unknown[] = [];
           return page<ThreadInfo>(
             client,
@@ -224,7 +220,7 @@ export async function createPostgresqlBackend(
           );
         }),
       list: (query = {}) =>
-        db.transaction(async (client) => {
+        storageTransaction(db, async (client) => {
           const values: unknown[] = [],
             where = scopeFilter(query.scope, values);
           return (
@@ -235,7 +231,7 @@ export async function createPostgresqlBackend(
           ).rows.map((row) => immutable(row.body) as ThreadInfo);
         }),
       purge: (id, query = {}) =>
-        db.transaction(
+        storageTransaction(db,
           async (client) => {
             const info = await head(client, id);
             if (!info || !matchesScope(info.scope, query.scope))
@@ -275,12 +271,12 @@ export async function createPostgresqlBackend(
     },
     checkpoints: {
       get: (id) =>
-        db.transaction(async (client) => {
+        storageTransaction(db, async (client) => {
           const cp = await checkpoint(client, id);
           return cp ? hydrate(db, client, cp) : null;
         }),
       list: (threadId) =>
-        db.transaction(async (client) => {
+        storageTransaction(db, async (client) => {
           const { rows } = await client.query(
             `SELECT body FROM ${table("checkpoints")} WHERE thread_id=$1 ORDER BY revision`,
             [threadId],
@@ -288,7 +284,7 @@ export async function createPostgresqlBackend(
           return Promise.all(rows.map((row) => hydrate(db, client, row.body)));
         }),
       page: (threadId, options) =>
-        db.transaction((client) =>
+        storageTransaction(db, (client) =>
           page(
             client,
             table("checkpoints"),
@@ -310,7 +306,7 @@ export async function createPostgresqlBackend(
           ),
         ),
       history: (threadId, options, query = {}) =>
-        db.transaction(async (client) => {
+        storageTransaction(db, async (client) => {
           const info = await head(client, threadId);
           if (!info || info.deleted || !matchesScope(info.scope, query.scope))
             fail("ThreadNotFound", "Thread does not match query");
@@ -349,7 +345,7 @@ export async function createPostgresqlBackend(
     },
     executions: {
       listRecords: (kind, threadId, query) =>
-        db.transaction((client) =>
+        storageTransaction(db, (client) =>
           records(client, kind, threadId, query?.atCheckpointId),
         ),
       get: <K extends RecordKind>(
@@ -357,7 +353,7 @@ export async function createPostgresqlBackend(
         id: string,
         query?: { threadId?: string; atCheckpointId?: string },
       ) =>
-        db.transaction(async (client) => {
+        storageTransaction(db, async (client) => {
           checkKind(kind);
           const cp = query?.atCheckpointId
             ? await checkpoint(client, query.atCheckpointId)
@@ -377,7 +373,7 @@ export async function createPostgresqlBackend(
           );
         }),
       page: (kind, threadId, query) =>
-        db.transaction(async (client) => {
+        storageTransaction(db, async (client) => {
           checkKind(kind);
           const cp = await checkpoint(
             client,
@@ -416,7 +412,7 @@ export async function createPostgresqlBackend(
         batch = immutable(batch);
         validateBatch(batch);
         const fingerprint = await commitFingerprint(batch);
-        await db.transaction(
+        await storageTransaction(db,
           async (client) => {
             const prior = await client.query(
               `SELECT fingerprint FROM ${table("commits")} WHERE id=$1 UNION ALL SELECT fingerprint FROM ${table("staging")} WHERE id=$1`,
@@ -441,7 +437,7 @@ export async function createPostgresqlBackend(
         );
       },
       lookupCommit: (id) =>
-        db.transaction((client) =>
+        storageTransaction(db, (client) =>
           get<CommitReceipt>(
             client,
             `SELECT body FROM ${table("commits")} WHERE id=$1`,
@@ -451,14 +447,14 @@ export async function createPostgresqlBackend(
       publish: async (request) => {
         request = immutable(request);
         // Staged payloads cannot change; discover the source to lock both fork threads in order.
-        const staged = await db.transaction((client) =>
+        const staged = await storageTransaction(db, (client) =>
           get<CommitBatch>(
             client,
             `SELECT body FROM ${table("staging")} WHERE id=$1`,
             [request.commitId],
           ),
         );
-        return db.transaction(
+        return storageTransaction(db,
           async (client) => {
             const prior = await get<CommitReceipt>(
               client,

@@ -22,13 +22,16 @@ import {
 import { createMongoDBBackend } from "../src/index.js";
 
 const uri = process.env.TESSAR_TEST_MONGODB_URL;
-const resources: { databaseName: string; backends: StorageBackend[] }[] = [];
+const resources: { databaseName: string; backends: StorageBackend[]; clients: MongoClient[] }[] = [];
 async function fixture() {
   const databaseName = "tessar_test_" + randomUUID().replaceAll("-", "");
-  const resource = { databaseName, backends: [] as StorageBackend[] };
+  const resource = { databaseName, backends: [] as StorageBackend[], clients: [] as MongoClient[] };
   resources.push(resource);
   const open = async () => {
-    const backend = await createMongoDBBackend({ uri: uri!, databaseName });
+    const client = new MongoClient(uri!);
+    resource.clients.push(client);
+    await client.connect();
+    const backend = await createMongoDBBackend({ database: client.db(databaseName) });
     resource.backends.push(backend);
     return backend;
   };
@@ -37,14 +40,17 @@ async function fixture() {
 afterEach(async () => {
   if (!resources.length) return;
   const client = new MongoClient(uri!);
+  const pending = resources.splice(0);
   try {
-    for (const resource of resources.splice(0)) {
+    for (const resource of pending) {
       for (const backend of resource.backends) await backend.close();
       if (!/^tessar_test_[a-f0-9]{32}$/.test(resource.databaseName))
         throw Error("Unsafe cleanup database");
       await client.db(resource.databaseName).dropDatabase();
     }
   } finally {
+    for (const resource of pending)
+      for (const ownedClient of resource.clients) await ownedClient.close();
     await client.close();
   }
 });

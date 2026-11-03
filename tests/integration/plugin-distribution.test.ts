@@ -10,7 +10,7 @@ import { pathToFileURL } from "node:url";
 import { realpathSync } from "node:fs";
 const execute = promisify(execFile);
 
-it("installs packed libSQL state storage without its optional RAG peer", async () => {
+it("installs packed libSQL without its optional driver or RAG peers", async () => {
   const root = await mkdtemp(join(tmpdir(), "tessar libsql standalone "));
   try {
     const packs = join(root, "packs"), host = join(root, "host"), cache = join(root, "cache");
@@ -22,32 +22,42 @@ it("installs packed libSQL state storage without its optional RAG peer", async (
       const packed = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", packs], resolve(directory), cache);
       tarballs.push(resolve(packs, JSON.parse(packed.stdout).filename));
     }
-    // Supply the installed native driver locally so the consumer test stays offline.
+    // Optional peers must not be installed before the application chooses them.
     await command("npm", ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund",
-      ...tarballs, realpathSync(resolve("packages/libsql/node_modules/libsql")), realpathSync(resolve("node_modules/zod"))], host, cache);
+      ...tarballs, realpathSync(resolve("node_modules/zod"))], host, cache);
     expect(existsSync(join(host, "node_modules/@tessar/rag"))).toBe(false);
+    expect(existsSync(join(host, "node_modules/libsql"))).toBe(false);
     const installed = JSON.parse(await readFile(join(host, "node_modules/@tessar/libsql/package.json"), "utf8"));
     expect(installed.dependencies["@tessar/rag"]).toBeUndefined();
     expect(installed.peerDependencies["@tessar/rag"]).toMatch(/^\^\d/);
     expect(installed.peerDependenciesMeta["@tessar/rag"].optional).toBe(true);
+    expect(installed.dependencies.libsql).toBeUndefined();
+    expect(installed.peerDependenciesMeta.libsql.optional).toBe(true);
+    // Supply the chosen native driver locally so the consumer test stays offline.
+    await command("npm", ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund",
+      realpathSync(resolve("packages/libsql/node_modules/libsql"))], host, cache);
     await writeFile(join(host, "main.mjs"), `
       import assert from 'node:assert/strict';
       import * as storage from '@tessar/libsql';
+      import Database from 'libsql';
+      const database = new Database(':memory:');
       assert.deepEqual(Object.keys(storage).sort(), ['LibsqlStoragePlugin','createLibsqlBackend']);
-      const backend = await storage.createLibsqlBackend({filename:':memory:'});
+      const backend = await storage.createLibsqlBackend({database});
       try {
         const record = await backend.records.append({namespace:'consumer',data:{ok:true}});
         assert.deepEqual((await backend.records.get('consumer',record.id)).data,{ok:true});
-      } finally { await backend.close(); }
+      } finally { await backend.close(); database.close(); }
       await assert.rejects(import('@tessar/libsql/vector'), error =>
         error.code === 'ERR_MODULE_NOT_FOUND' && error.message.includes('@tessar/rag'));
     `);
     await execute(process.execPath, ["main.mjs"], { cwd: host, windowsHide: true });
     await writeFile(join(host, "consumer.ts"), `
       import {createLibsqlBackend,LibsqlStoragePlugin,type LibsqlStorageOptions} from '@tessar/libsql';
-      const options:LibsqlStorageOptions={filename:':memory:'};
+      import Database from 'libsql';
+      const database=new Database(':memory:');
+      const options:LibsqlStorageOptions={database};
       const backend=await createLibsqlBackend(options);await backend.close();
-      new LibsqlStoragePlugin(options);
+      new LibsqlStoragePlugin(options);database.close();
     `);
     await writeFile(join(host, "tsconfig.json"), JSON.stringify({
       compilerOptions: { strict: true, noEmit: true, module: "NodeNext", target: "ES2023", types: [] },

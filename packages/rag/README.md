@@ -234,18 +234,25 @@ class. Connection and native request options are documented in that package.
 The `VectorStore`, `VectorCollectionInfo`, `VectorRecord`, `VectorFilter`,
 `VectorListOptions` and `VectorDelete` exports are TypeScript contracts. There is
 no vector store runtime class in this package. `@tessar/libsql/vector` implements them as
-`LibsqlVectorStore`, independently of agent state or a Controller:
+`LibsqlVectorStore`, independently of agent state or a Controller. Install
+`@tessar/libsql` and `libsql@0.5.29`; the application owns the native database:
 
 ```ts
+import Database from "libsql";
 import { LibsqlVectorStore } from "@tessar/libsql/vector";
 
-const store = new LibsqlVectorStore({ filename: "./vectors.db", embedding: model });
+const database = new Database("./vectors.db");
 try {
-  await store.insert(chunks);
-  const records = await store.list({ filter: { metadata: { project: "handbook" } } });
-  console.log(records); // { id, createdAt, content, vector }[]
+  const store = new LibsqlVectorStore({ database, embedding: model });
+  try {
+    await store.insert(chunks);
+    const records = await store.list({ filter: { metadata: { project: "handbook" } } });
+    console.log(records); // { id, createdAt, content, vector }[]
+  } finally {
+    await store.close();
+  }
 } finally {
-  await store.close();
+  database.close();
 }
 ```
 
@@ -291,10 +298,10 @@ Legacy collections without identity are rejected without adoption or migration.
 `embedDocuments`/`embedQuery` remain independently usable; the store has no raw
 vector insert/search overload. No automatic re-embedding or document lifecycle.
 
-For keyword retrieval over the same saved chunks, use native backend BM25:
+For keyword retrieval over the same saved chunks in libSQL, use its native BM25:
 
 ```ts
-const matches = await store.searchText("configuration Tessar", {
+const matches = await store.searchBM25("configuration Tessar", {
   topK: 5,
   filter: { metadata: { project: "handbook" } },
 });
@@ -308,6 +315,73 @@ text; whitespace-separated literal segments are OR-matched through FTS5's
 default tokenizer, without exposing query operators. No embedding call is made.
 FTS indexes are collection-specific and kept atomic with insert/delete. See the
 [BM25 guide](../libsql/README.md#bm25-text-search) for query/ranking semantics.
+
+### PostgreSQL vector storage
+
+`PostgresqlVectorStore` from `@tessar/postgresql/vector` provides the same
+insert/info/get/list/delete/vector-search operations with a borrowed native
+`pg.Pool`. Install `@tessar/postgresql`, `@tessar/rag` and `pg` explicitly (plus
+`@types/pg` for TypeScript). Its constructor accepts `{ pool, embedding, schema?,
+collection? }`; defaults are schema `"tessar"` and collection `"default"`.
+The root PostgreSQL entry remains independent of the optional RAG peer.
+
+An administrator must enable pgvector first. Configuration validation is
+synchronous; database initialization happens on the first asynchronous operation.
+The store retains complete content and original vectors in JSONB and indexes
+float32 vectors with per-collection HNSW cosine indexes. Native HNSW vector
+indexes support at most 2000 dimensions; there is no automatic halfvec conversion
+or dimension reduction. Unfiltered search is approximate; source/metadata filters
+rank the matched subset exactly before topK. Model identity and inferred dimensions
+are persisted per collection. `close()` leaves the application-owned pool open,
+including after initialization failure. See the
+[PostgreSQL adapter](../postgresql/README.md#independent-vector-storage) and
+[guide](../../examples/guide/rag.md#persist-chunks-and-embeddings-in-postgresql)
+for setup and cleanup.
+
+The shared keyword method is `searchBM25(query, { topK?, filter? }?)`.
+PostgreSQL implements it with administrator-installed/enabled `pg_search`;
+libSQL uses FTS5 BM25. PostgreSQL creates/backfills its native BM25 index on
+the first BM25 call, then native indexing maintains subsequent writes. Missing
+`pg_search` rejects only PostgreSQL BM25 calls, leaving CRUD/vector operations
+available. Tessar never installs extensions or changes server configuration.
+
+PostgreSQL additionally offers `searchNative(query, { topK?, filter? }?)`, using
+built-in `ts_rank` with explicit `simple` configuration and no BM25 extension.
+Native lookup uses a GIN index, with no stemming or automatic language inference.
+Both PostgreSQL keyword methods accept plain literal OR terms, default topK to
+5, apply source/metadata AND filters before topK and call no embedding model.
+Results preserve id/date/content and contain a descending score without vectors.
+Native rank, BM25 and cosine scores have different scales; keyword methods have
+no cosine threshold. See the [keyword API](../postgresql/README.md#keyword-search).
+
+### MongoDB vector storage
+
+`MongoDBVectorStore` from `@tessar/mongodb/vector` accepts `{ database: Db,
+embedding, namespace?, collection? }`, with collection default `"default"`.
+Install `@tessar/mongodb`, `@tessar/rag` and `mongodb` explicitly; the RAG peer is
+optional for root state-storage consumers. The application owns connecting and
+closing MongoClient; store close only invalidates its facade. A replica set or
+sharded deployment is required for atomic bulk insertion.
+
+The adapter provides the shared CRUD, info, vector search and `searchBM25`
+operations plus MongoDB-specific `searchNative`. Vector search uses native exact
+`$vectorSearch`, converting MongoDB's [0, 1] cosine score to shared [-1, 1]
+similarity. BM25 uses MongoDB Search with explicit BM25 similarity; native keyword
+search uses ordinary `$text`/textScore and language `none`, without mongot.
+Both keyword methods accept plain literal OR terms and call no embedding model.
+Their scores are different from cosine and from each other.
+
+Vector/BM25 require developer-provisioned Atlas or self-managed Search/mongot.
+Tessar installs no services or server configuration. It automatically creates
+its own collections/indexes, with dynamic source/scalar metadata filtering and
+no filter-field, index-name or dimension options. Filter scalar types are exact;
+null differs from missing. Internal tokens over 32766 bytes reject before model
+I/O. Indexes are created on the corresponding first search; building search
+indexes reject with InvalidState and incompatible definitions with
+InvalidConfiguration, without hidden polling or automatic updates. Search-index
+visibility is eventual, so immediate get/list visibility does not promise
+search-after-insert visibility. See the [MongoDB adapter](../mongodb/README.md#independent-vector-storage)
+and [guide](../../examples/guide/rag.md#persist-chunks-and-embeddings-in-mongodb).
 
 ## Task identity and cancellation
 

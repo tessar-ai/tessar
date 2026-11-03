@@ -1,3 +1,4 @@
+import { storageTransaction } from "./transaction.js";
 import type { PoolClient } from "pg";
 import { fail, immutable, type Lease, type OwnershipPort } from "@tessar/core";
 import type { Database } from "./database.js";
@@ -29,7 +30,7 @@ export function createOwnership(db: Database): OwnershipPort {
   return {
     acquire: async (request) => {
       request = immutable(request);
-      return db.transaction(
+      return storageTransaction(db,
         async (client) => {
           validTtl(request.ttlMs);
           const { rows } = await client.query(
@@ -44,7 +45,7 @@ export function createOwnership(db: Database): OwnershipPort {
     },
     renew: async (lease, ttlMs) => {
       lease = immutable(lease);
-      return db.transaction(
+      return storageTransaction(db,
         async (client) => {
           validTtl(ttlMs);
           const { rows } = await client.query(
@@ -59,7 +60,7 @@ export function createOwnership(db: Database): OwnershipPort {
     },
     release: async (lease) => {
       lease = immutable(lease);
-      return db.transaction(
+      return storageTransaction(db,
         async (client) => {
           await client.query(
             `UPDATE ${table("leases")} SET expires_at='epoch' WHERE thread_id=$1 AND owner_token=$2 AND fencing_token=$3`,

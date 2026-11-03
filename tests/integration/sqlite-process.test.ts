@@ -1,3 +1,4 @@
+import { createTestDatabase } from "../../packages/libsql/test/database-fixture.js";
 import { removeSqliteTestDirectory as rm } from "../helpers/sqlite-cleanup.js";
 import { z } from "zod";
 import { expect, it } from "vitest";
@@ -77,7 +78,7 @@ it.skipIf(!supportsSpawn).each(["crash-model-result", "crash-tool-dispatch"])(
       );
       db.close();
       const harness = await AgentHarness.create({
-        backend: await createLibsqlBackend({ filename }),
+        backend: await createLibsqlBackend({ database: createTestDatabase(filename)}),
         plugins: [
           {
             id: "tools",

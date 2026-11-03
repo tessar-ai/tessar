@@ -31,6 +31,17 @@ pnpm test:storage --maxWorkers 4
 These tests use generated schemas/databases and skip when their URLs are absent.
 MongoDB needs a replica set or sharded deployment supporting transactions.
 
+## Storage adapter structure
+
+Keep equivalent responsibilities in the same place across libSQL, PostgreSQL and
+MongoDB. `database.ts` declares an explicit `Database` interface and `openDatabase()`
+for the borrowed connection; `schema.ts` initializes state storage when the backend
+factory calls it. `transaction.ts` owns native commit, rollback and connection/session
+cleanup, shared by state and vector storage. State-specific error mapping remains
+separate so vector operations preserve native errors. Vector-only use must not
+initialize state tables or collections. Native fields and synchronous/asynchronous
+operations may differ; libSQL also enables foreign keys for connection integrity.
+
 ## Public API changes
 
 [API-REVIEW.md](API-REVIEW.md) records the implemented public surface for comparison

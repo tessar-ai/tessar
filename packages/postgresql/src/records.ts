@@ -1,3 +1,4 @@
+import { storageTransaction } from "./transaction.js";
 import {
   canonicalJson,
   fail,
@@ -15,7 +16,7 @@ export function createRecordStore(db: Database): RecordStore {
   return {
     append: async (options) => {
       const value = prepareStoredRecord(options);
-      return db.transaction(async (client) => {
+      return storageTransaction(db, async (client) => {
         const result = await client.query(
           `INSERT INTO ${table}(namespace,id,created_at,body) VALUES($1,$2,$3,$4) ON CONFLICT(namespace,id) DO NOTHING`,
           [value.namespace, value.id, value.createdAt, canonicalJson(value)],
@@ -30,7 +31,7 @@ export function createRecordStore(db: Database): RecordStore {
       requireId(id, "record id");
       const values: unknown[] = [namespace, id];
       const scope = scopeFilter(query.scope, values);
-      return db.transaction(async (client) => {
+      return storageTransaction(db, async (client) => {
         const { rows } = await client.query(
           `SELECT body FROM ${table} WHERE namespace=$1 AND id=$2 AND ${scope}`,
           values,
@@ -42,7 +43,7 @@ export function createRecordStore(db: Database): RecordStore {
       requireId(query.namespace, "record namespace");
       const values: unknown[] = [query.namespace];
       const scope = scopeFilter(query.scope, values);
-      return db.transaction((client) =>
+      return storageTransaction(db, (client) =>
         page<StoredRecord>(
           client,
           table,

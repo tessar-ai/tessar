@@ -1,4 +1,5 @@
-import type DatabaseSync from "libsql";
+import type { Database } from "./database.js";
+import { transaction } from "./transaction.js";
 import { fail, type Lease, type OwnershipPort } from "@tessar/core";
 type LeaseRow = {
   thread_id: string;
@@ -6,7 +7,7 @@ type LeaseRow = {
   fencing_token: number;
   expires_at: number;
 };
-export function databaseNow(db: DatabaseSync.Database): number {
+export function databaseNow(db: Database): number {
   return (
     db
       .prepare(
@@ -15,20 +16,9 @@ export function databaseNow(db: DatabaseSync.Database): number {
       .get() as { now: number }
   ).now;
 }
-export function transaction<T>(db: DatabaseSync.Database, action: () => T): T {
-  db.exec("BEGIN IMMEDIATE");
-  try {
-    const result = action();
-    db.exec("COMMIT");
-    return result;
-  } catch (error) {
-    try { db.exec("ROLLBACK"); } catch { /* Preserve the original driver error. */ }
-    throw error;
-  }
-}
-export function assertOwnership(db: DatabaseSync.Database, lease: Lease): void {
+export function assertOwnership(db: Database, lease: Lease): void {
   const row = db
-    .prepare("SELECT * FROM tessar_leases WHERE thread_id=?")
+    .prepare(`SELECT * FROM ${db.prefix}tessar_leases WHERE thread_id=?`)
     .get(lease.threadId) as LeaseRow | undefined;
   if (
     !row ||
@@ -44,14 +34,14 @@ const toLease = (row: LeaseRow): Lease => ({
   fencingToken: row.fencing_token,
   expiresAt: new Date(row.expires_at).toISOString(),
 });
-export function createOwnership(db: DatabaseSync.Database): OwnershipPort {
+export function createOwnership(db: Database): OwnershipPort {
   return {
     acquire: async (request) =>
       transaction(db, () => {
         if (!Number.isFinite(request.ttlMs) || request.ttlMs <= 0)
           fail("InvalidConfiguration", "Invalid lease duration");
         const previous = db
-          .prepare("SELECT * FROM tessar_leases WHERE thread_id=?")
+          .prepare(`SELECT * FROM ${db.prefix}tessar_leases WHERE thread_id=?`)
           .get(request.threadId) as LeaseRow | undefined,
           now = databaseNow(db);
         if (previous && previous.expires_at > now)
@@ -63,7 +53,7 @@ export function createOwnership(db: DatabaseSync.Database): OwnershipPort {
           expires_at: now + request.ttlMs,
         };
         db.prepare(
-          "INSERT INTO tessar_leases VALUES(?,?,?,?) ON CONFLICT(thread_id) DO UPDATE SET owner_token=excluded.owner_token,fencing_token=excluded.fencing_token,expires_at=excluded.expires_at",
+          `INSERT INTO ${db.prefix}tessar_leases VALUES(?,?,?,?) ON CONFLICT(thread_id) DO UPDATE SET owner_token=excluded.owner_token,fencing_token=excluded.fencing_token,expires_at=excluded.expires_at`,
         ).run(
           row.thread_id,
           row.owner_token,
@@ -79,13 +69,13 @@ export function createOwnership(db: DatabaseSync.Database): OwnershipPort {
           fail("InvalidConfiguration", "Invalid lease duration");
         const expires = databaseNow(db) + ttlMs;
         db.prepare(
-          "UPDATE tessar_leases SET expires_at=? WHERE thread_id=?",
+          `UPDATE ${db.prefix}tessar_leases SET expires_at=? WHERE thread_id=?`,
         ).run(expires, lease.threadId);
         return { ...lease, expiresAt: new Date(expires).toISOString() };
       }),
     release: async (lease) => {
       db.prepare(
-        "UPDATE tessar_leases SET expires_at=0 WHERE thread_id=? AND owner_token=? AND fencing_token=?",
+        `UPDATE ${db.prefix}tessar_leases SET expires_at=0 WHERE thread_id=? AND owner_token=? AND fencing_token=?`,
       ).run(lease.threadId, lease.ownerToken, lease.fencingToken);
     },
   };

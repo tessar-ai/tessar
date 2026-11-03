@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./database-fixture.js";
 import { createTestStore, insert as insertVectors, search as searchVector } from "./embedding-fixture.js";
 import Database from "libsql";
 import { DatabaseSync as NativeDatabase } from "node:sqlite";
@@ -73,7 +74,7 @@ it("rolls back main records when a native index write fails late", async () => {
       .rejects.toThrow("index failure");
     expect(await store.list()).toEqual([]);
     expect(search(inspect, index!, [1, 2])).toEqual([]);
-    expect(await store.searchText("one two")).toEqual([]);
+    expect(await store.searchBM25("one two")).toEqual([]);
   } finally { inspect.close(); await store.close(); }
 });
 
@@ -95,7 +96,7 @@ it("builds a missing index over existing JSON records without changing their val
     expect(await store.get("old")).toMatchObject({ id: "old", createdAt: "2026-10-30T00:00:00.000Z", vector: [0.123456789012345, 2] });
     expect(indexes(inspect)).toHaveLength(1);
     expect(search(inspect, indexes(inspect)[0]!, [1, 2])).toEqual(["old"]);
-    expect((await store.searchText("old")).map(r => r.id)).toEqual(["old"]);
+    expect((await store.searchBM25("old")).map(r => r.id)).toEqual(["old"]);
   } finally { inspect.close(); await store.close(); }
 });
 
@@ -111,7 +112,7 @@ it("rolls back native index deletion if deleting the stored record fails", async
       await expect(store.delete(selector)).rejects.toThrow("delete failure");
       expect(await store.get(id!)).not.toBeNull();
       expect(search(inspect, index, [1, 2])).toEqual([id]);
-      expect((await store.searchText("keep")).map(r => r.id)).toEqual([id]);
+      expect((await store.searchBM25("keep")).map(r => r.id)).toEqual([id]);
     }
   } finally { inspect.close(); await store.close(); }
 });
@@ -123,7 +124,7 @@ it("retains an existing node:sqlite state file when reopening with the new engin
   const record = { namespace: "old", id: "kept", createdAt: "2026-10-30T00:00:00.000Z", scope: {}, data: { value: 1 } };
   native.prepare("INSERT INTO tessar_records VALUES(?,?,?,?)").run(record.namespace, record.id, record.createdAt, JSON.stringify(record));
   native.close();
-  const backend = await createLibsqlBackend({ filename });
+  const backend = await createLibsqlBackend({ database: createTestDatabase(filename)});
   try { expect(await backend.records.get("old", "kept")).toEqual(record); }
   finally { await backend.close(); }
 });

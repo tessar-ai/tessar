@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./database-fixture.js";
 import { createTestStore, insert as insertVectors, search as searchVector } from "./embedding-fixture.js";
 import { removeSqliteTestDirectory as rm } from "../../../tests/helpers/sqlite-cleanup.js";
 import DatabaseSync from "libsql";
@@ -142,13 +143,13 @@ it("rolls back a late SQLite insert failure and retains the native error", async
     expect(error).toMatchObject({ code: "SQLITE_CONSTRAINT_TRIGGER", message: "late write failure" });
     expect(TessarRagError.isInstance(error)).toBe(false);
     expect(await store.list()).toEqual([]);
-    expect(await store.searchText("first reject")).toEqual([]);
+    expect(await store.searchBM25("first reject")).toEqual([]);
     expect(await insertVectors(store, { contents: [content("after")], vectors: [[1, 2]] })).toHaveLength(1);
   } finally { db.close(); }
 });
 
 it("validates configuration, pagination and closed handles", async () => {
-  for (const configuration of [{ embedding: null }, { embedding: {} }, { collection: " " }, { filename: "" }, { unexpected: true }])
+  for (const configuration of [{ embedding: null }, { embedding: {} }, { collection: " " }, { database: null }, { unexpected: true }])
     expect(() => open(configuration)).toThrow(TessarRagError);
   const store = open();
   for (const query of [{ limit: 0 }, { limit: 1001 }, { limit: null }, { limit: "1" }, { offset: -1 }, { offset: 0.5 }, { offset: null }, { order: "desc" }])
@@ -161,7 +162,7 @@ it("validates configuration, pagination and closed handles", async () => {
 
 it("preserves caller data independently and coexists with agent state in the same file", async () => {
   const filename = await file();
-  const backend = await sqlite.createLibsqlBackend({ filename });
+  const backend = await sqlite.createLibsqlBackend({ database: createTestDatabase(filename)});
   try {
     const store = open({ filename });
     const original = { ...content("original"), metadata: { nested: { n: 1 } } };

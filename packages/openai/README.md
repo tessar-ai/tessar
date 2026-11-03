@@ -153,18 +153,25 @@ instance as `embedding`, persist its identity and perform document/query embeddi
 without repeating the model configuration or dimensions:
 
 ```ts
+import Database from "libsql";
 import { LibsqlVectorStore } from "@tessar/libsql/vector";
 
-const store = new LibsqlVectorStore({ filename: "./vectors.db", embedding: model });
+const database = new Database("./vectors.db");
 try {
-  await store.insert(chunks);
-  const results = await store.search("What does the handbook say?", { topK: 5 });
+  const store = new LibsqlVectorStore({ database, embedding: model });
+  try {
+    await store.insert(chunks);
+    const results = await store.search("What does the handbook say?", { topK: 5 });
+  } finally {
+    await store.close();
+  }
 } finally {
-  await store.close();
+  database.close();
 }
 ```
 
-Install `@tessar/libsql` and its optional peer `@tessar/rag` to use that entry.
+Install `@tessar/libsql`, `libsql@0.5.29` and its optional peer `@tessar/rag`
+to use that entry. The application owns and closes the native database.
 Dimensions are inferred by the store from actual vectors. The ref identifies the
 configured model, not its weights or every provider-side configuration change;
 using the same model name at a different compatible endpoint does not itself

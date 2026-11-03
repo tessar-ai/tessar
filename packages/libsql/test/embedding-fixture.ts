@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./database-fixture.js";
 import { LibsqlVectorStore } from "@tessar/libsql/vector";
 import type { Content, Chunk, EmbeddingModel, VectorSearchOptions } from "@tessar/rag";
 
@@ -14,9 +15,9 @@ class FixtureEmbedding implements EmbeddingModel {
 
 const models = new WeakMap<LibsqlVectorStore, FixtureEmbedding>();
 export function createTestStore(options: { filename: string; collection?: string; dimensions?: number }) {
-  const { dimensions = 2, ...storage } = options;
+  const { dimensions = 2, filename, ...storage } = options;
   const embedding = new FixtureEmbedding(dimensions);
-  const store = new LibsqlVectorStore({ embedding, ...storage });
+  const store = new LibsqlVectorStore({ database: createTestDatabase(filename), embedding, ...storage });
   models.set(store, embedding);
   return store;
 }

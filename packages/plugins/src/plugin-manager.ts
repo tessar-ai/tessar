@@ -353,7 +353,20 @@ export class PluginManager {
         )
           throw Error("Not an installed plugin: " + value);
       }
-      if (names.length) await this.npm(["update", ...names]);
+      const registry = names.filter((value) =>
+        /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(
+          manifest.dependencies![value]!,
+        ),
+      );
+      if (registry.length)
+        await this.npm([
+          "install",
+          "--save-exact",
+          "--install-links",
+          ...registry.map((value) => value + "@latest"),
+        ]);
+      const sources = names.filter((value) => !registry.includes(value));
+      if (sources.length) await this.npm(["update", ...sources]);
     });
   }
   remove(name: string): Promise<void> {

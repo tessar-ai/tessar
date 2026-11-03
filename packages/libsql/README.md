@@ -5,13 +5,14 @@ RAG. Vector storage, vector search and BM25 are exported only from
 `@tessar/libsql/vector`. To use that entry, explicitly install its optional peer:
 
 ```sh
-npm install @tessar/libsql @tessar/rag
+npm install @tessar/libsql @tessar/rag libsql@0.5.29
 ```
 
 `@tessar/rag` supplies the vector contracts and TessarRagError. It is an optional
 peer dependency, not an automatically installed dependency; importing `/vector`
-without it fails. State-only users can install just `@tessar/libsql` and import
-from its root. The store implementation and driver remain in this package.
+without it fails. State-only users install `@tessar/libsql` and `libsql@0.5.29` and import
+from its root. The driver is an optional peer installed explicitly by consumers
+and a development dependency for tests. Core remains a runtime dependency.
 
 ## Independent vector storage
 
@@ -20,6 +21,7 @@ It needs no Controller, storage plugin or extension. The entire
 package uses the same synchronous `libsql` driver for state and vectors.
 
 ```ts
+import Database from "libsql";
 import { LibsqlVectorStore } from "@tessar/libsql/vector";
 import { OpenAIEmbedding } from "@tessar/openai";
 
@@ -28,22 +30,27 @@ const embedding = new OpenAIEmbedding({
   model: "text-embedding-3-small",
 });
 
-const store = new LibsqlVectorStore({
-  filename: "./vectors.db",
-  collection: "handbook", // Optional; defaults to "default".
-  embedding, // Configure the model once; dimensions come from its output.
-});
+const database = new Database("./vectors.db");
 try {
-  const ids = await store.insert(chunks);
-  const records = await store.list({ filter: { metadata: { project: "handbook" } }, limit: 20, offset: 0 });
-  const first = records[0];
-  if (first) {
-    console.log(await store.get(first.id));
-    await store.delete({ ids: [first.id] });
+  const store = new LibsqlVectorStore({
+    database,
+    collection: "handbook", // Optional; defaults to "default".
+    embedding, // Configure the model once; dimensions come from its output.
+  });
+  try {
+    const ids = await store.insert(chunks);
+    const records = await store.list({ filter: { metadata: { project: "handbook" } }, limit: 20, offset: 0 });
+    const first = records[0];
+    if (first) {
+      console.log(await store.get(first.id));
+      await store.delete({ ids: [first.id] });
+    }
+    console.log(ids);
+  } finally {
+    await store.close();
   }
-  console.log(ids);
 } finally {
-  await store.close();
+  database.close();
 }
 ```
 
@@ -91,10 +98,11 @@ returns a count. Exactly one selector is required; empty ID arrays and empty
 filters are rejected. Duplicate IDs count each deleted row once.
 
 The store creates `tessar_vector_models`, `tessar_vector_collections`, `tessar_vectors` and a native
-vector table/index for each collection. Same file/collection shares data, different collections isolate it and
-different filenames create independent databases. Different handles use separate
-connections. Existing collection model identity/dimensions cannot be silently changed. State and
-vector storage may use the same file; closing one handle does not close the other.
+vector table/index for each collection. The same database/namespace/collection
+shares data. Collections are logical groups within a namespace, not schemas.
+Namespaces isolate tables, indexes and metadata. Existing collection model
+identity/dimensions cannot be silently changed. State and vectors may borrow
+the same database; closing either handle leaves the native database open.
 
 Constructor validation/model identity conflicts throw TessarRagError with code
 InvalidConfiguration. Invalid content, vectors, queries or selectors reject with
@@ -177,11 +185,11 @@ the event loop longer. There is no implicit oversampling or new index tuning.
 Search the text of saved chunks without embedding the question:
 
 ```ts
-const results = await store.searchText("configuration Tessar", {
+const results = await store.searchBM25("configuration Tessar", {
   topK: 5,
   filter: { metadata: { project: "handbook" } },
 });
-// Or await store.searchText("configuration Tessar");
+// Or await store.searchBM25("configuration Tessar");
 for (const result of results) console.log(result.score, result.content);
 ```
 
@@ -190,7 +198,7 @@ to 5 and must be a positive safe integer. `filter` supports the same nonempty
 source/metadata equality conditions as list/delete (AND), applied before topK.
 There is no `score_threshold`: BM25 is not on the cosine similarity scale.
 
-`searchText` uses native FTS5 `bm25()`, not a Tessar ranking algorithm. Returns
+`searchBM25` uses native FTS5 `bm25()`, not a Tessar ranking algorithm. Returns
 `{ id, createdAt, content, score }[]` with original provenance, without vectors;
 score is `-bm25()` so larger means better. It is not normalized to 0..1 or a
 percentage and cannot be compared directly with vector scores. Results are
@@ -211,7 +219,8 @@ collection populates a missing text index without rewriting saved records.
 Index creation/backfill is synchronous and adds disk space/startup cost for large
 collections. No automatic document re-reading, hybrid fusion or reranking.
 
-`close()` calls the driver and does not delete database files. The current driver
+`close()` marks the store closed without closing the borrowed database. Close
+the native database after all users finish. The current driver
 can retain file handles on Windows after close, preventing immediate file deletion
 until resources/processes release them. Database native error classes/codes are
 those of libSQL (for example SQLITE_BUSY), not node:sqlite's ERR_SQLITE_ERROR.
@@ -222,14 +231,17 @@ Local libSQL persistence for Tessar's state and checkpoint contracts.
 Requires Node 24.22.1 or newer and a supported native `libsql` driver binary.
 
 ```sh
-npm install @tessar/core @tessar/libsql
+npm install @tessar/core @tessar/libsql libsql@0.5.29
 ```
 
 ```ts
+import Database from "libsql";
 import { LibsqlStoragePlugin } from "@tessar/libsql";
 
-const storage = new LibsqlStoragePlugin({ filename: "./state.db" });
+const database = new Database("./state.db");
+const storage = new LibsqlStoragePlugin({ database, namespace: "app" });
 // Include storage in new Controller({ id, agent, plugins: [storage, ...] }).
+// After disposing the Controller, call database.close().
 ```
 
 Core owns state/checkpoint behavior; this plugin supplies physical persistence.
@@ -239,19 +251,26 @@ to application-selected metadata; applications own authentication and authorizat
 This backend uses synchronous database
 operations and is a reference implementation, not a server throughput claim.
 
-`filename: ":memory:"` selects RAM; another filename selects a local database
-file. Remote connections, authentication and embedded-replica sync options are
-not exposed in this increment. The engine supports more deployment modes, but
-the public Tessar API here retains its existing filename-based contract.
+Configure RAM (`new Database(":memory:")`), local files, remote authentication
+and embedded replicas on the native database. Call native `sync()` directly;
+Tessar provides no sync wrapper. Live remote deployments have not been verified.
+The application owns and closes the database, including after initialization
+failure. Backend `close()` is a no-op because it owns no persistent resources.
+Tessar does not override `journal_mode` or `busy_timeout`; foreign keys are enabled
+for data integrity.
 
 This is an early 0.x release. See the
 [repository](https://github.com/tessar-ai/tessar) for usage and contracts.
 
 ## Schema v1
 
-The current layout is the initial schema, recorded as `PRAGMA user_version=1`.
-Initialization creates missing tables and indexes transactionally. Tables and
-explicitly named indexes use the `tessar_` prefix.
+The current layout is schema v1, recorded in the namespaced `tessar_schema`
+metadata table without writing global `PRAGMA user_version`. Initialization
+creates missing tables and indexes transactionally and retains existing data;
+it does not migrate application data. Omitted `namespace` retains existing
+`tessar_*` names; `namespace: "app"` creates `app_tessar_threads`, for example,
+and scopes all indexes and metadata. Namespaces must match
+`[a-z_][a-z0-9_]{0,62}`; empty or invalid values are rejected.
 
 Messages and trace records have revision intervals instead of one copy per
 checkpoint. Public checkpoints still hydrate complete logical history. Successful

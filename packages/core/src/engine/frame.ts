@@ -62,6 +62,7 @@ export interface ExecutionFrame {
   cp: Checkpoint;
   stream: StreamRecord;
   records: Map<string, RecordEntry>;
+  committedRecords: Map<string, string>;
   state: PluginStateAccess;
   admitted: boolean;
   sequence: number;
@@ -89,27 +90,34 @@ export type ExecutionContext = Omit<LoopContext, "finish"> & {
 export async function loadRecords(
   execution: ExecutionContext,
   threadId: string,
+  streamId: string,
 ): Promise<Map<string, RecordEntry>> {
   const records = new Map<string, RecordEntry>();
+  const stream = await execution.runtime.backend.executions.get(
+    "streams", streamId, { threadId },
+  );
+  if (stream)
+    records.set("streams:" + streamId, {
+      kind: "streams", id: streamId, threadId, data: structuredClone(stream),
+    });
   for (const kind of [
-    "streams",
     "turns",
     "model_attempts",
     "tool_executions",
     "interrupts",
-  ] as const)
-    for (const row of await execution.runtime.backend.executions.listRecords(
-      kind,
-      threadId,
-    )) {
-      const id = "id" in row ? row.id : "";
-      records.set(kind + ":" + id, {
-        kind,
-        id,
-        threadId,
-        data: structuredClone(row),
-      } as RecordEntry);
-    }
+  ] as const) {
+    let cursor: string | undefined;
+    do {
+      const page = await execution.runtime.backend.executions.page(
+        kind, threadId, { streamId, limit: 100, ...(cursor ? { cursor } : {}) },
+      );
+      for (const row of page.items)
+        records.set(kind + ":" + row.id, {
+          kind, id: row.id, threadId, data: structuredClone(row),
+        } as RecordEntry);
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+  }
   return records;
 }
 
@@ -161,6 +169,9 @@ export function createFrame(
     };
   frame = {
     ...options,
+    committedRecords: new Map(
+      [...options.records].map(([key, record]) => [key, JSON.stringify(record)]),
+    ),
     state,
     sequence: 0,
     activeSegmentStartedAt: performance.now(),

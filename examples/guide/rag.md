@@ -210,41 +210,49 @@ JSON body fields unchanged; omitted options keep the SDK/server defaults.
 
 ## Persist chunks and embeddings in libSQL
 
-Install `@tessar/libsql` alongside the RAG and embedding packages. RAG is an
+Install `@tessar/libsql` and `libsql@0.5.29` alongside the RAG and embedding packages. RAG is an
 optional peer of libSQL: it must be installed explicitly to use the `/vector`
 entry, while state-only consumers do not need it. Continue from
 the `chunks` and configured `model` above; no additional mapping is needed:
 
 ```ts
+import Database from "libsql";
 import { LibsqlVectorStore } from "@tessar/libsql/vector";
 
-const store = new LibsqlVectorStore({
-  filename: "./vectors.db",
-  collection: "handbook", // Optional, defaults to "default".
-  embedding: model, // Configure once; dimensions are inferred from actual output.
-});
+const database = new Database("./vectors.db");
 try {
-  await store.insert(chunks);
-  console.log(await store.info()); // { collection, model: model.ref, dimensions }
-  // Works after restarting too; retaining insert's returned IDs is optional.
-  const records = await store.list({ filter: { metadata: { project: "handbook" } }, limit: 20 });
-  for (const record of records) console.log(record.id, record.createdAt, record.content);
-  const selected = records[0];
-  if (selected) {
-    const saved = await store.get(selected.id);
-    console.log(saved?.vector);
-    await store.delete({ ids: [selected.id] });
+  const store = new LibsqlVectorStore({
+    database,
+    collection: "handbook", // Optional, defaults to "default".
+    embedding: model, // Configure once; dimensions are inferred from actual output.
+  });
+  try {
+    await store.insert(chunks);
+    console.log(await store.info()); // { collection, model: model.ref, dimensions }
+    // Works after restarting too; retaining insert's returned IDs is optional.
+    const records = await store.list({ filter: { metadata: { project: "handbook" } }, limit: 20 });
+    for (const record of records) console.log(record.id, record.createdAt, record.content);
+    const selected = records[0];
+    if (selected) {
+      const saved = await store.get(selected.id);
+      console.log(saved?.vector);
+      await store.delete({ ids: [selected.id] });
+    }
+  } finally {
+    await store.close();
   }
 } finally {
-  await store.close();
+  database.close();
 }
 ```
 
 The store calls embedDocuments once per nonempty insert, generates and persists
 UUIDs and UTC insertion dates, validates model output and commits each insert atomically. Complete chunk
 content is retained, including source/metadata/position. Repeated inserts create
-new records. Collections isolate data in one file; different files are separate
-databases. Model identity is saved per collection and must match when reopening.
+new records. Collections are logical groups within a namespace. Optional
+`namespace` isolates tables, indexes and metadata in a shared database. It must
+match `[a-z_][a-z0-9_]{0,62}`; omitted retains `tessar_*` names, while
+`"app"` uses `app_tessar_*`. The application owns the native database. Model identity is saved per collection and must match when reopening.
 Dimensions come from the first successful insert, remain null beforehand, and
 survive deleting all records. Every insert/search validates output dimensions.
 No probe embedding calls are made. Old collections without a saved model ref
@@ -265,8 +273,182 @@ are built from saved rows when opening a labelled collection. Only insert and
 semantic search call the configured model; read/list/delete/info/BM25 do not.
 No document lifecycle management is added. Large batches/index
 builds run synchronously and can block the event loop. Native database errors
-propagate; validation errors use TessarRagError. The package supports RAM/local
-files through filename; remote/sync configuration has not been added.
+propagate; validation errors use TessarRagError. Configure RAM, local, remote or
+embedded-replica options on the native database and call native `sync()` directly.
+Store `close()` only marks the store closed; close the database after all users
+finish. No live remote deployment verification is claimed.
+
+## Persist chunks and embeddings in PostgreSQL
+
+Install the native driver and optional RAG peer explicitly:
+
+```sh
+npm install @tessar/postgresql @tessar/rag pg
+npm install --save-dev @types/pg
+```
+
+A database administrator must install pgvector and run `CREATE EXTENSION vector;`
+in the target database. Tessar checks the extension; it does not install it.
+The application role also needs schema, table and index creation permissions.
+Continue with `chunks` and the configured embedding `model` above:
+
+```ts
+import { Pool } from "pg";
+import { PostgresqlVectorStore } from "@tessar/postgresql/vector";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+try {
+  const store = new PostgresqlVectorStore({
+    pool,
+    embedding: model,
+    schema: "tessar", // Optional, defaults to "tessar".
+    collection: "handbook", // Optional, defaults to "default".
+  });
+  try {
+    await store.insert(chunks);
+    console.log(await store.info());
+    console.log(await store.list({ limit: 20 }));
+    const results = await store.search("How do I configure the application?", {
+      topK: 5,
+      score_threshold: 0.7,
+      filter: { metadata: { project: "handbook" } },
+    });
+    for (const result of results) console.log(result.score, result.content);
+  } finally {
+    await store.close();
+  }
+} finally {
+  await pool.end();
+}
+```
+
+Configure TLS and other native driver options on the pool. The constructor
+validates configuration synchronously; the first asynchronous method initializes
+the database layout and rejects if initialization fails. `close()` only invalidates
+the store facade, leaving the pool open even after initialization failure.
+
+CRUD, pagination, model identity and filter semantics match the libSQL vector
+operations above. Complete content and original vectors are retained in JSONB;
+UUIDs and UTC timestamps are generated for each insert. Embedding calls happen
+outside database transactions; each insertion, including initial dimensions and
+index creation, commits atomically. Dimensions are inferred from the first
+successful insertion, remain null beforehand and survive deleting all records.
+Model/dimension mismatches reject without automatic re-embedding.
+
+The native pgvector float32 HNSW cosine index supports at most 2000 dimensions;
+larger output rejects without halfvec conversion or dimension reduction.
+Unfiltered vector search is approximate. Source/metadata filters score the matching
+subset exactly before topK, which can cost more for large matching sets. Original
+vectors remain available through get/list. No agent lifecycle or context injection
+is added. See the [adapter API](../../packages/postgresql/README.md#independent-vector-storage)
+for details. No live remote deployment verification is claimed.
+
+For unfiltered HNSW search, topK is a maximum; the server candidate budget
+(`hnsw.ef_search`, default 40) and dead tuples can yield fewer results. The
+developer owns server tuning; Tessar does not change global settings or autotune.
+See [pgvector's result-count guidance](https://github.com/pgvector/pgvector#why-are-there-less-results-for-a-query-after-adding-an-hnsw-index).
+
+### Search PostgreSQL keywords
+
+Use either keyword method while the PostgreSQL store above is open:
+
+```ts
+const bm25 = await store.searchBM25("configuration Tessar", {
+  topK: 5,
+  filter: { metadata: { project: "handbook" } },
+});
+const native = await store.searchNative("configuration Tessar", {
+  topK: 5,
+  filter: { metadata: { project: "handbook" } },
+});
+for (const match of native) console.log(match.score, match.content.text);
+```
+
+For BM25, an administrator must install `pg_search` on the server and enable
+it in the database with `CREATE EXTENSION pg_search;`, following its server
+setup requirements. This is separate from pgvector. Tessar does not install
+extensions or change server configuration. Missing `pg_search` rejects only
+`searchBM25`; vector operations and `searchNative` still work. The first BM25
+call creates and backfills the native index, adding initial latency/disk usage;
+the index maintains later writes automatically.
+
+`searchNative` uses built-in PostgreSQL `ts_rank` with explicit `simple`
+configuration and a GIN index, without a BM25 extension, stemming or automatic
+language inference. Both
+methods use nonblank plain literal OR terms, call no embedding model, default
+topK to 5 and apply source/metadata AND filters before topK. Results retain
+id/date/content and omit vectors. Their descending scores are neither cosine
+similarities nor percentages; native rank and BM25 scales are different. Neither
+accepts `score_threshold`. Hybrid fusion remains an application decision.
+
+## Persist chunks and embeddings in MongoDB
+
+Install `@tessar/mongodb`, `@tessar/rag` and `mongodb` explicitly. Supply an
+application-owned native Db and the same chunks/model used above:
+
+```ts
+import { MongoClient } from "mongodb";
+import { MongoDBVectorStore } from "@tessar/mongodb/vector";
+
+const client = new MongoClient(process.env.MONGODB_URL!);
+try {
+  await client.connect();
+  const store = new MongoDBVectorStore({
+    database: client.db("my_agent"),
+    embedding: model,
+    namespace: "app", // Optional collection prefix.
+    collection: "handbook", // Optional, defaults to "default".
+  });
+  try {
+    await store.insert(chunks);
+    console.log(await store.info());
+    console.log(await store.list({ limit: 20 }));
+    const matches = await store.searchNative("configuration Tessar", {
+      topK: 5,
+      filter: { metadata: { project: "handbook" } },
+    });
+    for (const match of matches) console.log(match.score, match.content.text);
+  } finally {
+    await store.close();
+  }
+} finally {
+  await client.close();
+}
+```
+
+Configure TLS/pooling and connect/close the MongoClient in application code.
+Tessar never connects or closes it, even after initialization failure. Atomic
+bulk insertion requires a replica set or sharded deployment; embedding calls
+run outside transactions. CRUD/model identity/dimension semantics follow the
+shared store contract, retaining original content/vectors with UUIDs/UTC dates.
+
+`searchNative` uses ordinary `$text`/textScore with language `none` and needs no
+mongot. `searchBM25` uses explicit MongoDB Search BM25. Both accept plain literal
+OR terms with optional topK (default 5) and source/metadata AND filters before
+topK, without model calls or score_threshold. Their scores are distinct from each
+other and from cosine; native search adds no stemming or language inference.
+
+`search(question, { topK?, score_threshold?, filter? }?)` uses exact native
+`$vectorSearch` and converts MongoDB cosine scores [0, 1] into [-1, 1]. No ANN
+candidate tuning is inferred. Vector/BM25 require a compatible Atlas or
+self-managed Search/mongot deployment provisioned by the developer; Tessar never
+installs services or changes server configuration. CRUD/native text remain
+available without mongot.
+
+Tessar creates its own indexes on the corresponding first search. No index names,
+filter fields or dimensions need configuration. Canonical internal filter tokens
+support new metadata keys automatically, preserving scalar types and null versus
+missing. Tokens over 32766 bytes reject before embedding instead of silently
+omitting a filter value.
+
+Vector/BM25 indexes build asynchronously. Each search checks readiness and rejects
+with InvalidState while its index is building, without hidden waiting. An
+incompatible existing definition rejects with InvalidConfiguration; Tessar does
+not update it automatically. Search visibility can lag committed inserts/deletes;
+successful get/list does not guarantee immediate search visibility. Plan explicit
+readiness handling in the application. See the [MongoDB API](../../packages/mongodb/README.md#independent-vector-storage).
+Live ordinary storage and Search verification need separate configured test URLs;
+skipped tests do not verify either deployment.
 
 ## Search for related chunks
 
@@ -317,12 +499,12 @@ This method performs vector search only. No hybrid fusion, reranking or
 automatic context injection is performed. The application decides whether to
 use these chunks in a tool, `context.prepare`, or a separate flow.
 
-## Search text with BM25
+## Search text with BM25 in libSQL
 
 To find saved chunks by keywords, pass ordinary query text directly to the store:
 
 ```ts
-const matches = await store.searchText("configuration Tessar", {
+const matches = await store.searchBM25("configuration Tessar", {
   topK: 5,
   filter: { metadata: { project: "handbook" } },
 });

@@ -66,7 +66,7 @@ export interface VectorStore {
   get(id: string): Promise<VectorRecord | null>;
   list(options?: VectorListOptions): Promise<VectorRecord[]>;
   search(query: string, options?: VectorSearchOptions): Promise<VectorSearchResult[]>;
-  searchText(query: string, options?: TextSearchOptions): Promise<TextSearchResult[]>;
+  searchBM25(query: string, options?: TextSearchOptions): Promise<TextSearchResult[]>;
   delete(selector: VectorDelete): Promise<number>;
   close(): Promise<void>;
 }

@@ -1,11 +1,12 @@
 import { expect, it, vi } from "vitest";
+import type { Db } from "mongodb";
 import type { StorageBackend } from "@tessar/core";
 import { PluginHost } from "../../core/src/plugins/host.js";
 const { open } = vi.hoisted(() => ({ open: vi.fn() }));
 vi.mock("../src/backend.js", () => ({ createMongoDBBackend: open }));
 import { MongoDBStoragePlugin } from "../src/index.js";
 
-it("registers a backend whose connection is closed by plugin disposal", async () => {
+it("registers a backend which is released by plugin disposal", async () => {
   const close = vi.fn().mockResolvedValue(undefined);
   const backend = { close } as unknown as StorageBackend;
   open.mockResolvedValueOnce(backend);
@@ -13,8 +14,7 @@ it("registers a backend whose connection is closed by plugin disposal", async ()
   try {
     await host.initialize([
       new MongoDBStoragePlugin({
-        uri: "mongodb://unused",
-        databaseName: "unused",
+        database: {} as Db,
       }),
     ]);
     expect(host.registrations()).toMatchObject([
@@ -50,8 +50,7 @@ it.each([false, true])(
       await expect(
         host.attach(
           new MongoDBStoragePlugin({
-            uri: "mongodb://unused",
-            databaseName: "unused",
+            database: {} as Db,
           }),
         ),
       ).rejects.toMatchObject({ code: "RegistrationConflict" });

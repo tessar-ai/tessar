@@ -182,7 +182,7 @@ export async function restoreFrame(
     ttlMs: 30000,
   });
   try {
-    const records = await loadRecords(execution, request.threadId);
+    const records = await loadRecords(execution, request.threadId, request.streamId);
     const stream = (
       records.get("streams:" + request.streamId) as { data: StreamRecord }
     ).data;
@@ -321,7 +321,7 @@ async function prepareResumeFrame(
       request.value,
     );
     const cp = structuredClone(stored),
-      records = await loadRecords(execution, request.threadId);
+      records = await loadRecords(execution, request.threadId, interrupt.streamId);
     if (interrupt.kind !== "tool-result") {
       const eventId = cp.execution?.handlerCursor?.eventId;
       if (!eventId) fail("ResumeIncompatible", "Missing continuation cursor");

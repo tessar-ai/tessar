@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./database-fixture.js";
 import { expect, it, vi } from "vitest";
 import { LibsqlVectorStore } from "@tessar/libsql/vector";
 import Database from "libsql";
@@ -21,12 +22,12 @@ async function filename() {
 
 it("configures embedding once and learns dimensions from the first insert", async () => {
   const embedding = model();
-  const store = new LibsqlVectorStore({ filename: ":memory:", embedding });
+  const store = new LibsqlVectorStore({ database: createTestDatabase(":memory:"), embedding });
   try {
     expect(await store.info()).toEqual({ collection: "default", model: embedding.ref, dimensions: null });
     expect(await store.insert([])).toEqual([]);
     expect(await store.search("manual")).toEqual([]);
-    expect(await store.searchText("manual")).toEqual([]);
+    expect(await store.searchBM25("manual")).toEqual([]);
     expect(embedding.embedDocuments).not.toHaveBeenCalled();
     expect(embedding.embedQuery).not.toHaveBeenCalled();
     const ids = await store.insert([content]);
@@ -39,25 +40,25 @@ it("configures embedding once and learns dimensions from the first insert", asyn
 
 it("persists identity/dimensions, rejects another model, and keeps dimensions after deleting all rows", async () => {
   const file = await filename(), embedding = model();
-  const store = new LibsqlVectorStore({ filename: file, embedding });
+  const store = new LibsqlVectorStore({ database: createTestDatabase(file), embedding });
   const ids = await store.insert([content]);
   await store.delete({ ids });
   embedding.embedQuery.mockClear();
   expect(await store.search("empty")).toEqual([]);
   expect(embedding.embedQuery).not.toHaveBeenCalled();
   await store.close();
-  const reopened = new LibsqlVectorStore({ filename: file, embedding: model() });
+  const reopened = new LibsqlVectorStore({ database: createTestDatabase(file), embedding: model() });
   try { expect(await reopened.info()).toEqual({ collection: "default", model: embedding.ref, dimensions: 2 }); }
   finally { await reopened.close(); }
   for (const ref of [
     { providerId: "other", modelId: "test" }, { providerId: "fixture", modelId: "other" },
     { providerId: "fixture", modelId: "test", connectionId: "other" },
-  ]) expect(() => new LibsqlVectorStore({ filename: file, embedding: { ...model(), ref } }))
+  ]) expect(() => new LibsqlVectorStore({ database: createTestDatabase(file), embedding: { ...model(), ref } }))
     .toThrow(/different embedding model/);
 });
 
 it("does not overwrite vectors or dimensions when a later embedding changes dimensions", async () => {
-  const embedding = model(), store = new LibsqlVectorStore({ filename: ":memory:", embedding });
+  const embedding = model(), store = new LibsqlVectorStore({ database: createTestDatabase(":memory:"), embedding });
   try {
     const ids = await store.insert([content]);
     embedding.embedDocuments.mockResolvedValue([[1, 0, 0]]);
@@ -71,7 +72,7 @@ it("does not overwrite vectors or dimensions when a later embedding changes dime
 
 it.each([[], [[NaN, 0]], [[Infinity, 0]], [[]], [[0, 0]], [[1, 0], [1, 0]], [new Array(2)]].map(output => ({ output })))
   ("rejects invalid embedding output without initializing dimensions: %j", async ({ output }) => {
-    const embedding = model(), store = new LibsqlVectorStore({ filename: ":memory:", embedding });
+    const embedding = model(), store = new LibsqlVectorStore({ database: createTestDatabase(":memory:"), embedding });
     try {
       embedding.embedDocuments.mockResolvedValue(output);
       await expect(store.insert([content])).rejects.toMatchObject({ code: "InvalidData" });
@@ -81,7 +82,7 @@ it.each([[], [[NaN, 0]], [[Infinity, 0]], [[]], [[0, 0]], [[1, 0], [1, 0]], [new
   });
 
 it("validates content and removed signatures before calling the provider", async () => {
-  const embedding = model(), store = new LibsqlVectorStore({ filename: ":memory:", embedding });
+  const embedding = model(), store = new LibsqlVectorStore({ database: createTestDatabase(":memory:"), embedding });
   try {
     for (const input of [{ contents: [content], vectors: [[1, 0]] }, "manual", [{ text: "missing format" }]])
       await expect(store.insert(input as never)).rejects.toMatchObject({ code: "InvalidData" });
@@ -93,7 +94,7 @@ it("validates content and removed signatures before calling the provider", async
 });
 
 it("rejects a mutable adapter changing its model identity after construction", async () => {
-  const embedding = model(), store = new LibsqlVectorStore({ filename: ":memory:", embedding });
+  const embedding = model(), store = new LibsqlVectorStore({ database: createTestDatabase(":memory:"), embedding });
   try {
     embedding.ref.modelId = "different";
     await expect(store.insert([content])).rejects.toMatchObject({ code: "InvalidConfiguration" });
@@ -103,7 +104,7 @@ it("rejects a mutable adapter changing its model identity after construction", a
 });
 
 it("preserves provider exceptions and permits retry by the caller", async () => {
-  const embedding = model(), store = new LibsqlVectorStore({ filename: ":memory:", embedding });
+  const embedding = model(), store = new LibsqlVectorStore({ database: createTestDatabase(":memory:"), embedding });
   const error = new Error("provider failed");
   try {
     embedding.embedDocuments.mockRejectedValueOnce(error);
@@ -118,7 +119,7 @@ it("preserves provider exceptions and permits retry by the caller", async () => 
 
 it("accepts omitted or explicitly undefined optional connection identity consistently", async () => {
   const embedding = { ...model(), ref: { providerId: "fixture", modelId: "test", connectionId: undefined } };
-  const store = new LibsqlVectorStore({ filename: ":memory:", embedding });
+  const store = new LibsqlVectorStore({ database: createTestDatabase(":memory:"), embedding });
   try {
     await store.insert([content]);
     expect(await store.info()).toMatchObject({ model: { providerId: "fixture", modelId: "test" }, dimensions: 2 });
@@ -130,7 +131,7 @@ it("does not adopt old collections whose embedding model is unknown", async () =
   const file = await filename(), db = new Database(file);
   try {
     db.exec("CREATE TABLE tessar_vector_collections(name TEXT PRIMARY KEY,dimensions INTEGER NOT NULL); INSERT INTO tessar_vector_collections VALUES('default',2)");
-    expect(() => new LibsqlVectorStore({ filename: file, embedding: model() })).toThrow(/no embedding model identity/);
+    expect(() => new LibsqlVectorStore({ database: createTestDatabase(file), embedding: model() })).toThrow(/no embedding model identity/);
     expect(db.prepare("SELECT * FROM tessar_vector_collections").all()).toEqual([{ name: "default", dimensions: 2 }]);
     expect(db.prepare("SELECT name FROM sqlite_master WHERE name='tessar_vector_models'").all()).toEqual([]);
   } finally { db.close(); }
@@ -141,8 +142,8 @@ it("resolves competing first-insert dimensions using committed collection metada
   const ready = Promise.withResolvers<number[][]>();
   first.embedDocuments.mockReturnValueOnce(ready.promise);
   second.embedDocuments.mockResolvedValue([[1, 0, 0]]);
-  const a = new LibsqlVectorStore({ filename: file, embedding: first });
-  const b = new LibsqlVectorStore({ filename: file, embedding: second });
+  const a = new LibsqlVectorStore({ database: createTestDatabase(file), embedding: first });
+  const b = new LibsqlVectorStore({ database: createTestDatabase(file), embedding: second });
   try {
     const pending = a.insert([content]);
     await b.insert([content]);
@@ -154,7 +155,7 @@ it("resolves competing first-insert dimensions using committed collection metada
 });
 
 it("does not write after closing while an embedding request is pending", async () => {
-  const embedding = model(), store = new LibsqlVectorStore({ filename: ":memory:", embedding });
+  const embedding = model(), store = new LibsqlVectorStore({ database: createTestDatabase(":memory:"), embedding });
   const ready = Promise.withResolvers<number[][]>();
   embedding.embedDocuments.mockReturnValueOnce(ready.promise);
   const pending = store.insert([content]);

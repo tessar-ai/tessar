@@ -51,11 +51,12 @@ export async function updateUsage(
   execution: ExecutionContext,
   frame: ExecutionFrame,
 ): Promise<void> {
-  const attempts = execution.rows<ModelAttemptRecord>(frame, "model_attempts");
-  frame.stream.directUsage = aggregateUsage(
-    attempts.filter((attempt) => attempt.streamId === frame.stream.id),
-  );
-  for (const turn of execution.rows<TurnRecord>(frame, "turns"))
+  const attempts = execution.rows<ModelAttemptRecord>(frame, "model_attempts")
+    .filter((attempt) => attempt.streamId === frame.stream.id);
+  frame.stream.directUsage = aggregateUsage(attempts);
+  const turn = frame.records.get("turns:" + frame.cp.execution?.turnId)
+    ?.data as TurnRecord | undefined;
+  if (turn)
     turn.usage = aggregateUsage(attempts.filter((a) => a.turnId === turn.id));
 }
 
@@ -100,16 +101,25 @@ async function commitNow(
       record.data.revision = cp.revision;
     }
   }
+  const versions = new Map<string, string>();
+  const records: RecordEntry[] = [];
+  // Execution producers mutate records in place, including after their first commit.
+  for (const [key, record] of frame.records) {
+    const version = JSON.stringify(record);
+    versions.set(key, version);
+    if (frame.committedRecords.get(key) !== version) records.push(record);
+  }
   await new CommitCoordinator(execution.runtime.backend).commit(
     {
       commitId: execution.ids.next("commit"),
       threadId: cp.threadId,
       expectedRevision: frame.cp.revision,
       checkpoint: cp,
-      records: [...frame.records.values()],
+      records,
     },
     frame.lease,
   );
+  frame.committedRecords = versions;
   frame.cp = { ...structuredClone(cp), execution: frame.cp.execution };
   await execution.hook(frame, checkpointHooks.committed, {
     checkpointId: cp.id,
