@@ -25,6 +25,7 @@
     "@tessar/plugins": "workspace:*",
     "@tessar/postgresql": "workspace:*",
     "@tessar/rag": "workspace:*",
+    "@tessar/server": "workspace:*",
     "@tessar/libsql": "workspace:*",
     "@tessar/typesafe": "workspace:*",
     "@types/node": "^24.0.0",

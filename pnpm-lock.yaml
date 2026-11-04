@@ -32,6 +32,9 @@ importers:
       '@tessar/rag':
         specifier: workspace:*
         version: link:packages/rag
+      '@tessar/server':
+        specifier: workspace:*
+        version: link:packages/server
       '@tessar/typesafe':
         specifier: workspace:*
         version: link:packages/typesafe
@@ -189,6 +192,19 @@ importers:
         specifier: ^9.3.13
         version: 9.3.13
 
+  packages/server:
+    dependencies:
+      '@hono/node-server':
+        specifier: 2.1.6
+        version: 2.1.6(hono@4.13.16)
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
+    devDependencies:
+      '@tessar/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/typesafe:
     dependencies:
       '@tessar/core':
@@ -222,7 +238,31 @@ importers:
         specifier: workspace:*
         version: link:../../../../packages/core
 
+  tests/fixtures/apps/server:
+    dependencies:
+      '@tessar/core':
+        specifier: workspace:*
+        version: link:../../../../packages/core
+      '@tessar/libsql':
+        specifier: workspace:*
+        version: link:../../../../packages/libsql
+      '@tessar/server':
+        specifier: workspace:*
+        version: link:../../../../packages/server
+      libsql:
+        specifier: 0.5.29
+        version: 0.5.29
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+
 packages:
+
+  '@hono/node-server@2.1.6':
+    resolution: {integrity: sha512-p/KH9MnfNcsm3sR6x4lNgm5j+QN4Et8srKredl9DZfXiyZ1UQ3aQ2YVpFLbqktYN5JI+DB+VZFKM2PqE5hLKjQ==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      hono: ^4 || ^5.0.0-0
 
   '@jridgewell/resolve-uri@3.1.2':
     resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
@@ -794,6 +834,10 @@ packages:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
     hasBin: true
 
+  hono@4.13.16:
+    resolution: {integrity: sha512-AOLOEhvrV+iH92xXCnFr/5+3KjPKcI3xP63XJtX5spAnkznPdHijlIsUTpi7/9EhWqrTCekw5c5zh1K+YsVw7A==}
+    engines: {node: '>=16.9.0'}
+
   immediate@3.0.6:
     resolution: {integrity: sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==}
 
@@ -1268,6 +1312,10 @@ packages:
 
 snapshots:
 
+  '@hono/node-server@2.1.6(hono@4.13.16)':
+    dependencies:
+      hono: 4.13.16
+
   '@jridgewell/resolve-uri@3.1.2': {}
 
   '@jridgewell/sourcemap-codec@1.6.0': {}
@@ -1658,6 +1706,8 @@ snapshots:
   graceful-fs@4.2.11: {}
 
   he@1.2.0: {}
+
+  hono@4.13.16: {}
 
   immediate@3.0.6: {}
 

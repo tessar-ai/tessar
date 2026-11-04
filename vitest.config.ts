@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 const path = (name: string) => fileURLToPath(new URL(name, import.meta.url));
 export default defineConfig({
   resolve: { alias: [
+    { find: "@tessar/server", replacement: path("./packages/server/src/index.ts") },
     { find: "@tessar/rag", replacement: path("./packages/rag/src/index.ts") },
     { find: "@tessar/plugins/logger", replacement: path("./packages/plugins/src/build-in/logger.ts") },
     { find: "@tessar/opentelemetry", replacement: path("./packages/opentelemetry/src/index.ts") },

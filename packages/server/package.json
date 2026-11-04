@@ -1,0 +1,20 @@
+{
+  "name": "@tessar/server",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "Standalone HTTP and SSE server for Tessar runtimes.",
+  "type": "module",
+  "repository": { "type": "git", "url": "git+https://github.com/tessar-ai/tessar.git", "directory": "packages/server" },
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "engines": { "node": ">=24.22.1" },
+  "peerDependencies": { "@tessar/core": "workspace:^" },
+  "devDependencies": { "@tessar/core": "workspace:*" },
+  "dependencies": { "hono": "4.13.16", "@hono/node-server": "2.1.6" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

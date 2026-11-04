@@ -1,9 +1,9 @@
-# @tessar/cli
+# tessar
 
 Create Tessar projects and project-local TypeScript files. Requires Node.js 24.22.1 or newer.
 
 ```sh
-npm install -g @tessar/cli
+npm install -g tessar
 tessar new my-agent
 ```
 
@@ -19,6 +19,9 @@ After creation:
 cd my-agent
 npm install
 ```
+
+Without a global installation, use `npx tessar new my-agent` or
+`npx tessar g <kind> <name>`.
 
 Copy `.env.example` to `.env`, set `OPENAI_API_KEY` and `OPENAI_MODEL`, then run:
 

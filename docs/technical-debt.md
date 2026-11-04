@@ -6,14 +6,14 @@ A working terminal example does not establish browser application support.
 
 ## TD-002 — Self-hosted server and application/browser client SDK
 
-**Status:** deferred. **Scope:** future application integration work.
+**Status:** standalone server increment delivered (2026-11-04); debt remains open.
+**Scope:** application integration; browser/client SDK remains deferred.
 
 ### Gap
 
-The current SDK provides an agent runtime and in-process state updates. It does
-not provide a complete self-hosted HTTP server and browser client SDK. Application
-developers still have to build the connection between backend execution and the
-browser themselves. This debt extends beyond rendering snapshots.
+The optional `@tessar/server` package adds standalone HTTP APIs and accumulated
+SSE state around the existing runtime. It does not yet provide a browser/client
+SDK or complete server-to-browser application flow. This debt remains open.
 
 ### Direction
 
@@ -35,8 +35,9 @@ Completion requires a working server-to-browser application flow, including
 continued interaction after reload or disconnection. CLI-only demonstrations
 are insufficient evidence for closing this debt.
 
-Class names, constructors, endpoint schemas, transport protocols, package layout
-and implementation strategy remain undecided and require a separate design.
+The standalone server API and HTTP mapping are documented in the
+[server guide](../examples/guide/server.md) and [package README](../packages/server/README.md).
+Existing-server integration and the browser/client SDK still need separate design.
 
 ## TD-004 ? Collection query capabilities and Thread execution lists
 

@@ -1,5 +1,5 @@
 {
-  "name": "@tessar/cli",
+  "name": "tessar",
   "version": "0.1.0",
   "description": "Project and file scaffolding for Tessar.",
   "license": "Apache-2.0",

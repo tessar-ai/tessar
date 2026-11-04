@@ -119,8 +119,9 @@ it("packs and installs the standalone CLI and scaffolds from a different working
     const packed = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", root], resolve("packages/cli"), cache);
     const tarball = resolve(root, JSON.parse(packed.stdout).filename);
     await command("npm", ["install", "--global", "--prefix", host, "--offline", "--ignore-scripts", "--no-audit", "--no-fund", tarball], work, cache);
-    const installed = join(host, process.platform === "win32" ? "node_modules" : "lib/node_modules", "@tessar/cli");
+    const installed = join(host, process.platform === "win32" ? "node_modules" : "lib/node_modules", "tessar");
     const manifest = JSON.parse(await readFile(join(installed, "package.json"), "utf8"));
+    expect(manifest.name).toBe("tessar");
     expect(Object.keys(manifest.dependencies ?? {})).toHaveLength(0);
     expect(typeof manifest.bin.tessar).toBe("string");
     const bin = join(installed, manifest.bin.tessar);
@@ -144,6 +145,11 @@ it("packs and installs the standalone CLI and scaffolds from a different working
     for (const text of ["new", "generate", "agent", "tool", "controller", "session", "basic", "hook", "provider", "storage", "capability"])
       expect(help.stdout).toContain(text);
     expect((await run(bin, ["--version"], work)).stdout.trim()).toBe(manifest.version);
+    const local = join(root, "local");
+    await mkdir(local);
+    await writeFile(join(local, "package.json"), JSON.stringify({ private: true }));
+    await command("npm", ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", tarball], local, cache);
+    expect((await command("npx", ["--offline", "tessar", "--version"], local, cache)).stdout.trim()).toBe(manifest.version);
     await run(bin, ["new", "installed-app"], work, "y\ny\n1\ny\n");
     const project = join(work, "installed-app");
     expect(existsSync(join(project, "src/controllers/main.ts"))).toBe(true);
@@ -165,14 +171,14 @@ it("packs and installs the standalone CLI and scaffolds from a different working
   }
 }, 60000);
 
-async function command(name: "npm" | "pnpm", args: string[], cwd: string, cache: string) {
+async function command(name: "npm" | "npx" | "pnpm", args: string[], cwd: string, cache: string) {
   const options = {
     cwd, windowsHide: true, timeout: 30000,
     env: { ...process.env, CI: "true", npm_config_offline: "true", npm_config_cache: cache },
   };
   let executable = name as string;
   if (process.platform === "win32") {
-    const entry = name === "npm" ? "npm/bin/npm-cli.js" : "pnpm/bin/pnpm.mjs";
+    const entry = name === "pnpm" ? "pnpm/bin/pnpm.mjs" : `npm/bin/${name}-cli.js`;
     const launcher = [dirname(process.execPath), ...(process.env.PATH ?? "").split(delimiter)]
       .flatMap(path => [join(path, "node_modules", entry), join(path, "..", entry)])
       .find(existsSync);
