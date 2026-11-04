@@ -204,12 +204,13 @@ try {
         .filter((part) => part.type === "text")
         .map((part) => part.text)
         .join("");
-      const turns = await thread.listTurns(end.streamId);
       let toolCalls = 0;
-      for (const turn of turns.items)
-        toolCalls += (await thread.listToolExecutions(turn.id)).items.filter(
-          (tool) => tool.status === "succeeded",
-        ).length;
+      let cursor: string | undefined;
+      do {
+        const page = await thread.listToolExecutions({ status: "succeeded", cursor });
+        toolCalls += page.items.filter((tool) => tool.streamId === end.streamId).length;
+        cursor = page.nextCursor ?? undefined;
+      } while (cursor);
       console.log(
         JSON.stringify({
           status: record.status,

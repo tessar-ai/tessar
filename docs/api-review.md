@@ -380,13 +380,15 @@ Không có `.set()` hoặc `session.setModel()`.
 | `.getCheckpoint(id)` | `id: string` | `Promise<Checkpoint \| null>` |
 | `.listCheckpoints(options?)` | `PageOptions` | `Promise<Page<CheckpointInfo>>` |
 | `.getStream(id)` | `id: string` | `Promise<StreamRecord \| null>` |
-| `.listStreams(options?)` | `PageOptions` | `Promise<Page<StreamRecord>>` |
-| `.listTurns(streamId, options?)` | `streamId: string`, `options?: PageOptions` | `Promise<Page<TurnRecord>>` |
-| `.listModelAttempts(turnId, options?)` | `turnId: string`, `options?: PageOptions` | `Promise<Page<ModelAttemptRecord>>` |
-| `.listToolExecutions(turnId, options?)` | `turnId: string`, `options?: PageOptions` | `Promise<Page<ToolExecutionRecord>>` |
+| `.listStreams(options?)` | `ExecutionListOptions` | `Promise<Page<StreamRecord>>` |
+| `.listTurns(options?)` | `ExecutionListOptions` | `Promise<Page<TurnRecord>>` |
+| `.listModelAttempts(options?)` | `ExecutionListOptions` | `Promise<Page<ModelAttemptRecord>>` |
+| `.listToolExecutions(options?)` | `ExecutionListOptions` | `Promise<Page<ToolExecutionRecord>>` |
 | `.getInterrupt(id)` | `id: string` | `Promise<InterruptRecord \| null>` |
 | `.listInterrupts(options?)` | `PageOptions & { status?: "pending" \| "resolved" \| "cancelled" }` | `Promise<Page<InterruptRecord>>` |
 | `.dispose()` | Không có | `Promise<void>`; đóng handle |
+
+`ExecutionListOptions = { status?: string; limit?: number; cursor?: string }`: Thread execution lists cover the entire Thread; Stream/Turn IDs remain on returned records. Updated 2026-11-04.
 
 `PageOptions = { cursor?: string; limit?: number }`: mặc định limit 50, hợp lệ 1–200. `Page<T> = { items: readonly T[]; nextCursor: string | null }`. `HistoryPage` thêm `checkpointId`, `revision`; items là Message. Scope lọc bằng các key/value đã truyền, không tự chứng thực người dùng.
 
@@ -904,6 +906,9 @@ export declare class Session {
 ### Thread
 
 ```ts
+export interface ExecutionListOptions extends PageOptions {
+    status?: string;
+}
 export declare class Thread {
     readonly id: string;
     scope(): Scope;
@@ -925,10 +930,10 @@ export declare class Thread {
     getCheckpoint(id: string): Promise<import("./state/schema.js").Checkpoint | null>;
     listCheckpoints(options?: PageOptions): Promise<import("./state/schema.js").Page<import("./state/schema.js").CheckpointInfo>>;
     getStream(id: string): Promise<import("./index.js").StreamRecord | null>;
-    listStreams(options?: PageOptions): Promise<import("./state/schema.js").Page<import("./index.js").StreamRecord>>;
-    listTurns(streamId: string, options?: PageOptions): Promise<import("./state/schema.js").Page<import("./index.js").TurnRecord>>;
-    listModelAttempts(turnId: string, options?: PageOptions): Promise<import("./state/schema.js").Page<import("./index.js").ModelAttemptRecord>>;
-    listToolExecutions(turnId: string, options?: PageOptions): Promise<import("./state/schema.js").Page<import("./index.js").ToolExecutionRecord>>;
+    listStreams(options?: ExecutionListOptions): Promise<import("./state/schema.js").Page<import("./index.js").StreamRecord>>;
+    listTurns(options?: ExecutionListOptions): Promise<import("./state/schema.js").Page<import("./index.js").TurnRecord>>;
+    listModelAttempts(options?: ExecutionListOptions): Promise<import("./state/schema.js").Page<import("./index.js").ModelAttemptRecord>>;
+    listToolExecutions(options?: ExecutionListOptions): Promise<import("./state/schema.js").Page<import("./index.js").ToolExecutionRecord>>;
     getInterrupt(id: string): Promise<import("./state/schema.js").InterruptRecord | null>;
     listInterrupts(options?: PageOptions & {
         status?: "pending" | "resolved" | "cancelled";

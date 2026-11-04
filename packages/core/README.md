@@ -177,6 +177,19 @@ not a persistence key. Session creation notifications are available to Controlle
 plugins; subscribe on the returned handle for subsequent events. Restoration
 does not emit another `session.created` notification.
 
+Thread execution inspection lists records across the entire Thread:
+
+```ts
+const turns = await thread.listTurns();
+const attempts = await thread.listModelAttempts();
+const failedTools = await thread.listToolExecutions({ status: "failed", limit: 20 });
+```
+
+These methods and `thread.listStreams()` accept optional `ExecutionListOptions`
+(`status`, `limit`, `cursor`) and return `{ items, nextCursor }`. Required Stream/Turn
+ID arguments have been removed; records retain those IDs for inspecting relationships.
+See the [storage guide](../../examples/guide/storage.md) for filtering and paging.
+
 `session.thread.delete()` is a soft delete. `session.thread.purge({ threadId })` permanently
 removes only a deleted, inactive, unowned thread with no retained fork referencing
 it. Both invoke thread deletion policy; purge supplies `permanent: true`.
