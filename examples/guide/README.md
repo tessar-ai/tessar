@@ -36,6 +36,7 @@ Examples perform real model requests and can incur provider charges.
 
 | You want to… | Read |
 | --- | --- |
+| Create a project or generate SDK files | [CLI scaffolding](cli.md) |
 | Run an agent without application lifecycle code | [Agent](agent.md) |
 | Display output as it arrives | [Streaming](stream.md) |
 | Give the agent application functions | [Tools and messages](tools.md) |

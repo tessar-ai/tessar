@@ -34,8 +34,8 @@ npm install @tessar/core @tessar/openai zod
 Create `.env` with your credentials and a model available to your account:
 
 ```dotenv
-OPENAI_API_KEY=your-api-key
-OPENAI_MODEL=your-model-id
+OPENAI_API_KEY = <your-api-key>
+OPENAI_MODEL = <your-model-id>
 ```
 
 Save this as `agent.ts` in a project with `"type": "module"` in `package.json`:
@@ -144,6 +144,7 @@ Install the packages your application uses:
 | Package                                               | Provides                                                                       |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [`@tessar/core`](packages/core/README.md)             | Agent execution, sessions, messages, tools, hooks, state and in-memory storage |
+| [`@tessar/cli`](packages/cli/README.md)               | Project and file scaffolding with `tessar new` and `tessar generate` |
 | [`@tessar/openai`](packages/openai/README.md)         | OpenAI Responses, Chat Completions and embedding adapters                       |
 | [`@tessar/typesafe`](packages/typesafe/README.md)     | Typed TypeSafe calls for classification, routing and application decisions, with optional persistence |
 | [`@tessar/plugins`](packages/plugins/README.md)       | Plugin discovery/loading, npm plugin management and the `/logger` plugin       |
