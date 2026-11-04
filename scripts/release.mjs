@@ -41,7 +41,7 @@ export function checkRelease({
     "Expected a release tag such as opentelemetry@0.1.0 or core@0.2.0-beta.1",
   );
   const [, shortName, version] = match;
-  const name = `@tessar/${shortName}`;
+  const name = shortName === "tessar" ? "tessar" : `@tessar/${shortName}`;
   const matches = workspace(root).filter(
     (entry) => entry.manifest.name === name,
   );
@@ -74,7 +74,7 @@ export function checkRelease({
     directory,
     version,
     tag,
-    archive: `dist/release/tessar-${shortName}-${version}.tgz`,
+    archive: `dist/release/${name.replace("@", "").replace("/", "-")}-${version}.tgz`,
   };
 }
 

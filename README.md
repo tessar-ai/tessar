@@ -136,6 +136,7 @@ public SDK and credentials you supply.
 | [Plugins](examples/guide/plugins.md)                 | Custom plugins, hooks, logging and loading plugins after packaging |
 | [OpenTelemetry](examples/guide/opentelemetry.md)    | Trace model calls, tools, retries and resumed executions           |
 | [Storage](examples/guide/storage.md)                 | SQLite, PostgreSQL, MongoDB and restoring conversations            |
+| [Server](examples/guide/server.md)                   | Standalone HTTP APIs, independent Sessions and shared Thread SSE    |
 
 ## Packages
 
@@ -144,13 +145,14 @@ Install the packages your application uses:
 | Package                                               | Provides                                                                       |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [`@tessar/core`](packages/core/README.md)             | Agent execution, sessions, messages, tools, hooks, state and in-memory storage |
-| [`@tessar/cli`](packages/cli/README.md)               | Project and file scaffolding with `tessar new` and `tessar generate` |
+| [`tessar`](packages/cli/README.md)                   | Project and file scaffolding with `tessar new` and `tessar generate` |
 | [`@tessar/openai`](packages/openai/README.md)         | OpenAI Responses, Chat Completions and embedding adapters                       |
 | [`@tessar/typesafe`](packages/typesafe/README.md)     | Typed TypeSafe calls for classification, routing and application decisions, with optional persistence |
 | [`@tessar/plugins`](packages/plugins/README.md)       | Plugin discovery/loading, npm plugin management and the `/logger` plugin       |
 | [`@tessar/rag`](packages/rag/README.md)               | Independent document reading and structure-aware chunking                      |
 | [`@tessar/opentelemetry`](packages/opentelemetry/README.md)     | OTLP tracing with Langfuse and Laminar adapters                 |
 | [`@tessar/libsql`](packages/libsql/README.md)         | State/checkpoint storage using a borrowed libSQL database; optional `/vector` entry for vector/BM25 search                 |
+| [`@tessar/server`](packages/server/README.md)         | Optional standalone HTTP/SSE host for Agents and Controllers |
 | [`@tessar/postgresql`](packages/postgresql/README.md) | PostgreSQL persistence                                                         |
 | [`@tessar/mongodb`](packages/mongodb/README.md)       | MongoDB persistence                                                            |
 

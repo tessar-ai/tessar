@@ -72,6 +72,17 @@ const files = [
   "package/dist/index.d.ts",
 ];
 
+it("releases the unscoped tessar CLI from packages/cli", () => {
+  const root = fixture();
+  mkdirSync(join(root, "packages/cli"));
+  writeFileSync(join(root, "packages/cli/package.json"), JSON.stringify({
+    ...manifest(root, "core"), name: "tessar", version: "0.1.0",
+  }));
+  expect(checkRelease({ root, ref: "tessar@0.1.0" })).toMatchObject({
+    package: "tessar", directory: "packages/cli", archive: "dist/release/tessar-0.1.0.tgz",
+  });
+});
+
 it.each([
   ["0.1.0", "latest"],
   ["0.2.0-beta.1", "next"],
