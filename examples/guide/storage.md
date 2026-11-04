@@ -170,11 +170,27 @@ data. Live remote deployments have not been verified.
 | `thread.snapshot()` | Current checkpoint state and aggregate usage |
 | `thread.listCheckpoints()` | Checkpoint history |
 | `thread.listStreams()` | Executions belonging to the thread |
-| `thread.listTurns(streamId)` | Turns within an execution |
-| `thread.listModelAttempts(turnId)` | Model attempts, usage and errors |
-| `thread.listToolExecutions(turnId)` | Tool execution records |
+| `thread.listTurns()` | Turns across all executions in the Thread |
+| `thread.listModelAttempts()` | Model attempts, usage and errors across the Thread |
+| `thread.listToolExecutions()` | Tool execution records across the Thread |
 
 Page APIs expose `items` and `nextCursor`. Fetch the next page with that cursor.
+The four execution lists accept optional `{ status, limit, cursor }`. Filtering
+is applied before pagination. For example:
+
+```ts
+const failedTools = await thread.listToolExecutions({ status: "failed", limit: 20 });
+const next = failedTools.nextCursor
+  ? await thread.listToolExecutions({ status: "failed", cursor: failedTools.nextCursor })
+  : null;
+```
+
+Status values belong to each record type; for example, successful Streams use
+`completed`, while successful tool executions use `succeeded`. Returned records
+retain Stream/Turn IDs for inspecting relationships. These methods no longer take
+a required Stream/Turn ID; passing the old ID argument is rejected. Scope is fixed
+by the Thread handle, and a cursor cannot be reused for another query or Thread.
+
 Usage fields are available when reported by the provider; missing values are
 not zero. A thread's retained history and the context you send to a model are
 separate concerns: plugins can transform the outgoing request at `context.prepare`.

@@ -38,50 +38,43 @@ are insufficient evidence for closing this debt.
 Class names, constructors, endpoint schemas, transport protocols, package layout
 and implementation strategy remain undecided and require a separate design.
 
-## TD-003 — Terminal renderer example
+## TD-004 ? Collection query capabilities and Thread execution lists
 
-**Status:** open. **Scope:** presentation, independent of TD-002.
+**Status:** completed for the agreed scope (2026-11-04).
 
-The current terminal example can leave repeated snapshot frames in scrollback.
-Improve presentation across long output, resizing and repeated runs so old
-frames are not mistaken for restored history or additional model executions.
+The collection review established that each API needs only capabilities appropriate
+for its data. Model/Tool arrays, capability enumeration, Session/Thread paging,
+checkpoint/history queries, independent records and vector listing retain their
+existing behavior. No universal search/filter/sort/paging contract is required.
 
-This debt concerns the renderer. A terminal fix does not resolve the missing
-self-hosted server or browser application integration.
+The concrete gap was Thread execution inspection: callers had to discover Stream
+or Turn IDs before listing related records, and most public wrappers did not
+expose the backend's existing status filter.
 
-## TD-004 — Consistent filtering, sorting and pagination for list APIs
+### Delivered
 
-**Status:** deferred. **Scope:** public collection APIs for SDK and application consumers.
+- `thread.listStreams()`, `listTurns()`, `listModelAttempts()` and
+  `listToolExecutions()` list all matching records in the current Thread.
+- All four accept optional `{ status, limit, cursor }`, exported as
+  `ExecutionListOptions`, and return the existing `{ items, nextCursor }`.
+- Stream/Turn relationships remain on returned records. Old required-ID arguments
+  are removed without overloads and rejected at runtime. Callers and guides are
+  updated; no persistence migration or new backend query implementation is needed.
+- Existing Thread scope, deterministic ordering, status-before-paging and
+  resource/status-bound cursor checks are preserved.
 
-### Gap
+### Verification
 
-Collection APIs currently offer different query capabilities. For example,
-`session.model.list()` returns an in-memory array without query parameters.
-Session/Thread and execution-record lists already support cursor/limit paging,
-with some resource-specific filters, but there is no shared public contract for
-filtering, sort fields, sort direction and pagination across applicable lists.
-Consumers implement those behaviors themselves, including model-selection UI.
+Shared regression coverage verifies multiple Streams/Turns, status filtering,
+pagination, cursor binding and Thread/scope isolation on Memory and libSQL.
+Core/backend checks: 352 passed, 55 skipped. Affected process/persistence integration
+checks: 15 passed. Source/test typecheck, workspace build and dependency boundaries
+passed. Live PostgreSQL/MongoDB checks were skipped because no test URLs were
+configured; the shared regression runs for those backends when configured.
 
-### Direction
-
-- Review public list APIs for models, tools, Sessions, Threads, checkpoints and
-  execution records; document which query capabilities each collection supports.
-- Define consistent filter/search, sort/order, paging and result semantics where
-  applicable, with clear defaults and supported fields for each resource.
-- Preserve existing scope boundaries, paging guarantees and compatibility.
-  Ordering must be deterministic when values tie, and pagination must remain
-  consistent with its active query and ordering.
-- Distinguish in-memory collections from storage-backed queries and capability
-  registry enumeration. Do not force a database-style query mechanism onto
-  every method merely because it returns a list.
-- Support CLI selectors and application/browser consumers without requiring
-  each host to reinvent common collection handling. Keep behavior consistent
-  across applicable storage backends.
-
-Completion requires public documentation and appropriate coverage of filtering,
-ordering, pagination and scope isolation for the affected APIs. Parameter names,
-page-versus-cursor choices, return shapes and implementation strategy require a
-separate design. Recording this debt does not change current APIs.
+See the [final API inventory](list-api-review.md) and
+[storage guide](../examples/guide/storage.md). Additional query capabilities require
+a concrete use case and separate design; they are not outstanding TD-004 work.
 
 ## TD-005 — Local IPC and synchronized CLI tabs
 
