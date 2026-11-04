@@ -63,6 +63,24 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
+  packages/cli:
+    devDependencies:
+      '@tessar/core':
+        specifier: workspace:*
+        version: link:../core
+      '@tessar/libsql':
+        specifier: workspace:*
+        version: link:../libsql
+      '@tessar/mongodb':
+        specifier: workspace:*
+        version: link:../mongodb
+      '@tessar/openai':
+        specifier: workspace:*
+        version: link:../openai
+      '@tessar/postgresql':
+        specifier: workspace:*
+        version: link:../postgresql
+
   packages/core:
     devDependencies:
       zod:
