@@ -1,12 +1,12 @@
 import type { Plugin, PluginContext } from "@tessar/core";
 import {
-  OpenAIProvider,
+  OpenAIChat,
   type OpenAIAPI,
-  type OpenAIProviderOptions,
+  type OpenAIChatOptions,
 } from "./provider.js";
 export type OpenAIPluginOptions =
-  | Omit<OpenAIProviderOptions<"responses">, "model">
-  | Omit<OpenAIProviderOptions<"chat-completions">, "model">;
+  | Omit<OpenAIChatOptions<"responses">, "model">
+  | Omit<OpenAIChatOptions<"chat-completions">, "model">;
 export class OpenAIPlugin implements Plugin {
   readonly id: string;
   private readonly providerId: string;
@@ -21,9 +21,9 @@ export class OpenAIPlugin implements Plugin {
   setup(tessar: PluginContext): void {
     const options = this.options,
       id = this.providerId;
-    let connection: OpenAIProvider<OpenAIAPI> | undefined;
-    const create = (model: string): OpenAIProvider<OpenAIAPI> => {
-      connection ??= new OpenAIProvider<OpenAIAPI>({ ...options, model });
+    let connection: OpenAIChat<OpenAIAPI> | undefined;
+    const create = (model: string): OpenAIChat<OpenAIAPI> => {
+      connection ??= new OpenAIChat<OpenAIAPI>({ ...options, model });
       return connection.ref.modelId === model
         ? connection
         : connection.withModel(model);
@@ -34,7 +34,7 @@ export class OpenAIPlugin implements Plugin {
       metadataPartition: options.metadataPartition,
       catalogModelRef: (ref) =>
         !options.baseURL ||
-        options.baseURL.replace(/\/$/, "") === "https://api.openai.com/v1"
+          options.baseURL.replace(/\/$/, "") === "https://api.openai.com/v1"
           ? { providerId: "openai", modelId: ref.modelId }
           : null,
       catalogMappingVersion: 1,

@@ -24,6 +24,58 @@ function boundary(session: import("../src/session.js").Session, type: string) {
     });
   });
 }
+it.each([false, true])("rejects follow-up racing with a pending thread switch (admission already reading: %s)", async reading => {
+  const backend = createMemoryBackend();
+  const write = backend.sessions.compareAndSet.bind(backend.sessions);
+  const read = backend.sessions.get.bind(backend.sessions);
+  let holdWrite = false, holdRead = false;
+  let enteredWrite!: () => void, enteredRead!: () => void;
+  let releaseWrite!: () => void, releaseRead!: () => void;
+  const writing = new Promise<void>(resolve => { enteredWrite = resolve; });
+  const readingCurrent = new Promise<void>(resolve => { enteredRead = resolve; });
+  const writeGate = new Promise<void>(resolve => { releaseWrite = resolve; });
+  const readGate = new Promise<void>(resolve => { releaseRead = resolve; });
+  backend.sessions.compareAndSet = async (value, revision) => {
+    if (holdWrite) { enteredWrite(); await writeGate; }
+    return write(value, revision);
+  };
+  backend.sessions.get = async (...args) => {
+    const value = await read(...args);
+    if (holdRead) { holdRead = false; enteredRead(); await readGate; }
+    return value;
+  };
+  const { controller, provider } = await fixture([{ text: "ok" }], [{
+    id: "gated-session", setup(tessar) { tessar.storage.register(backend); },
+  }]);
+  try {
+    const session = await controller.createSession();
+    const old = await session.thread.create();
+    const next = await session.thread.create();
+    await session.thread.switch(old.id);
+    let admission: Promise<unknown> | undefined;
+    if (reading) {
+      holdRead = true;
+      admission = session.followUp("racing input");
+      await readingCurrent;
+    }
+    holdWrite = true;
+    const switching = session.thread.switch(next.id);
+    await writing;
+    admission ??= session.followUp("racing input");
+    const rejected = expect(admission).rejects.toMatchObject({ code: "SessionBusy" });
+    releaseRead();
+    try { await rejected; }
+    finally { releaseWrite(); await switching; }
+    expect(provider.calls).toHaveLength(0);
+    expect(session.followUp.isEmpty()).toBe(true);
+    expect(session.thread.getId()).toBe(next.id);
+    const done = boundary(session, streamHooks.end);
+    const receipt = await session.followUp("valid input");
+    expect(receipt.threadId).toBe(next.id);
+    await done;
+    expect(provider.calls).toHaveLength(1);
+  } finally { releaseRead(); releaseWrite(); await controller.dispose(); }
+});
 it("isolates sync and async subscribers while delivering the same session event", async () => {
   const { controller } = await fixture();
   try {

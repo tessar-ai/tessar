@@ -1,3 +1,4 @@
+import Database from "libsql";
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import {
   Agent,
@@ -10,7 +11,7 @@ import {
   stream,
 } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
-import { SqliteStoragePlugin } from "@tessar/sqlite";
+import { LibsqlStoragePlugin } from "@tessar/libsql";
 import { z } from "zod";
 
 const [command, filename] = process.argv.slice(2) as [string, string];
@@ -32,28 +33,30 @@ const starting = command === "start" || command === "crash-wait";
 const model = new ScriptedProvider(
   starting
     ? [
-        {
-          response: {
-            message: MessageCodec.encode(
-              new AssistantMessage([
-                {
-                  type: "tool-call",
-                  toolCallId: "call",
-                  name: "ask",
-                  arguments: {},
-                },
-              ]),
-            ),
-          },
+      {
+        response: {
+          message: MessageCodec.encode(
+            new AssistantMessage([
+              {
+                type: "tool-call",
+                toolCallId: "call",
+                name: "ask",
+                arguments: {},
+              },
+            ]),
+          ),
         },
-      ]
+      },
+    ]
     : [{ text: "finished" }],
 );
+const database = new Database(filename);
+database.exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000");
 const controller = new Controller({
   id: "host",
   agent: new Agent({ id: "assistant", model, tools: { ask } }),
   plugins: [
-    new SqliteStoragePlugin({ filename }),
+    new LibsqlStoragePlugin({ database }),
     {
       id: "crash-boundary",
       setup(tessar) {
@@ -138,4 +141,5 @@ try {
   await done;
 } finally {
   await controller.dispose();
+  database.close();
 }

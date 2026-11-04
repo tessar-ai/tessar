@@ -1,18 +1,20 @@
 import { expect, it, vi } from "vitest";
 import type { StorageBackend } from "@tessar/core";
+import type { Pool } from "pg";
 import { PluginHost } from "../../core/src/plugins/host.js";
 const { open } = vi.hoisted(() => ({ open: vi.fn() }));
 vi.mock("../src/backend.js", () => ({ createPostgresqlBackend: open }));
 import { PostgresqlStoragePlugin } from "../src/index.js";
 
-it("registers a backend whose connection is closed by plugin disposal", async () => {
+it("passes the borrowed pool through and disposes the registered backend", async () => {
   const close = vi.fn().mockResolvedValue(undefined);
   const backend = { close } as unknown as StorageBackend;
   open.mockResolvedValueOnce(backend);
   const host = new PluginHost();
+  const pool = { end: vi.fn() } as unknown as Pool;
   try {
     await host.initialize([
-      new PostgresqlStoragePlugin({ connectionString: "postgres://unused" }),
+      new PostgresqlStoragePlugin({ pool }),
     ]);
     expect(host.registrations()).toMatchObject([
       {
@@ -22,10 +24,12 @@ it("registers a backend whose connection is closed by plugin disposal", async ()
       },
     ]);
     expect(close).not.toHaveBeenCalled();
+    expect(open).toHaveBeenLastCalledWith({ pool });
   } finally {
     await host.dispose();
   }
   expect(close).toHaveBeenCalledOnce();
+  expect(pool.end).not.toHaveBeenCalled();
 });
 
 it.each([false, true])(
@@ -51,7 +55,7 @@ it.each([false, true])(
       await expect(
         host.attach(
           new PostgresqlStoragePlugin({
-            connectionString: "postgres://unused",
+            pool: {} as Pool,
           }),
         ),
       ).rejects.toMatchObject({ code: "RegistrationConflict" });

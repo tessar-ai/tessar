@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, it } from "vitest";
 import { Agent, Controller, HumanMessage, normalizeInstruction } from "@tessar/core";
 import OpenAI from "openai";
-import { OpenAIProvider, OpenAIPlugin } from "../src/index.js";
+import { OpenAIChat, OpenAIPlugin } from "../src/index.js";
 
 it.each(["responses", "chat-completions"] as const)("builds the same native %s connection through OpenAIPlugin", async (api) => {
   const calls: { url: string; body: any }[] = [];
@@ -18,7 +18,7 @@ it.each(["responses", "chat-completions"] as const)("builds the same native %s c
   const provider = registration.create("fixture");
   const agent = new Agent({ id: randomUUID(), model: provider });
   try {
-    expect(provider).toBeInstanceOf(OpenAIProvider);
+    expect(provider).toBeInstanceOf(OpenAIChat);
     expect(provider.ref.connectionId).toBe("plugin");
     expect(registration.create("another").connection).toEqual(provider.connection);
     expect((await agent.generate("hello")).status).toBe("completed");
@@ -62,8 +62,8 @@ function completed(text = "ok") {
 
 it("retains a Session's executable connection across follow-ups, handle restoration and model-ID switches", async () => {
   const calls: { url: string; body: any }[] = [];
-  const defaultModel = new OpenAIProvider({ apiKey: "first", model: "fixture", connectionId: "first" });
-  const other = new OpenAIProvider({
+  const defaultModel = new OpenAIChat({ apiKey: "first", model: "fixture", connectionId: "first" });
+  const other = new OpenAIChat({
     apiKey: "other", baseURL: "https://other.test/v1", model: "fixture", connectionId: "other", temperature: 0.25,
     fetch: async (url: any, init: any) => { calls.push({ url: String(url), body: JSON.parse(init.body) }); return completed(); },
   });
@@ -100,7 +100,7 @@ it("retains a Session's executable connection across follow-ups, handle restorat
 
 it("forwards native options and headers without adding undeclared provider defaults", async () => {
   const calls: { url: string; body: any; headers: Headers }[] = [];
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     apiKey: "test",
     baseURL: "https://gateway.test/v1",
     model: "fixture",
@@ -139,7 +139,7 @@ it("forwards native options and headers without adding undeclared provider defau
 
 it("reuses a connection for model IDs and replaces nested options without mutating defaults", async () => {
   const bodies: any[] = [];
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     apiKey: "test",
     model: "first",
     reasoning: { effort: "high", summary: "auto" },
@@ -170,7 +170,7 @@ it("reuses a connection for model IDs and replaces nested options without mutati
 
 it("uses SDK retries for eligible provider failures and does not replay the Agent loop", async () => {
   let calls = 0;
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     apiKey: "test",
     model: "fixture",
     maxRetries: 1,
@@ -204,7 +204,7 @@ it("uses SDK retries for eligible provider failures and does not replay the Agen
 
 it("rejects runtime overrides and unsupported execution modes before making requests", async () => {
   let calls = 0;
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     apiKey: "test",
     model: "fixture",
     fetch: async () => {
@@ -238,7 +238,7 @@ it("rejects runtime overrides and unsupported execution modes before making requ
   expect(calls).toBe(0);
   expect(
     () =>
-      new OpenAIProvider({
+      new OpenAIChat({
         apiKey: "test",
         model: "fixture",
         context_management: [{ type: "compaction" }],
@@ -249,7 +249,7 @@ it("rejects runtime overrides and unsupported execution modes before making requ
 it("forwards transport configuration to SDK validation instead of the request body", () => {
   expect(
     () =>
-      new OpenAIProvider({
+      new OpenAIChat({
         apiKey: "test",
         model: "fixture",
         x509Transport: {} as any,
@@ -262,12 +262,12 @@ it("forwards transport configuration to SDK validation instead of the request bo
 });
 
 it("keeps opaque continuity bound to the actual connection", async () => {
-  const one = new OpenAIProvider({
+  const one = new OpenAIChat({
     apiKey: "one",
     model: "fixture",
     fetch: async () => completed(),
   });
-  const two = new OpenAIProvider({
+  const two = new OpenAIChat({
     apiKey: "two",
     model: "fixture",
     fetch: async () => completed(),
@@ -296,7 +296,7 @@ it("isolates a different endpoint, credentials and options even with the same mo
     });
     return completed();
   };
-  const first = new OpenAIProvider({
+  const first = new OpenAIChat({
     apiKey: "first",
     baseURL: "https://first.test/v1",
     model: "same",
@@ -304,7 +304,7 @@ it("isolates a different endpoint, credentials and options even with the same mo
     defaultHeaders: { "X-First": "private" },
     fetch,
   });
-  const second = new OpenAIProvider({
+  const second = new OpenAIChat({
     apiKey: "second",
     baseURL: "https://second.test/v1",
     model: "same",
@@ -327,7 +327,7 @@ it("isolates a different endpoint, credentials and options even with the same mo
 
 it("leaves retry defaults to the SDK and preserves exhausted SDK errors", async () => {
   let calls = 0;
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     apiKey: "test",
     model: "fixture",
     fetch: async () => {
@@ -358,7 +358,7 @@ it("leaves retry defaults to the SDK and preserves exhausted SDK errors", async 
 
 it("passes timeout to the SDK and leaves the model reusable after timeout", async () => {
   let calls = 0;
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     apiKey: "test",
     model: "fixture",
     maxRetries: 0,
@@ -384,7 +384,7 @@ it("passes timeout to the SDK and leaves the model reusable after timeout", asyn
 
 it("does not silently restart a stream after a delta has been emitted", async () => {
   let calls = 0;
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     apiKey: "test",
     model: "fixture",
     maxRetries: 3,

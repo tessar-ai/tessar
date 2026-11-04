@@ -1,3 +1,4 @@
+import { storageTransaction } from "./transaction.js";
 import { fail } from "@tessar/core";
 import type { Database } from "./database.js";
 export const recordTables = [
@@ -10,7 +11,7 @@ export const recordTables = [
 
 export async function initializeSchema(db: Database): Promise<void> {
   const { table, schema } = db;
-  await db.transaction(
+  await storageTransaction(db,
     async (client) => {
       // Reject future versions before touching application tables or indexes.
       const metadata = await client.query(

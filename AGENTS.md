@@ -5,7 +5,7 @@
 Tessar is a TypeScript ESM monorepo for building CLI agents and application integrations. Keep its core minimal; additional capabilities belong in plugins.
 
 - `packages/core/src/`: Agent, Controller, Session, loop, hooks, messages and state contracts.
-- `packages/{openai,plugins,opentelemetry,sqlite,postgresql,mongodb}/src/`: provider adapters, plugin utilities, tracing and storage backends.
+- `packages/{openai,plugins,opentelemetry,libsql,postgresql,mongodb}/src/`: provider adapters, plugin utilities, tracing and storage backends.
 - `packages/*/test/`: package tests; `tests/integration/`: cross-package and process tests.
 - `tests/fixtures/apps/{cli,headless}/`: private applications exercised by integration tests.
 - `examples/guide/`: public developer guides. Build output goes into ignored `dist/` directories.
@@ -25,6 +25,14 @@ Use Node.js >=24.22.1 and pnpm 11.5.3 from the repository root.
 ## Coding Style & Naming Conventions
 
 Use strict TypeScript, explicit type imports and `.js` extensions in relative imports. Prefer two-space indentation, double quotes and semicolons; preserve surrounding formatting. No repository formatter or lint command is configured. Use PascalCase for classes, camelCase for functions and kebab-case filenames. Keep provider and storage implementations outside core. Fixture applications should use public package exports.
+
+### Consistent Implementation Patterns
+
+- Code with the same responsibility across packages must follow the same structure, naming, type declarations and lifecycle boundaries. Read the equivalent implementations before adding or changing one; do not introduce another pattern for the same job.
+- Storage `database.ts` modules use an explicit `Database` interface and an `openDatabase()` function. They receive developer-owned connections; schema initialization belongs in `schema.ts` and is invoked by the backend factory.
+- Native transaction lifecycle belongs in each backend's `transaction.ts` and is reused by state and vector storage. Keep state-specific error mapping separate from native transaction errors.
+- Use platform differences to justify different fields, operations or asynchronous I/O, not unrelated differences in organization. Do not force SQL and document databases into a shared abstraction.
+- When an existing pattern must change, check and update equivalent callers, tests and documentation together. Record any necessary backend exception and its reason.
 
 ## Testing Guidelines
 

@@ -19,21 +19,23 @@ import {
 import { createPostgresqlBackend } from "../src/index.js";
 
 const connectionString = process.env.TESSAR_TEST_POSTGRES_URL;
-const resources: { schema: string; backends: StorageBackend[]; admin: Pool }[] =
+const resources: { schema: string; backends: StorageBackend[]; pools: Pool[]; admin: Pool }[] =
   [];
 async function fixture() {
   const schema = "tessar_test_" + randomUUID().replaceAll("-", "");
   const resource = {
     schema,
     backends: [] as StorageBackend[],
+    pools: [] as Pool[],
     admin: new Pool({ connectionString, connectionTimeoutMillis: 5000 }),
   };
   resources.push(resource);
   const connect = async () => {
+    const pool = new Pool({ connectionString, connectionTimeoutMillis: 5000 });
+    resource.pools.push(pool);
     const backend = await createPostgresqlBackend({
-      connectionString: connectionString!,
+      pool,
       schema,
-      driverOptions: { connectionTimeoutMillis: 5000 },
     });
     resource.backends.push(backend);
     return backend;
@@ -50,7 +52,7 @@ afterEach(async () => {
         `DROP SCHEMA IF EXISTS "${resource.schema}" CASCADE`,
       );
     } finally {
-      await resource.admin.end();
+      await Promise.all([...resource.pools, resource.admin].map((pool) => pool.end()));
     }
   }
 });
@@ -767,10 +769,15 @@ describe.skipIf(!connectionString)(
 );
 
 it("rejects unsafe schema identifiers before connecting", async () => {
-  await expect(
-    createPostgresqlBackend({
-      connectionString: "postgresql://unused",
-      schema: 'x"; DROP SCHEMA public CASCADE;--',
-    }),
-  ).rejects.toMatchObject({ code: "InvalidConfiguration" });
+  const pool = new Pool();
+  try {
+    await expect(
+      createPostgresqlBackend({
+        pool,
+        schema: 'x"; DROP SCHEMA public CASCADE;--',
+      }),
+    ).rejects.toMatchObject({ code: "InvalidConfiguration" });
+  } finally {
+    await pool.end();
+  }
 });

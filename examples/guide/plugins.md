@@ -22,7 +22,7 @@ import {
   type Plugin, type PluginContext,
 } from "@tessar/core";
 import { createTool } from "@tessar/core/tool";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 import { LoggerPlugin } from "@tessar/plugins/logger";
 import { z } from "zod";
 
@@ -53,7 +53,7 @@ class AppInfoPlugin implements Plugin {
 
 const agent = new Agent({
   id: "assistant",
-  model: new OpenAIProvider({
+  model: new OpenAIChat({
     apiKey: process.env.OPENAI_API_KEY!,
     model: process.env.OPENAI_MODEL!,
   }),
@@ -248,7 +248,7 @@ Use this separate host example instead of the preceding one. Save as
 
 ```ts
 import { Agent, Controller } from "@tessar/core";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 import { PluginManager } from "@tessar/plugins";
 
 const manager = new PluginManager({
@@ -257,7 +257,7 @@ const manager = new PluginManager({
 });
 const agent = new Agent({
   id: "assistant",
-  model: new OpenAIProvider({
+  model: new OpenAIChat({
     apiKey: process.env.OPENAI_API_KEY!,
     model: process.env.OPENAI_MODEL!,
   }),
@@ -307,6 +307,8 @@ need to be available in the plugin's environment.
 
 For distributed plugin packages, expose `manager.install(source)`,
 `manager.update(name)` and `manager.remove(name)` through your own CLI commands.
+Updating an exact registry version installs `latest` and pins the result, including
+major upgrades. Other source specifications retain native npm update behavior.
 Installation records entries in `plugins.json`; `load()` discovers custom files
 and loads configured packages, without installing missing dependencies. Tessar
 does not impose a CLI command name. See [PluginManager](../../packages/plugins/README.md).

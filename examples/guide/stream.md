@@ -35,7 +35,7 @@ OPENROUTER_MODEL=<your-model>
 
 | Step | Concept | API |
 | :--- | :--- | :--- |
-| 1 | Connect a model | `OpenAIProvider` |
+| 1 | Connect a model | `OpenAIChat` |
 | 2 | Define a tool | `createTool` |
 | 3 | Compose instructions and create the agent | `buildInstruction`, `Agent` |
 | 4 | Consume events | `agent.stream()` |
@@ -44,9 +44,9 @@ OPENROUTER_MODEL=<your-model>
 
 ## Provider
 
-`OpenAIProvider` wraps the OpenAI SDK and implements the `ModelAdapter` interface that `Agent` requires. It manages the HTTP client, model identity, request defaults, and the streaming protocol.
+`OpenAIChat` wraps the OpenAI SDK and implements the `ModelAdapter` interface that `Agent` requires. It manages the HTTP client, model identity, request defaults, and the streaming protocol.
 
-By default, `OpenAIProvider` uses the **Responses API** (`/v1/responses`). For the Chat Completions example below, explicitly select `api: "chat-completions"`. Choose the protocol supported by your endpoint; a compatible base URL alone does not select it.
+By default, `OpenAIChat` uses the **Responses API** (`/v1/responses`). For the Chat Completions example below, explicitly select `api: "chat-completions"`. Choose the protocol supported by your endpoint; a compatible base URL alone does not select it.
 
 | Endpoint | `api` value |
 | :--- | :--- |
@@ -56,9 +56,9 @@ By default, `OpenAIProvider` uses the **Responses API** (`/v1/responses`). For t
 The `baseURL` overrides the default `https://api.openai.com/v1` endpoint. The `model` string is sent directly to the provider, so use the exact model identifier your provider expects (e.g. `"openrouter/free"`, `"google/gemini-2.5-flash"`, `"openai/gpt-4o-mini"`).
 
 ```ts
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 
-const model = new OpenAIProvider({
+const model = new OpenAIChat({
   apiKey: process.env.OPENROUTER_API_KEY!,
   model: process.env.OPENROUTER_MODEL!,
   baseURL: "https://openrouter.ai/api/v1",
@@ -120,7 +120,7 @@ This is preferable to a single monolithic string because plugins can append thei
 `Agent` is the core execution unit. It owns the model, instructions, tools, limits, and the agent loop. Required fields:
 
 - **`id`**: identifies this agent in logs, state, and multi-agent setups.
-- **`model`**: the `ModelAdapter` instance (here, `OpenAIProvider`).
+- **`model`**: the `ModelAdapter` instance (here, `OpenAIChat`).
 
 Optional fields include `instructions`, `tools`, and `limits` (e.g. `maxToolCalls`, `maxTurns` to cap execution).
 
@@ -269,7 +269,7 @@ Available metrics: `inputTokens`, `outputTokens`, `reasoningOutputTokens`, `tota
 | :--- | :--- |
 | `modelOptions` | Overrides request settings for this call. Nested option objects are **replaced**, not merged. Omitted settings are left to the SDK defaults. |
 | `model` (string) | Switches the model identifier and keeps the agent's default connection (API key, `baseURL`). |
-| `model` (model instance) | Uses the instance's own connection, e.g. a different `OpenAIProvider`. |
+| `model` (model instance) | Uses the instance's own connection, e.g. a different `OpenAIChat`. |
 
 ```ts
 // Same connection, different model and request settings
@@ -282,7 +282,7 @@ const stream = agent.stream("What is the weather in Hanoi?", {
 
 // A different connection: the agent uses OpenRouter (Chat Completions),
 // but this call goes to OpenAI directly (Responses API)
-const openai = new OpenAIProvider({
+const openai = new OpenAIChat({
   apiKey: process.env.OPENAI_API_KEY!,
   model: process.env.OPENAI_MODEL!,
 });

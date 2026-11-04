@@ -82,8 +82,8 @@ export function createMemoryBackend(
     checkpointId
       ? (records.get(checkpointId) ?? [])
       : [...heads.values()]
-          .filter((h) => !h.deleted)
-          .flatMap((h) => currentRecords(h.id));
+        .filter((h) => !h.deleted)
+        .flatMap((h) => currentRecords(h.id));
   const backend: StorageBackend = {
     records: {
       append: async (options) => {
@@ -263,8 +263,8 @@ export function createMemoryBackend(
           limit = limitOf(options.limit);
         const cp = snapshots.get(
           cursor?.checkpointId ??
-            options.atCheckpointId ??
-            head.currentCheckpointId,
+          options.atCheckpointId ??
+          head.currentCheckpointId,
         );
         if (!cp || cp.threadId !== id)
           fail("CheckpointNotFound", "No checkpoint for history");
@@ -295,8 +295,8 @@ export function createMemoryBackend(
         guard();
         const cp = snapshots.get(
           query.atCheckpointId ??
-            heads.get(threadId)?.currentCheckpointId ??
-            "",
+          heads.get(threadId)?.currentCheckpointId ??
+          "",
         );
         if (!cp || cp.threadId !== threadId)
           fail("CheckpointNotFound", "No checkpoint for records");
@@ -337,6 +337,7 @@ export function createMemoryBackend(
     commits: {
       stage: async (batch) => {
         guard();
+        batch = immutable(batch);
         validateBatch(batch);
         const hash = await commitFingerprint(batch);
         guard();
@@ -349,7 +350,7 @@ export function createMemoryBackend(
         if (prior && canonicalJson(prior) !== canonicalJson(batch))
           fail("CommitConflict", "commitId reused with different payload");
         if (!prior) {
-          staged.set(batch.commitId, immutable(batch));
+          staged.set(batch.commitId, batch);
           stagedFingerprints.set(batch.commitId, hash);
         }
       },
@@ -384,7 +385,7 @@ export function createMemoryBackend(
             !parent ||
             parent.deleted ||
             snapshots.get(batch.lineage.sourceCheckpointId)?.threadId !==
-              parent.id
+            parent.id
           )
             fail("ThreadNotFound", "Fork source is no longer available");
         }
@@ -411,10 +412,10 @@ export function createMemoryBackend(
           !merged.has("interrupts:" + execution.pendingInterruptId)
         )
           fail("CommitConflict", "Execution references missing interrupt");
-        const cp = immutable(batch.checkpoint);
+        const cp = batch.checkpoint;
         const stream = execution
           ? (merged.get("streams:" + execution.streamId)
-              ?.data as RecordTypes["streams"])
+            ?.data as RecordTypes["streams"])
           : null;
         const info = immutable(buildThreadInfo(batch, head, stream));
         const receipt = immutable({

@@ -1,3 +1,4 @@
+import Database from "libsql";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -7,8 +8,13 @@ import { pathToFileURL } from "node:url";
 import { TessarError } from "@tessar/core";
 import * as rag from "@tessar/rag";
 import type { EmbeddingModel } from "@tessar/rag";
-import { OpenAIEmbedding } from "@tessar/openai";
+import { OpenAIEmbedding, OpenAIReranker } from "@tessar/openai";
+import { LibsqlVectorStore } from "@tessar/libsql/vector";
+import { PostgresqlVectorStore } from "@tessar/postgresql/vector";
+import { MongoDBVectorStore } from "@tessar/mongodb/vector";
 
+assert.equal(typeof PostgresqlVectorStore, "function");
+assert.equal(typeof MongoDBVectorStore, "function");
 assert.deepEqual(Object.keys(rag).sort(), ["DocumentReader", "DocumentSplitter", "TessarRagError"]);
 const reader = new rag.DocumentReader();
 const metadata = { project: "handbook", nested: { revision: 1 } };
@@ -59,8 +65,68 @@ const pageVectors = await embedding.embedDocuments(contents);
 assert.deepEqual(pageVectors, contents.map(content => [content.text.length, 1]));
 const documentVectors = await embedding.embedDocuments(chunks);
 assert.deepEqual(documentVectors, chunks.map(chunk => [chunk.text.length, 1]));
+const database = new Database(":memory:");
+const vectorStore = new LibsqlVectorStore({ database, embedding });
+try {
+  const ids = await vectorStore.insert(chunks);
+  const stored = await vectorStore.list();
+  assert.deepEqual(stored.map(record => record.content), chunks);
+  assert.deepEqual(stored.map(record => record.vector), documentVectors);
+  assert.deepEqual(stored.map(record => record.id), ids);
+  assert.ok(stored.every(record => Number.isFinite(Date.parse(record.createdAt))));
+  const matches = await vectorStore.search(chunks[0]!.text, { topK: 1 });
+  assert.equal(matches.length, 1);
+  assert.ok(ids.includes(matches[0]!.id));
+  assert.ok(Math.abs(matches[0]!.score - 1) < 1e-5);
+  assert.ok(!("vector" in matches[0]!) && !("distance" in matches[0]!));
+  const filtered = await vectorStore.search(chunks[0]!.text, {
+    topK: 1, score_threshold: 0.9, filter: { metadata: { project: "handbook" } },
+  });
+  assert.equal(filtered.length, 1);
+  assert.ok(filtered[0]!.score >= 0.9);
+  const textMatches = await vectorStore.searchBM25("Setup Run", {
+    topK: 1, filter: { metadata: { project: "handbook" } },
+  });
+  assert.equal(textMatches.length, 1);
+  assert.ok(ids.includes(textMatches[0]!.id));
+  assert.ok(textMatches[0]!.score > 0);
+  assert.ok(!("vector" in textMatches[0]!));
+  assert.equal(await vectorStore.delete({ ids }), ids.length);
+  assert.deepEqual(await vectorStore.list(), []);
+  assert.deepEqual(await vectorStore.search("question"), []);
+  assert.deepEqual(await vectorStore.searchBM25("Setup Run"), []);
+} finally {
+  await vectorStore.close();
+  database.close();
+}
 assert.deepEqual(await embedding.embedQuery("search"), [6, 1]);
-assert.equal(embeddingRequests.length, 3);
+assert.equal(embeddingRequests.length, 6);
+const batchedInputs: string[][] = [];
+const batchedEmbedding = new OpenAIEmbedding({
+  apiKey: "fixture", model: "fixture", batchSize: 2, concurrency: 2,
+  fetch: async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    assert.equal(body.batchSize, undefined);
+    assert.equal(body.concurrency, undefined);
+    batchedInputs.push(body.input);
+    return Response.json({ data: body.input.map((text: string, index: number) => ({ index, embedding: [text.length] })).reverse() });
+  },
+});
+assert.deepEqual(await batchedEmbedding.embedDocuments(["first", "second", "third"]), [[5], [6], [5]]);
+assert.deepEqual(batchedInputs, [["first", "second"], ["third"]]);
+const reranker = new OpenAIReranker({
+  endpoint: "https://rerank.test/v1/rerank", apiKey: "fixture", model: "fixture",
+  fetch: async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    assert.deepEqual(body.documents, [chunks[0]!.text]);
+    return Response.json({ results: [{ index: 0, relevance_score: 0.9 }] });
+  },
+});
+const candidates = [{ id: "fixture", content: chunks[0]!, score: 0.5 }];
+const reranked = await reranker.rerank("question", candidates);
+assert.equal(reranked[0]!.document, candidates[0]);
+assert.equal(reranked[0]!.document.score, 0.5);
+assert.equal(reranked[0]!.score, 0.9);
 assert.ok(embeddingRequests.every(body => body.dimensions === 2 && !("input_type" in body)));
 assert.throws(
   () => new rag.DocumentSplitter({ strategy: "recursive", maxSize: 0 }),

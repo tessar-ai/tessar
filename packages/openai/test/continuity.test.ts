@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { normalizeInstruction, MessageCodec } from "@tessar/core";
-import { OpenAIProvider } from "../src/provider.js";
+import { OpenAIChat } from "../src/provider.js";
 import { decodeOutput } from "../src/codec.js";
 import { decodeChatMessage } from "../src/chat-codec.js";
 
@@ -13,8 +13,8 @@ for (const api of ["responses", "chat-completions"] as const) {
       connectionId: "primary",
       baseURL: "https://one.test/v1",
     };
-    const a = new OpenAIProvider(options),
-      b = new OpenAIProvider(options);
+    const a = new OpenAIChat(options),
+      b = new OpenAIChat(options);
     const message =
       api === "responses"
         ? decodeOutput(
@@ -44,7 +44,7 @@ for (const api of ["responses", "chat-completions"] as const) {
       messages: [JSON.parse(JSON.stringify(MessageCodec.encode(message)))],
     };
     expect(() => b.validate(request)).not.toThrow();
-    const changed = new OpenAIProvider({
+    const changed = new OpenAIChat({
       ...options,
       baseURL: "https://two.test/v1",
     });
@@ -61,7 +61,7 @@ for (const api of ["responses", "chat-completions"] as const) {
 
 for (const api of ["responses", "chat-completions"] as const)
   it(`${api} requires explicit legacy identity and rejects protocol changes`, () => {
-    const original = new OpenAIProvider({
+    const original = new OpenAIChat({
       apiKey: "fixture",
       model: "fixture",
       api,
@@ -87,27 +87,27 @@ for (const api of ["responses", "chat-completions"] as const)
             "old",
           );
     const request = (
-      provider: OpenAIProvider<"responses" | "chat-completions">,
+      provider: OpenAIChat<"responses" | "chat-completions">,
     ) => ({
       model: provider.ref,
       instructions: normalizeInstruction(""),
       messages: [MessageCodec.encode(message)],
       tools: [],
     });
-    const implicit = new OpenAIProvider({
+    const implicit = new OpenAIChat({
       apiKey: "fixture",
       model: "fixture",
       api,
     });
     expect(() => implicit.validate(request(implicit))).toThrow();
-    const rebound = new OpenAIProvider({
+    const rebound = new OpenAIChat({
       apiKey: "fixture",
       model: "fixture",
       api,
       connectionId: original.ref.connectionId!,
     });
     expect(() => rebound.validate(request(rebound))).not.toThrow();
-    const different = new OpenAIProvider({
+    const different = new OpenAIChat({
       apiKey: "fixture",
       model: "fixture",
       api: api === "responses" ? "chat-completions" : "responses",

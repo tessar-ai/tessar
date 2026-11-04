@@ -11,3 +11,4 @@ docs/superpowers
 .env.storage
 /packages/*/LICENSE
 .pnpm-store
+tessar-conversation.md

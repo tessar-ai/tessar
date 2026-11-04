@@ -45,13 +45,16 @@ Danh mục gồm API ứng dụng, API viết plugin/provider/storage và các s
 | `@tessar/core/tool` | Tool, createTool, ToolSuspension và các type tool; cùng implementation với root |
 | `@tessar/core/testing` | ScriptedProvider, AgentHarness, ModelScript |
 | `@tessar/core/testing/storage-conformance` | initialBatch, storageConformance |
-| `@tessar/openai` | OpenAIProvider, OpenAIEmbedding, OpenAIPlugin và các type cấu hình |
+| `@tessar/openai` | OpenAIChat, OpenAIEmbedding, OpenAIPlugin và các type cấu hình |
 | `@tessar/plugins` | PluginManager, PluginManagerOptions |
 | `@tessar/plugins/logger` | LoggerPlugin, FileTransport, ConsoleTransport, logGroup và các type logger; default export là một instance logger |
 | `@tessar/opentelemetry` | OpenTelemetryPlugin, OTLPAdapter, LangfuseAdapter, LaminarAdapter và các type cấu hình |
-| `@tessar/sqlite` | SqliteStoragePlugin, createSqliteBackend, SqliteStorageOptions |
+| `@tessar/libsql` | LibsqlStoragePlugin, createLibsqlBackend, LibsqlStorageOptions |
+| `@tessar/libsql/vector` | LibsqlVectorStore, LibsqlVectorStoreOptions (requires optional RAG peer) |
 | `@tessar/postgresql` | PostgresqlStoragePlugin, createPostgresqlBackend, PostgresqlStorageOptions |
+| `@tessar/postgresql/vector` | PostgresqlVectorStore, PostgresqlVectorStoreOptions (requires optional RAG peer) |
 | `@tessar/mongodb` | MongoDBStoragePlugin, createMongoDBBackend, MongoDBStorageOptions |
+| `@tessar/mongodb/vector` | MongoDBVectorStore, MongoDBVectorStoreOptions (requires optional RAG peer) |
 
 ### Phạm vi đã đối chiếu
 
@@ -63,7 +66,7 @@ Danh mục gồm API ứng dụng, API viết plugin/provider/storage và các s
 | Thread | Session.thread tạo/lấy/fork | scope, snapshot, history/checkpoint/trace/interrupt reads, dispose | id |
 | Message / Event | Constructors và MessageCodec | normalizeContent, encode/decode | Các field message/event và event map |
 | Instruction / Tool | buildInstruction, normalizeInstruction, createTool/new Tool, ToolSuspension | execute/resume, emit/suspend, recovery callbacks | Sections, schema, tool definition và identity |
-| Provider / Model | OpenAIProvider, provider registration factory | profile, refreshProfile, withModel, validate, stream | ref, connection, options, api và các metadata DTO |
+| Provider / Model | OpenAIChat, provider registration factory | profile, refreshProfile, withModel, validate, stream | ref, connection, options, api và các metadata DTO |
 | ProfileResolver | `new ProfileResolver(options?)` | current, resolve, needsRefresh, clear | Không expose cache/catalog implementation |
 | Plugin authoring | Class implements Plugin | setup, registration, hook, emit, defer, state/effect/interrupt/child/auxiliary APIs | Plugin identity, capability namespaces và context data |
 | Plugin distribution / logger | PluginManager, LoggerPlugin | discover/load/install/update/remove/dispose, setup; transports.write/close | directory bất biến, plugin id, LogEntry |
@@ -75,9 +78,9 @@ Danh mục gồm API ứng dụng, API viết plugin/provider/storage và các s
 ## 2. Provider OpenAI
 
 ```ts
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 
-const model = new OpenAIProvider({
+const model = new OpenAIChat({
   apiKey: process.env.OPENAI_API_KEY,
   model: "gpt-6.1-sol",
   reasoning: { effort: "high" },
@@ -87,7 +90,7 @@ const model = new OpenAIProvider({
 
 ### Constructor
 
-`new OpenAIProvider(configuration)` nhận một object phẳng:
+`new OpenAIChat(configuration)` nhận một object phẳng:
 
 | Parameter | Kiểu | Mặc định / ý nghĩa |
 | --- | --- | --- |
@@ -133,7 +136,7 @@ new OpenAIPlugin(options: OpenAIPluginOptions)
 
 `options` bắt buộc là object, có thể dùng các field client ở phụ lục cùng `providerId?`, `metadataPartition?`. `.id` là `"provider." + providerId`; `.setup(tessar: PluginContext): void` đăng ký provider.
 
-Plugin dùng chung OpenAIProvider, nhận protocol, connection và native options tương ứng, bỏ field `model` vì factory chọn model theo request. Ví dụ `new OpenAIPlugin({ api: "chat-completions", connectionId: "gateway", temperature: 0.2 })`. Cùng provider ID chỉ đăng ký một lần; không gắn thêm plugin trùng provider của Agent.
+Plugin dùng chung OpenAIChat, nhận protocol, connection và native options tương ứng, bỏ field `model` vì factory chọn model theo request. Ví dụ `new OpenAIPlugin({ api: "chat-completions", connectionId: "gateway", temperature: 0.2 })`. Cùng provider ID chỉ đăng ký một lần; không gắn thêm plugin trùng provider của Agent.
 
 ## 3. Agent
 
@@ -578,7 +581,7 @@ Không có protocol child reservation/admission trong core. Plugin tự kết h�
 | `.discover()` | Không có | `Promise<string[]>` |
 | `.load(sources?)` | `readonly string[]`; bỏ qua thì discover | `Promise<Plugin[]>`; chưa attach vào Controller |
 | `.install(source, options?)` | `source: string`, `{ name?: string }` | `Promise<string>` tên package đã cài/đăng ký |
-| `.update(name?)` | `name?: string`; bỏ qua để cập nhật package đã cấu hình | `Promise<void>` |
+| `.update(name?)` | `name?: string`; bỏ qua để cập nhật plugin đã cấu hình. Version registry cố định lên `latest` rồi pin lại; nguồn khác giữ cách cập nhật native npm | `Promise<void>` |
 | `.remove(name)` | `name: string` | `Promise<void>` |
 | `.dispose()` | Không có | `void` |
 
@@ -605,15 +608,31 @@ Mỗi invocation/followUp có trace mới với Agent root. Langfuse Session nh�
 
 | API | Parameter | Trả về |
 | --- | --- | --- |
-| `new SqliteStoragePlugin(options)` | `{ filename: string }` | Plugin, id `storage.sqlite` |
-| `createSqliteBackend(options)` | `{ filename: string }` | `Promise<StorageBackend>` |
-| `new PostgresqlStoragePlugin(options)` | `{ connectionString: string; schema?: string; driverOptions?: Omit<PoolConfig, "connectionString"> }` | Plugin, id `storage.postgresql` |
+| `new LibsqlStoragePlugin(options)` | `{ database: libsql.Database; namespace?: string }` | Plugin, id `storage.libsql` |
+| `createLibsqlBackend(options)` | `{ database: libsql.Database; namespace?: string }` | `Promise<StorageBackend>` |
+| `new PostgresqlStoragePlugin(options)` | `{ pool: pg.Pool; schema?: string }` | Plugin, id `storage.postgresql` |
 | `createPostgresqlBackend(options)` | Cùng options PostgreSQL | `Promise<StorageBackend>` |
-| `new MongoDBStoragePlugin(options)` | `{ uri: string; databaseName: string; clientOptions?: MongoClientOptions }` | Plugin, id `storage.mongodb` |
+| `new MongoDBStoragePlugin(options)` | `{ database: mongodb.Db; namespace?: string }` | Plugin, id `storage.mongodb` |
 | `createMongoDBBackend(options)` | Cùng options MongoDB | `Promise<StorageBackend>` |
 | `createMemoryBackend(options?)` | `{ clock?: Clock }` | `StorageBackend`, đồng bộ |
 
-Mỗi plugin có `.setup(tessar: PluginContext): Promise<void>`. PostgreSQL schema mặc định `tessar`; tên schema phải hợp lệ. SQLite dùng Node SQLite. MongoDB cần transaction support. Không truyền thêm `tables` hay migration option qua constructor này. `PoolConfig` và `MongoClientOptions` thuộc driver, không phải một tập field Tessar định nghĩa lại.
+Each plugin has `.setup(tessar: PluginContext): Promise<void>`. Applications
+install native drivers explicitly: `libsql@0.5.29`, `pg@^8.16.3` (plus
+`@types/pg` as a TypeScript development dependency), or `mongodb@^6.21.0`. Drivers
+are optional peers and test development dependencies; core is a runtime dependency.
+Applications configure, own and close native databases/pools/clients, including
+after initialization failure. Backend `close()` is a no-op for borrowed state
+connections; per-operation MongoDB sessions and PostgreSQL pool clients are still
+cleaned up. PostgreSQL defaults to schema `tessar`; `agent_state` produces
+`agent_state.tessar_threads` using native quoted schema semantics. MongoDB
+namespaces must match `[A-Za-z_][A-Za-z0-9_]{0,62}`; libSQL requires lowercase
+ASCII `[a-z_][a-z0-9_]{0,62}` to prevent case-insensitive identifier aliases.
+Omitted namespace retains `tessar_*` names; `app` produces
+`app_tessar_threads` and scopes every index and metadata object. libSQL records
+version 1 in namespaced `tessar_schema`, retains existing data, enables foreign
+keys, and does not override `journal_mode`, `busy_timeout` or global
+`PRAGMA user_version`. Configure remote/replica options and call `sync()` on the
+native database; no Tessar sync wrapper or live remote verification is claimed.
 
 ### API cho tác giả backend
 
@@ -766,12 +785,12 @@ Các dòng này ghi nhận contract hiện tại sau đợt sửa tính nhất q
 - **Alias tool:** object key quyết định tên đăng ký, không mutate Tool gốc. Agent và plugin đều giữ schema identity khi resume.
 - **Concurrency:** field `tools.concurrency` hiện vẫn có; bỏ khai báo thì Infinity.
 - **Session input:** followUp nhận string, Message hoặc mảng Message; chưa có options per followUp. count()/isEmpty() đọc hàng đợi.
-- **Provider plugin:** OpenAIPlugin và OpenAIProvider dùng chung protocol/native options. Session giữ executable named connection trong runtime; restart phải đăng ký lại binding có cùng ID và descriptor.
+- **Provider plugin:** OpenAIPlugin và OpenAIChat dùng chung protocol/native options. Session giữ executable named connection trong runtime; restart phải đăng ký lại binding có cùng ID và descriptor.
 - **Event:** mỗi envelope có timestamp phát event; lifecycle Stream/Turn/model/tool có record startedAt/endedAt. stream.error tới cả hooks và consumer, phân biệt target execution/consumer. Kiểm tra loại event qua `.type`. Các group map là lowercase/camelCase và giá trị event là string.
 - **Instructions:** Session.thread.create không nhận instructions; type CreateThreadOptions dùng trong hook/testing vẫn có field này.
 - **Suspend:** Agent.resume trả Stream; Session.resume/recover trả receipt và phát event qua subscription.
 - **Signal:** Agent.sendSignal nhận input theo streamId hoặc threadId; khác hàng đợi followUp. Metadata cấp content part đã có; core không định nghĩa visibility hoặc policy của metadata.
-- **Đã thu hẹp declaration:** service backend/registry/clock/ID generator/cancel nội bộ của Agent; diagnostics/report của Controller; cache/catalog của ProfileResolver và registry/queries của harness không xuất hiện trong API public sau build. Session/Thread có constructor private; các factory nội bộ không export ra declaration. OpenAIProvider chỉ công khai constructor một object configuration, không expose tham số shared connection nội bộ.
+- **Đã thu hẹp declaration:** service backend/registry/clock/ID generator/cancel nội bộ của Agent; diagnostics/report của Controller; cache/catalog của ProfileResolver và registry/queries của harness không xuất hiện trong API public sau build. Session/Thread có constructor private; các factory nội bộ không export ra declaration. OpenAIChat chỉ công khai constructor một object configuration, không expose tham số shared connection nội bộ.
 - **Thay đổi cách đọc:** `agent.limits()`, `session.scope()`, `session.metadata()`, `thread.scope()`, `model.profile()` là method. Không có alias property trả cùng dữ liệu. Các field metadata/scope/profile trong DTO vẫn là dữ liệu và được giữ nguyên schema.
 
 ## 20. Chữ ký và kiểu dữ liệu đầy đủ
@@ -782,7 +801,7 @@ Các phần dưới đối chiếu trực tiếp declaration hiện tại để 
 
 ## Chữ ký public của các class
 
-Các block này giữ nguyên tham số từ declaration đã build, bỏ field private/protected. Session và Thread được tạo qua Controller/Session; không có constructor public. OpenAIProvider được làm phẳng hai member kế thừa công khai `ref` và `connection`. `AgentHarness.collect()` dùng alias `StreamEvent[]` thay cho union event đã mở rộng. `OptionsFor<A>` là type hỗ trợ nội bộ, tương ứng Responses hoặc Chat options theo `A`, không phải root export.
+Các block này giữ nguyên tham số từ declaration đã build, bỏ field private/protected. Session và Thread được tạo qua Controller/Session; không có constructor public. OpenAIChat được làm phẳng hai member kế thừa công khai `ref` và `connection`. `AgentHarness.collect()` dùng alias `StreamEvent[]` thay cho union event đã mở rộng. `OptionsFor<A>` là type hỗ trợ nội bộ, tương ứng Responses hoặc Chat options theo `A`, không phải root export.
 
 ### Agent
 
@@ -1028,16 +1047,16 @@ export declare class ProfileResolver {
 }
 ```
 
-### OpenAIProvider
+### OpenAIChat
 
 ```ts
-export declare class OpenAIProvider<A extends OpenAIAPI = "responses"> extends OpenAIAdapter {
+export declare class OpenAIChat<A extends OpenAIAPI = "responses"> extends OpenAIAdapter {
     readonly options: Readonly<OptionsFor<A>>;
     readonly api: A;
-    constructor(configuration: OpenAIProviderOptions<A> & {
+    constructor(configuration: OpenAIChatOptions<A> & {
         api?: A;
     });
-    withModel(modelId: string): OpenAIProvider<A>;
+    withModel(modelId: string): OpenAIChat<A>;
     effortOptions(level: string, options: JsonObject): JsonObject;
     validate(request: ModelRequest): void;
     stream(request: ModelRequest, context: ModelCallContext): AsyncIterable<ModelChunk>;
@@ -1051,7 +1070,7 @@ export declare class OpenAIProvider<A extends OpenAIAPI = "responses"> extends O
 ### OpenAIPlugin
 
 ```ts
-export type OpenAIPluginOptions = Omit<OpenAIProviderOptions<"responses">, "model"> | Omit<OpenAIProviderOptions<"chat-completions">, "model">;
+export type OpenAIPluginOptions = Omit<OpenAIChatOptions<"responses">, "model"> | Omit<OpenAIChatOptions<"chat-completions">, "model">;
 
 export declare class OpenAIPlugin implements Plugin {
     readonly id: string;
@@ -1087,12 +1106,12 @@ export declare class LoggerPlugin implements Plugin {
 }
 ```
 
-### SqliteStoragePlugin
+### LibsqlStoragePlugin
 
 ```ts
-export declare class SqliteStoragePlugin implements Plugin {
-    readonly id = "storage.sqlite";
-    constructor(options: SqliteStorageOptions);
+export declare class LibsqlStoragePlugin implements Plugin {
+    readonly id = "storage.libsql";
+    constructor(options: LibsqlStorageOptions);
     setup(tessar: PluginContext): Promise<void>;
 }
 ```
@@ -3053,16 +3072,17 @@ export declare class FileTransport implements LogTransport {
 }
 ```
 
-### SQLite options
+### libSQL options
 
-Nguồn: [packages/sqlite/src/backend.ts](packages/sqlite/src/backend.ts).
+Nguồn: [packages/libsql/src/backend.ts](packages/libsql/src/backend.ts).
 
 ```ts
-export interface SqliteStorageOptions {
-    filename: string;
+export interface LibsqlStorageOptions {
+    database: libsql.Database;
+    namespace?: string;
 }
 
-export declare function createSqliteBackend(options: SqliteStorageOptions): Promise<StorageBackend>;
+export declare function createLibsqlBackend(options: LibsqlStorageOptions): Promise<StorageBackend>;
 ```
 
 ### PostgreSQL options
@@ -3071,9 +3091,8 @@ Nguồn: [packages/postgresql/src/database.ts](packages/postgresql/src/database.
 
 ```ts
 export interface PostgresqlStorageOptions {
-    connectionString: string;
+    pool: pg.Pool;
     schema?: string;
-    driverOptions?: Omit<PoolConfig, "connectionString">;
 }
 ```
 
@@ -3083,9 +3102,8 @@ Nguồn: [packages/mongodb/src/database.ts](packages/mongodb/src/database.ts).
 
 ```ts
 export interface MongoDBStorageOptions {
-    uri: string;
-    databaseName: string;
-    clientOptions?: MongoClientOptions;
+    database: mongodb.Db;
+    namespace?: string;
 }
 ```
 
@@ -3127,7 +3145,7 @@ export type OpenAIChatModelOptions = Omit<ChatCompletionCreateParamsStreaming, "
     n?: 1;
 };
 
-export type OpenAIProviderOptions<A extends OpenAIAPI = OpenAIAPI> = OpenAIOptions & {
+export type OpenAIChatOptions<A extends OpenAIAPI = OpenAIAPI> = OpenAIOptions & {
     model: string;
     connectionId?: string;
 } & (A extends "chat-completions" ? {
@@ -3622,6 +3640,7 @@ Source: `packages/rag/src/embedding/types.ts`. Exported as a TypeScript type onl
 
 ```ts
 interface EmbeddingModel {
+  readonly ref: Readonly<ModelRef>;
   embedDocuments(input: readonly (string | { text: string })[]): Promise<number[][]>;
   embedQuery(input: string): Promise<number[]>;
 }
@@ -3641,8 +3660,14 @@ concrete structurally compatible implementation.
 ## OpenAI embedding model (`@tessar/openai`)
 
 ```ts
-type OpenAIEmbeddingOptions = ClientOptions & Omit<EmbeddingCreateParams, "input">;
+type OpenAIEmbeddingOptions = ClientOptions & Omit<EmbeddingCreateParams, "input"> & {
+  documentOptions?: JsonObject;
+  queryOptions?: JsonObject;
+  batchSize?: number;
+  concurrency?: number;
+};
 class OpenAIEmbedding {
+  readonly ref: Readonly<ModelRef>;
   constructor(configuration: OpenAIEmbeddingOptions);
   embedDocuments(input: readonly (string | { text: string })[]): Promise<number[][]>;
   embedQuery(input: string): Promise<number[]>;
@@ -3657,7 +3682,210 @@ settings stay outside the request body. Input comes from the two methods only.
 Results are numeric vectors in input order. Explicit base64 is decoded; omitted
 fields retain SDK behavior, including its automatic transport encoding.
 Empty document arrays return []; other calls make one SDK embeddings request,
-with no implicit batching, task fields, prefixing or model inference.
+with no implicit batching, task fields, prefixing or model inference. Optional
+documentOptions/queryOptions supply explicit provider body fields per method.
+Optional batchSize splits document arrays; concurrency defaults to 1 per call.
+Both are positive safe integers, excluded from provider request bodies. Omitted
+batchSize means one request. Text and vector order are preserved. First failure
+stops new work; running requests settle before rethrowing that original error.
+No partial results, token budgeting, truncation or provider limit guessing.
 SDK exceptions propagate unchanged; malformed provider vectors/indices use
-TessarError with source provider. No public configuration properties, Agent,
+TessarError with source provider. A frozen ref exposes providerId openai and the
+configured modelId, without credentials. No Agent,
 Controller, Session or RAG runtime dependency are required.
+
+## libSQL vector storage (`@tessar/libsql/vector`)
+
+`LibsqlVectorStore` implements `VectorStore` from `@tessar/rag`. Shared types are
+type-only exports: VectorCollectionInfo, VectorRecord, VectorFilter, VectorListOptions,
+VectorDelete, VectorSearchOptions, VectorSearchResult, TextSearchOptions,
+TextSearchResult and VectorStore. The vector entry requires RAG for these and
+TessarRagError. RAG is an optional peer dependency of libSQL, installed explicitly
+by vector consumers, plus a dev dependency for build/test. The state/checkpoint
+root entry does not export vector classes and works without installing RAG.
+
+```ts
+class LibsqlVectorStore implements VectorStore {
+  constructor(options: LibsqlVectorStoreOptions);
+  insert(contents: readonly (Content | Chunk)[]): Promise<string[]>;
+  info(): Promise<VectorCollectionInfo>;
+  get(id: string): Promise<VectorRecord | null>;
+  list(options?: VectorListOptions): Promise<VectorRecord[]>;
+  search(query: string, options?: VectorSearchOptions): Promise<VectorSearchResult[]>;
+  searchBM25(query: string, options?: TextSearchOptions): Promise<TextSearchResult[]>;
+  delete(selector: VectorDelete): Promise<number>;
+  close(): Promise<void>;
+}
+```
+
+Constructor requires `database: libsql.Database` and `embedding`; optional
+`namespace` scopes tables/indexes/metadata and `collection` defaults to `default`.
+A collection is a logical group within a namespace, not a schema. The application
+owns the native database; store `close()` marks the store closed without closing
+it. It creates separate vector tables without initializing agent state.
+Existing collection model refs must match. info returns collection/model/dimensions
+(null before first successful insert). No Controller, plugin or extension.
+
+Insert accepts contents, copies/validates inputs, calls embedDocuments once,
+learns/validates output dimensions and writes atomically. IDs and UTC createdAt are automatic, stored
+persistently and returned when reading records. No caller IDs/timestamps, overloads
+or raw-vector overloads. Re-inserting duplicates creates new records.
+Empty insert/search calls do not embed. Model refs are persisted separately;
+legacy unlabelled collections reject, with no migration or re-embedding.
+
+List returns records ordered by insertion sequence, with default limit 100,
+maximum 1000 and default offset 0. Filters combine exact source URI/page and exact
+top-level scalar metadata matches. Text filters are not supported.
+Get returns null when absent; delete accepts exactly one nonempty IDs/filter
+selector and returns a count. All operations are collection-scoped. Retaining
+insert IDs or adding metadata ahead of time is not required for later discovery.
+
+Validation uses TessarRagError; native SQLite/I/O errors remain unchanged. Close
+is idempotent. A native cosine vector index is maintained transactionally per collection.
+Search accepts required text, calls embedQuery once and accepts optional `{ topK?, score_threshold?, filter? }`
+(topK defaults to 5) and returns up to topK
+`{ id, createdAt, content, score }` items sorted by descending cosine similarity
+(`1 - cosine distance`, larger is nearer, not a percentage). It uses the native
+approximate index without filters; source/metadata filters restrict records before
+topK using exact scoring over matching rows, potentially scanning a large subset.
+score_threshold is an inclusive finite cosine similarity bound (-1..1), omitted
+for no threshold. Query vectors must match dimensions, be finite and nonzero.
+searchBM25 uses native FTS5 BM25 over saved content.text with optional topK
+(default 5) and source/metadata filter before topK. Its score is -bm25 (larger is
+better), not cosine; there is no cosine threshold. Query is plain nonblank text:
+whitespace-separated segments are literal quoted phrases joined with OR, using
+FTS5's default tokenizer rather than exposing FTS grammar. Results have the same
+id/createdAt/content/score fields but a distinct TextSearchResult type and score
+semantics. Per-collection text indexes/statistics are isolated, built if missing,
+and maintained in insert/delete transactions without modifying saved records.
+No automatic re-embedding of saved data, reranking, retries or document lifecycle.
+SQLite methods return promises but perform synchronous work internally.
+
+## PostgreSQL vector storage (`@tessar/postgresql/vector`)
+
+`PostgresqlVectorStore` and `PostgresqlVectorStoreOptions` are separate from the
+root state-storage entry. Install `@tessar/postgresql`, `@tessar/rag` and `pg`
+explicitly, with `@types/pg` for TypeScript. RAG is an optional peer; state-only
+root imports do not require it.
+
+```ts
+interface PostgresqlVectorStoreOptions {
+  pool: import("pg").Pool;
+  embedding: EmbeddingModel;
+  schema?: string; // "tessar"
+  collection?: string; // "default"
+}
+```
+
+The public methods are `insert`, `info`, `get`, `list`, `delete`, `search`,
+`searchBM25`, `searchNative` and `close`, using shared RAG record/filter/search
+types for the shared operations. Constructor
+validation is synchronous; first asynchronous use initializes tables/metadata
+and rejects on database/network initialization failure. The pool is borrowed:
+closing the facade or failing initialization never calls pool.end(). Borrowed
+clients are released on success and failure. Configure native connection/TLS
+options on the pool and close it after all consumers finish.
+
+An administrator must install and enable pgvector with `CREATE EXTENSION vector;`.
+Tessar checks availability without installing it. Content/source/metadata/position
+and original vectors are retained in JSONB, with generated UUIDs/UTC timestamps.
+Model identity is saved per collection. Dimensions are null until the first
+successful insert, inferred from actual output and retained after deletion.
+Identity/dimension mismatches reject without automatic re-embedding. Provider
+calls run outside transactions; insert records, first dimensions and the native
+per-collection HNSW cosine index commit atomically.
+
+Native pgvector float32 HNSW vector indexes support at most 2000 dimensions;
+larger vectors reject without halfvec conversion or dimension reduction. Get/list
+retain original vectors. List pagination and delete selectors follow the shared
+RAG contract. Filters use exact source URI/page and top-level metadata scalar
+equality combined with AND; text filters are unsupported.
+
+`search(query, { topK = 5, score_threshold?, filter? }?)` requires nonblank text.
+Threshold is an inclusive cosine minimum in [-1, 1]. Results preserve
+id/createdAt/content and return a descending cosine score without vectors.
+Unfiltered search is approximate; filtered search scores the matching subset
+exactly before topK. Empty collections return [] without a provider call.
+No agent/context lifecycle or live remote verification is claimed. See
+[adapter setup](../packages/postgresql/README.md#independent-vector-storage).
+
+`searchBM25(query, { topK?, filter? }?)` uses `pg_search` BM25. An administrator
+must separately install the server extension and enable it in the database with
+`CREATE EXTENSION pg_search;`, following its server setup requirements. Tessar
+never installs extensions or changes server configuration. Missing pg_search
+rejects only BM25 calls, leaving CRUD/vector/native search available. Its native
+index is created/backfilled on the first BM25 call and maintains later writes.
+Initial indexing needs index creation permissions and adds latency/disk usage.
+
+`searchNative(query, { topK?, filter? }?)` uses built-in PostgreSQL text search
+with explicit `simple` configuration and `ts_rank`; no BM25 extension is needed.
+Native lookup uses a GIN index, without stemming or automatic language inference.
+Both keyword methods use nonblank plain literal OR terms, call no embedding
+model, default topK to 5 and filter source/metadata with AND before topK. Results
+contain id/createdAt/content/score without vectors. No matches return []. Native
+rank and BM25 scores use different scales, neither cosine nor percentages;
+neither keyword method accepts score_threshold. Hybrid fusion is application code.
+
+## MongoDB vector storage (`@tessar/mongodb/vector`)
+
+`MongoDBVectorStore` accepts `{ database: Db, embedding: EmbeddingModel,
+namespace?: string, collection?: string }`. Collection defaults to `"default"`;
+omitting namespace retains Tessar naming. Install `@tessar/mongodb`, `@tessar/rag`
+and `mongodb` explicitly. The root state-storage entry remains independent of
+the optional RAG peer. The application owns connecting/closing MongoClient and
+native driver options; store close only invalidates its facade, including after
+initialization failure. A replica set/sharded deployment is required for atomic
+bulk insertion, with model calls outside transactions and sessions always ended.
+
+Public methods are insert/info/get/list/delete/search/searchBM25/searchNative/close.
+Shared CRUD retains original Content/Chunk/vector data, generated UUIDs and UTC
+timestamps. Model identity is frozen per collection; dimensions come from the
+first successful insert, remain null beforehand and survive deletion. No automatic
+re-embedding is performed. Filters use source URI/page and top-level scalar
+metadata equality with AND; types are distinct and null differs from missing.
+Dynamic canonical tokens need no filterFields/indexName/dimensions options.
+Tokens exceeding 32766 bytes reject before model I/O to prevent silent index
+omission. No MongoDB query operators or text filters are exposed.
+
+`search(query, { topK = 5, score_threshold?, filter? }?)` uses native exact
+`$vectorSearch`, without inferred ANN tuning. Convert MongoDB cosine [0, 1] to
+shared [-1, 1]; optional threshold is an inclusive minimum in that shared range.
+`searchBM25(query, { topK = 5, filter? }?)` uses MongoDB Search with explicit
+BM25 similarity. MongoDB-specific `searchNative` takes the same keyword options
+and uses ordinary `$text`/textScore with language `none`, without mongot,
+stemming or language inference. Keyword methods accept plain literal OR terms,
+call no embedding model and have no score_threshold. Their score scales differ
+from cosine and each other. Filters restrict records before topK; results retain
+id/createdAt/content and descending score, without vectors.
+
+Vector/BM25 require developer-provisioned Atlas or compatible self-managed
+Search/mongot; Tessar installs no services or server configuration. CRUD/native
+text need no mongot. Tessar creates only its own collections/indexes, each search
+index lazily on its corresponding first search. Vector/BM25 queryable state is
+checked on each call: building rejects InvalidState with no hidden polling;
+incompatible definitions reject InvalidConfiguration with no automatic update.
+Native service errors propagate. Index visibility is eventual: immediate get/list
+visibility does not guarantee search-after-insert visibility.
+
+Tests use TESSAR_TEST_MONGODB_URL for ordinary storage/native text and optional
+TESSAR_TEST_MONGODB_SEARCH_URL for Search. Skips do not verify a deployment;
+no live verification claim is made here. See the
+[MongoDB adapter](../packages/mongodb/README.md#independent-vector-storage).
+
+## Compatible embedding options and reranker
+
+OpenAIChat and OpenAIChatOptions replace OpenAIProvider and OpenAIProviderOptions
+without aliases. Both Responses and Chat Completions modes retain their behavior.
+OpenAIEmbedding adds optional documentOptions/queryOptions JSON objects merged
+into their respective request bodies. They cannot override input/model/client
+settings. No task or input_type is inferred; omitted objects preserve defaults.
+The Cohere-only package is superseded by configurable compatible endpoints.
+
+OpenAIReranker from @tessar/openai takes {endpoint, apiKey, model, fetch?}.
+rerank(query, candidates, {topK = 5, score_threshold?}) accepts strings, Content,
+Chunk or results.content.text. Sends only text as model/query/documents/top_n,
+maps results[index,relevance_score] to {document: original, score}, sorts
+descending and applies the native-scale threshold. Empty arrays skip HTTP.
+HTTP failures use TessarError/RerankFailed with status details; invalid JSON
+or result shapes use InvalidData/source provider; transport errors propagate.
+No SDK dependency, automatic retries, protocol detection or RRF.

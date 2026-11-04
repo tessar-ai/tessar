@@ -1,4 +1,3 @@
-import { text } from "../../src/events/type.js";
 import { expect, it } from "vitest";
 import { streamModel } from "../../src/models/stream.js";
 import type { ModelAdapter, ModelChunk } from "../../src/models/contract.js";

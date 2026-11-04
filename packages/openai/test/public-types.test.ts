@@ -5,7 +5,7 @@ import {
   type ModelChunk,
   type ModelRequest,
 } from "@tessar/core";
-import { OpenAIProvider, OpenAIEmbedding, type OpenAIProviderOptions, type OpenAIEmbeddingOptions } from "../src/index.js";
+import { OpenAIChat, OpenAIEmbedding, type OpenAIChatOptions, type OpenAIEmbeddingOptions } from "../src/index.js";
 import type { EmbeddingModel, Content, Chunk } from "@tessar/rag";
 
 if (false) {
@@ -47,18 +47,18 @@ class OtherModel implements ModelAdapter {
 }
 
 it("infers native model options for defaults, model-ID overrides and other adapters", () => {
-  const model = new OpenAIProvider({ apiKey: "test", model: "fixture" });
+  const model = new OpenAIChat({ apiKey: "test", model: "fixture" });
   const agent = new Agent({ id: "test", model });
   expect(agent.getModel()).toBe(model);
   if (false) {
-    const configuration: OpenAIProviderOptions = {
+    const configuration: OpenAIChatOptions = {
       api: "chat-completions",
       apiKey: "test",
       model: "fixture",
       reasoning_effort: "high",
     };
-    new OpenAIProvider(configuration);
-    const chat = new OpenAIProvider({
+    new OpenAIChat(configuration);
+    const chat = new OpenAIChat({
       api: "chat-completions",
       apiKey: "test",
       model: "fixture",
@@ -72,7 +72,7 @@ it("infers native model options for defaults, model-ID overrides and other adapt
     agent.generate("hi", { model: chat, modelOptions: { max_tokens: 100 } });
     // @ts-expect-error Chat request fields are not Responses fields
     chatAgent.stream("hi", { modelOptions: { max_output_tokens: 100 } });
-    new OpenAIProvider({
+    new OpenAIChat({
       api: "chat-completions",
       apiKey: "test",
       model: "fixture",
@@ -81,7 +81,7 @@ it("infers native model options for defaults, model-ID overrides and other adapt
     });
     // @ts-expect-error API belongs to the connection, not execution request overrides
     chatAgent.stream("hi", { modelOptions: { api: "responses" } });
-    new OpenAIProvider({
+    new OpenAIChat({
       api: "chat-completions",
       apiKey: "test",
       model: "fixture",
@@ -116,8 +116,8 @@ it("infers native model options for defaults, model-ID overrides and other adapt
     // @ts-expect-error model is required by the Agent constructor
     new Agent({ id: "missing" });
     // @ts-expect-error Provider input is derived by Agent
-    new OpenAIProvider({ apiKey: "test", model: "fixture", input: "bypass" });
-    new OpenAIProvider({
+    new OpenAIChat({ apiKey: "test", model: "fixture", input: "bypass" });
+    new OpenAIChat({
       apiKey: "test",
       model: "fixture",
       // @ts-expect-error Provider-managed compaction requires a supported continuity codec

@@ -1,49 +1,22 @@
-import {
-  MongoClient,
-  MongoServerError,
-  type MongoClientOptions,
-  type ClientSession,
-} from "mongodb";
+import type { Db } from "mongodb";
 import { fail } from "@tessar/core";
-import { initializeSchema } from "./schema.js";
 
 export interface MongoDBStorageOptions {
-  uri: string;
-  databaseName: string;
-  clientOptions?: MongoClientOptions;
+  database: Db;
+  namespace?: string;
 }
 
-export async function openDatabase(options: MongoDBStorageOptions) {
-  if (!options.databaseName)
-    fail("InvalidConfiguration", "MongoDB databaseName is required");
-  const client = new MongoClient(options.uri, options.clientOptions);
-  let closePromise: Promise<void> | undefined;
-  const close = () => (closePromise ??= client.close());
-  try {
-    await client.connect();
-    const collections = await initializeSchema(client.db(options.databaseName));
-    async function transaction<T>(
-      action: (session: ClientSession) => Promise<T>,
-    ): Promise<T> {
-      const session = client.startSession();
-      try {
-        return (await session.withTransaction(() => action(session), {
-          readConcern: { level: "snapshot" },
-          writeConcern: { w: "majority" },
-          readPreference: "primary",
-        }))!;
-      } catch (error) {
-        if (error instanceof MongoServerError && error.code === 11000)
-          fail("CommitConflict", "Storage identity or revision already exists");
-        throw error;
-      } finally {
-        await session.endSession();
-      }
-    }
+export interface Database {
+  readonly database: Db;
+  readonly prefix: string;
+}
 
-    return { ...collections, transaction, close };
-  } catch (error) {
-    await close().catch(() => {});
-    throw error;
-  }
+export function openDatabase({ database, namespace }: MongoDBStorageOptions): Database {
+  if (!database || typeof database.collection !== "function" || typeof database.createCollection !== "function"
+    || typeof database.client?.startSession !== "function")
+    fail("InvalidConfiguration", "database must be a MongoDB Db");
+  if (namespace !== undefined &&
+    (typeof namespace !== "string" || !/^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(namespace)))
+    fail("InvalidConfiguration", "MongoDB namespace must be an ASCII identifier of at most 63 characters");
+  return { database, prefix: namespace === undefined ? "" : `${namespace}_` };
 }

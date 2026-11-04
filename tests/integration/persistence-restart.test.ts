@@ -1,3 +1,5 @@
+import { createTestDatabase } from "../../packages/libsql/test/database-fixture.js";
+import { removeSqliteTestDirectory as rm } from "../helpers/sqlite-cleanup.js";
 import {
   createThread,
   getThread,
@@ -5,7 +7,7 @@ import {
 import { z } from "zod";
 import { expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -22,9 +24,9 @@ import {
   type Session,
   type Plugin,
 } from "@tessar/core";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 import { AgentHarness } from "@tessar/core/testing";
-import { createSqliteBackend, SqliteStoragePlugin } from "@tessar/sqlite";
+import { createLibsqlBackend, LibsqlStoragePlugin } from "@tessar/libsql";
 
 function completion(api: string, id: number) {
   const data =
@@ -102,7 +104,7 @@ for (const api of ["responses", "chat-completions"] as const)
       baseURL = "https://fixture.test/v1",
       connectionId = "primary",
     ) {
-      const model = new OpenAIProvider({
+      const model = new OpenAIChat({
         api,
         connectionId,
         model: "fixture",
@@ -117,7 +119,7 @@ for (const api of ["responses", "chat-completions"] as const)
       const controller = new Controller({
         id: "app",
         agent: new Agent({ id: "assistant", model }),
-        plugins: [new SqliteStoragePlugin({ filename })],
+        plugins: [new LibsqlStoragePlugin({ database: createTestDatabase(filename)})],
       });
       await controller.initialize();
       return controller;
@@ -250,7 +252,7 @@ it("reopens a suspended Session with summary state and does not replay its compl
   });
   async function open(resumed = false, configurationId = "v1") {
     return AgentHarness.create({
-      backend: await createSqliteBackend({ filename }),
+      backend: await createLibsqlBackend({ database: createTestDatabase(filename)}),
       plugins: [plugin(configurationId)],
       modelScripts: resumed
         ? [{ text: "finished" }]
@@ -400,7 +402,7 @@ it.each(["endpoint", "protocol"])(
     async function open(changed = false) {
       const api =
         changed && change === "protocol" ? "chat-completions" : "responses";
-      const model = new OpenAIProvider({
+      const model = new OpenAIChat({
         api,
         connectionId: "same",
         model: "fixture",
@@ -418,7 +420,7 @@ it.each(["endpoint", "protocol"])(
         id: "app",
         agent: new Agent({ id: "app", model }),
         plugins: [
-          new SqliteStoragePlugin({ filename }),
+          new LibsqlStoragePlugin({ database: createTestDatabase(filename)}),
           {
             id: "approval",
             setup(tessar) {

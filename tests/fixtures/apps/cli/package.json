@@ -13,8 +13,9 @@
     "@tessar/core": "workspace:*",
     "@tessar/openai": "workspace:*",
     "@tessar/plugins": "workspace:*",
-    "@tessar/sqlite": "workspace:*",
-    "zod": "^4.6.7"
+    "@tessar/libsql": "workspace:*",
+    "zod": "^4.6.7",
+    "libsql": "0.5.29"
   },
   "version": "0.0.0",
   "files": [

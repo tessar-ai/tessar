@@ -12,8 +12,8 @@
     "build": "pnpm -r build",
     "build:release": "pnpm --filter \"./packages/*\" -r pack --pack-destination dist/release",
     "typecheck": "tsc --noEmit -p tsconfig.tests.json",
-    "test": "vitest run --configLoader native --pool threads --exclude tests/integration/**",
-    "test:integration": "vitest run --configLoader native --pool threads tests/integration",
+    "test": "vitest run --configLoader native --pool forks --exclude tests/integration/**",
+    "test:integration": "vitest run --configLoader native --pool forks tests/integration",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "test:storage": "node --env-file-if-exists=.env.storage node_modules/vitest/vitest.mjs run packages/postgresql/test packages/mongodb/test --configLoader native --pool threads"
   },
@@ -25,12 +25,16 @@
     "@tessar/plugins": "workspace:*",
     "@tessar/postgresql": "workspace:*",
     "@tessar/rag": "workspace:*",
-    "@tessar/sqlite": "workspace:*",
+    "@tessar/libsql": "workspace:*",
     "@tessar/typesafe": "workspace:*",
     "@types/node": "^24.0.0",
     "semver": "^7.8.5",
     "typescript": "7.0.2",
     "vitest": "5.0.4",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "libsql": "0.5.29",
+    "mongodb": "^6.21.0",
+    "pg": "^8.16.3",
+    "@types/pg": "^8.15.5"
   }
 }

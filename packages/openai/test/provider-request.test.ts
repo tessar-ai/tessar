@@ -10,7 +10,7 @@ import {
   type ModelRequest,
   normalizeInstruction,
 } from "@tessar/core";
-import { OpenAIProvider } from "../src/index.js";
+import { OpenAIChat } from "../src/index.js";
 
 type Protocol = "responses" | "chat-completions";
 function completion(api: Protocol) {
@@ -44,7 +44,7 @@ function completion(api: Protocol) {
 
 function fixture(api: Protocol, fetcher?: (body: any) => Response) {
   const sent: any[] = [];
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     api,
     apiKey: "test",
     model: "fixture",
@@ -197,7 +197,7 @@ for (const api of ["responses", "chat-completions"] as const) {
   it(`${api} prepares once per adapter call and reuses the body for SDK retries`, async () => {
     let preparations = 0;
     const sent: any[] = [];
-    const model = new OpenAIProvider({
+    const model = new OpenAIChat({
       api,
       apiKey: "test",
       model: "fixture",

@@ -1,4 +1,3 @@
-import { session as sessionHooks } from "../../src/events/type.js";
 import { expect, it } from "vitest";
 import { PluginHost } from "../../src/plugins/host.js";
 import type { HookSpec } from "../../src/events/definition.js";

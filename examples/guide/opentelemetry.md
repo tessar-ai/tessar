@@ -18,12 +18,12 @@ ignored `.env` file; set `OPENAI_MODEL` to a model your provider supports.
 
 ```ts
 import { Agent, Controller, text as textEvents } from "@tessar/core";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 import { OpenTelemetryPlugin, LangfuseAdapter } from "@tessar/opentelemetry";
 
 const agent = new Agent({
   id: "assistant",
-  model: new OpenAIProvider({
+  model: new OpenAIChat({
     apiKey: process.env.OPENAI_API_KEY!,
     model: process.env.OPENAI_MODEL!,
   }),

@@ -107,24 +107,18 @@ export class EffectService {
     input: I,
     options: { key: string },
   ): Promise<O> {
-    requireId(options.key, "effect key");
-    const parsed = definition.input.parse(input);
-    assertJson(parsed);
-    const lock = definition.id + ":" + options.key,
+    const key = requireId(options.key, "effect key");
+    const parsed = immutable(definition.input.parse(input)) as I;
+    const lock = definition.id + ":" + key,
       digest = canonicalJson({
         id: definition.id,
         version: definition.version,
         input: parsed,
       });
     const previous = this.locks.get(lock);
-    if (previous) {
-      try {
-        await previous;
-      } catch {
-        /* inspect committed outcome below */
-      }
-    }
-    const operation = this.perform(definition, parsed, options.key, digest);
+    const operation = (previous ?? Promise.resolve())
+      .catch(() => { /* Inspect committed outcome even after a failed predecessor. */ })
+      .then(() => this.perform(definition, parsed, key, digest));
     this.locks.set(lock, operation);
     try {
       return await operation;

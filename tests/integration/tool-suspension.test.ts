@@ -1,7 +1,8 @@
+import { removeSqliteTestDirectory as rm } from "../helpers/sqlite-cleanup.js";
 import { expect, it } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";

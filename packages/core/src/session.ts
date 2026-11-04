@@ -641,9 +641,13 @@ export class Session {
       input: string | MessageData | readonly MessageData[],
     ): Promise<QueuedInputReceipt> => {
       this.check();
+      if (this.controlPending)
+        fail("SessionBusy", "Session control operation is pending");
       if (!this.selection)
         fail("ThreadNotSelected", "Select or create a Thread first");
       await this.assertCurrent();
+      if (this.controlPending)
+        fail("SessionBusy", "Session control operation is pending");
       const receipt = immutable({
         id: randomIds.next("input"),
         threadId: this.selection.id,

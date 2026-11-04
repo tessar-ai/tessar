@@ -31,6 +31,17 @@ pnpm test:storage --maxWorkers 4
 These tests use generated schemas/databases and skip when their URLs are absent.
 MongoDB needs a replica set or sharded deployment supporting transactions.
 
+## Storage adapter structure
+
+Keep equivalent responsibilities in the same place across libSQL, PostgreSQL and
+MongoDB. `database.ts` declares an explicit `Database` interface and `openDatabase()`
+for the borrowed connection; `schema.ts` initializes state storage when the backend
+factory calls it. `transaction.ts` owns native commit, rollback and connection/session
+cleanup, shared by state and vector storage. State-specific error mapping remains
+separate so vector operations preserve native errors. Vector-only use must not
+initialize state tables or collections. Native fields and synchronous/asynchronous
+operations may differ; libSQL also enables foreign keys for connection integrity.
+
 ## Public API changes
 
 [API-REVIEW.md](API-REVIEW.md) records the implemented public surface for comparison
@@ -102,7 +113,7 @@ compatible published internal dependencies before attempting publication.
 
 Publish changed dependencies first and wait for their release to succeed before
 tagging dependents. For the current release, publish `core@0.1.5` first, then
-`plugins@0.1.5`, `openai@0.1.4`, `sqlite@0.1.4`, `postgresql@0.1.4` and
+`plugins@0.1.5`, `openai@0.1.4`, `libsql@0.1.4`, `postgresql@0.1.4` and
 `mongodb@0.1.4`. Packed workspace dependencies use the new Core version.
 When releasing multiple versions of the same package, finish the earlier
 release first so the `latest` npm tag cannot race backwards.
