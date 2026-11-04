@@ -29,13 +29,20 @@ it("binds queries and mutations to actual Thread scope and exposes committed tra
     }
     const rows = await thread.listStreams();
     expect(rows.items).toHaveLength(1);
-    const turns = await thread.listTurns(stream.id!);
+    const turns = await thread.listTurns();
+    expect(turns.items).toHaveLength(1);
+    expect((await thread.listTurns({ status: "completed" })).items).toHaveLength(1);
     expect(
-      (await thread.listModelAttempts(turns.items[0]!.id)).items,
+      (await thread.listModelAttempts()).items,
     ).toHaveLength(1);
     expect(
-      (await thread.listToolExecutions(turns.items[0]!.id)).items,
+      (await thread.listToolExecutions()).items,
     ).toHaveLength(0);
+    for (const method of ["listStreams", "listTurns", "listModelAttempts", "listToolExecutions"] as const) {
+      for (const invalid of ["old-id", null, [], { turnId: "old-id" }, { status: 1 }, { cursor: 1 }]) {
+        expect(() => thread[method](invalid as never)).toThrow(/optional object/);
+      }
+    }
     expect((await thread.getHistory()).items).toHaveLength(2);
     const fork = await forkThread(controller, thread.id);
     expect((await fork.getHistory()).items).toHaveLength(2);
