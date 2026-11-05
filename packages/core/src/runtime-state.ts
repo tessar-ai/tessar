@@ -1,3 +1,4 @@
+import { stream as streamEvents, input as inputEvents, model as modelEvents, text as textEvents, reasoning as reasoningEvents, tool as toolEvents, message as messageEvents } from "./events/type.js";
 import type { ErrorInfo } from "./errors.js";
 import { immutable, type JsonValue } from "./json.js";
 import type { ContentPart } from "./messages/parts.js";
@@ -7,16 +8,16 @@ export type RuntimePart = {
   readonly partIndex: number;
   readonly status: "streaming" | "completed" | "interrupted";
 } & (
-  | {
+    | {
       [K in "text" | "reasoning"]: { readonly type: K; readonly text: string };
     }["text" | "reasoning"]
-  | {
+    | {
       readonly type: "tool-call";
       readonly toolCallId?: string;
       readonly name?: string;
       readonly arguments?: import("./json.js").JsonObject;
     }
-);
+  );
 export type RuntimeDraft = Omit<MessageData, "content"> & {
   readonly content: readonly RuntimePart[];
 };
@@ -84,23 +85,23 @@ export class StateView {
   ): readonly RuntimeMessage[] {
     return this.value.messages.some((value) => value.id === message.id)
       ? this.value.messages.map((value) =>
-          value.id === message.id ? message : value,
-        )
+        value.id === message.id ? message : value,
+      )
       : [...this.value.messages, message];
   }
   consume(event: StreamEvent): RuntimeState | null {
     switch (event.type) {
-      case "stream.started":
-      case "stream.resumed":
+      case streamEvents.started:
+      case streamEvents.resumed:
         return this.update({ status: "running", interrupt: null, error: null });
-      case "input.received": {
+      case inputEvents.received: {
         let messages = this.value.messages;
         for (const message of event.payload.messages)
           if (!messages.some((value) => value.id === message.id))
             messages = [...messages, message];
         return this.update({ messages });
       }
-      case "model.start": {
+      case modelEvents.start: {
         if (event.payload.purpose === "auxiliary") return null;
         const draft = this.value.currentMessage;
         return this.update({
@@ -111,14 +112,14 @@ export class StateView {
           ),
         });
       }
-      case "text.start":
-      case "reasoning.start":
-      case "tool.call.start":
-      case "text.delta":
-      case "reasoning.delta":
-      case "text.end":
-      case "reasoning.end":
-      case "tool.call.end": {
+      case textEvents.start:
+      case reasoningEvents.start:
+      case toolEvents.call.start:
+      case textEvents.delta:
+      case reasoningEvents.delta:
+      case textEvents.end:
+      case reasoningEvents.end:
+      case toolEvents.call.end: {
         if (event.payload.purpose === "auxiliary") return null;
         const payload = event.payload;
         let draft = this.value.currentMessage;
@@ -139,7 +140,7 @@ export class StateView {
           partIndex: payload.partIndex,
         };
         let part: RuntimePart;
-        if (event.type === "tool.call.start") {
+        if (event.type === toolEvents.call.start) {
           part = {
             ...identity,
             type: "tool-call",
@@ -149,7 +150,7 @@ export class StateView {
               : {}),
             ...(event.payload.name ? { name: event.payload.name } : {}),
           };
-        } else if (event.type === "tool.call.end") {
+        } else if (event.type === toolEvents.call.end) {
           const value = event.payload;
           part = {
             ...identity,
@@ -180,7 +181,7 @@ export class StateView {
                 ? value.text
                 : "delta" in value
                   ? (previous && "text" in previous ? previous.text : "") +
-                    value.delta
+                  value.delta
                   : "",
           };
         }
@@ -192,7 +193,7 @@ export class StateView {
           messages: this.upsert(draft),
         });
       }
-      case "message.committed": {
+      case messageEvents.committed: {
         const message = event.payload.message;
         if (message.role === "assistant") {
           const draft = this.value.currentMessage;
@@ -205,7 +206,7 @@ export class StateView {
         }
         return this.update({ messages: this.upsert(message) });
       }
-      case "tool.start": {
+      case toolEvents.start: {
         const { toolExecutionId, toolCallId } = event.payload;
         const call = this.value.messages
           .flatMap((message) => message.content)
@@ -229,7 +230,7 @@ export class StateView {
           ],
         });
       }
-      case "tool.update":
+      case toolEvents.update:
         return this.update({
           tools: this.value.tools.map((tool) =>
             tool.id === event.payload.toolExecutionId
@@ -237,19 +238,19 @@ export class StateView {
               : tool,
           ),
         });
-      case "tool.end":
+      case toolEvents.end:
         return this.update({
           tools: this.value.tools.map((tool) =>
             tool.id === event.payload.toolExecutionId
               ? {
-                  ...tool,
-                  status: event.payload.status,
-                  result: event.payload.result,
-                }
+                ...tool,
+                status: event.payload.status,
+                result: event.payload.result,
+              }
               : tool,
           ),
         });
-      case "tool.error":
+      case toolEvents.error:
         return this.update({
           tools: this.value.tools.map((tool) =>
             tool.id === event.payload.toolExecutionId
@@ -257,10 +258,10 @@ export class StateView {
               : tool,
           ),
         });
-      case "model.error":
+      case modelEvents.error:
         if (event.payload.purpose === "auxiliary") return null;
         return this.update({ error: event.payload.error });
-      case "stream.suspended":
+      case streamEvents.suspended:
         return this.update({
           status: "suspended",
           interrupt: event.payload.interrupt,
@@ -270,7 +271,7 @@ export class StateView {
               : tool,
           ),
         });
-      case "stream.end": {
+      case streamEvents.end: {
         let messages = this.value.messages;
         for (const message of event.payload.output)
           if (!messages.some((value) => value.id === message.id))
@@ -282,7 +283,7 @@ export class StateView {
           error: event.payload.error,
         });
       }
-      case "stream.error":
+      case streamEvents.error:
         return this.update({
           status:
             (event.payload.persistedStatus as StreamStatus | null) ?? "failed",

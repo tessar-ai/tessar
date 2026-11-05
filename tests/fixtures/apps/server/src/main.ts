@@ -34,7 +34,7 @@ let closing = false;
 async function close() {
   if (closing) return;
   closing = true;
-  try { await tessar.close(); } finally { database?.close(); }
+  try { await tessar.shutdown(); } finally { database?.close(); }
 }
 process.stdin.on("data", () => { void close(); });
 process.stdin.on("end", () => { void close(); });

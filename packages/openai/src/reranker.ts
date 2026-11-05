@@ -1,5 +1,10 @@
 import { TessarError } from "@tessar/core";
 
+const ERROR_CODE = {
+  INVALID_CONFIGURATION: "InvalidConfiguration",
+  INVALID_DATA: "InvalidData",
+} as const;
+
 export interface OpenAIRerankerOptions {
   endpoint: string;
   apiKey: string;
@@ -26,17 +31,17 @@ export class OpenAIReranker {
 
   constructor(configuration: OpenAIRerankerOptions) {
     if (!configuration || typeof configuration !== "object")
-      throw new TessarError("InvalidConfiguration", "Reranker configuration must be an object");
+      throw new TessarError(ERROR_CODE.INVALID_CONFIGURATION, "Reranker configuration must be an object");
     for (const key of ["endpoint", "apiKey", "model"] as const)
       if (typeof configuration[key] !== "string" || !configuration[key].trim())
-        throw new TessarError("InvalidConfiguration", key + " must be a nonempty string");
+        throw new TessarError(ERROR_CODE.INVALID_CONFIGURATION, key + " must be a nonempty string");
     let url: URL;
     try { url = new URL(configuration.endpoint); }
-    catch { throw new TessarError("InvalidConfiguration", "Reranker endpoint must be an HTTP URL"); }
+    catch { throw new TessarError(ERROR_CODE.INVALID_CONFIGURATION, "Reranker endpoint must be an HTTP URL"); }
     if (!["https:", "http:"].includes(url.protocol) || url.username || url.password)
-      throw new TessarError("InvalidConfiguration", "Reranker endpoint must be an HTTP URL without credentials");
+      throw new TessarError(ERROR_CODE.INVALID_CONFIGURATION, "Reranker endpoint must be an HTTP URL without credentials");
     if (configuration.fetch !== undefined && typeof configuration.fetch !== "function")
-      throw new TessarError("InvalidConfiguration", "Reranker fetch must be a function");
+      throw new TessarError(ERROR_CODE.INVALID_CONFIGURATION, "Reranker fetch must be a function");
     this.#endpoint = configuration.endpoint;
     this.#apiKey = configuration.apiKey;
     this.#model = configuration.model;
@@ -45,21 +50,21 @@ export class OpenAIReranker {
 
   async rerank<T extends RerankDocument>(query: string, candidates: readonly T[], options: RerankOptions = {}): Promise<RerankResult<T>[]> {
     if (typeof query !== "string" || !Array.isArray(candidates))
-      throw new TessarError("InvalidData", "Rerank requires a string query and an array of candidates");
+      throw new TessarError(ERROR_CODE.INVALID_DATA, "Rerank requires a string query and an array of candidates");
     if (!options || typeof options !== "object" || Array.isArray(options))
-      throw new TessarError("InvalidData", "Rerank options must be an object");
+      throw new TessarError(ERROR_CODE.INVALID_DATA, "Rerank options must be an object");
     const { topK = 5, score_threshold } = options;
     if (!Number.isSafeInteger(topK) || topK < 1)
-      throw new TessarError("InvalidData", "topK must be a positive safe integer");
+      throw new TessarError(ERROR_CODE.INVALID_DATA, "topK must be a positive safe integer");
     if (score_threshold !== undefined && (typeof score_threshold !== "number" || !Number.isFinite(score_threshold)))
-      throw new TessarError("InvalidData", "score_threshold must be finite");
+      throw new TessarError(ERROR_CODE.INVALID_DATA, "score_threshold must be finite");
     const documents = Array.from(candidates);
     const texts = documents.map(document => {
       const text = typeof document === "string" ? document
         : document && typeof document === "object"
           ? "text" in document ? document.text : document.content?.text : undefined;
       if (typeof text !== "string")
-        throw new TessarError("InvalidData", "Rerank candidates must contain string text");
+        throw new TessarError(ERROR_CODE.INVALID_DATA, "Rerank candidates must contain string text");
       return text;
     });
     if (!documents.length) return [];
@@ -98,5 +103,5 @@ export class OpenAIReranker {
 }
 
 function invalidResponse(): never {
-  throw new TessarError("InvalidData", "Invalid rerank results", { source: "provider" });
+  throw new TessarError(ERROR_CODE.INVALID_DATA, "Invalid rerank results", { source: "provider" });
 }

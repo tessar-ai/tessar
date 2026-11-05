@@ -5,6 +5,11 @@ import type { EmbeddingCreateParams } from "openai/resources/embeddings";
 import { fail, requireId, snapshotModelOptions, TessarError, type JsonObject, type ModelRef } from "@tessar/core";
 import { clientKeys, createClient } from "./adapter.js";
 
+const ERROR_CODE = {
+  INVALID_CONFIGURATION: "InvalidConfiguration",
+  INVALID_DATA: "InvalidData",
+} as const;
+
 export type OpenAIEmbeddingOptions = ClientOptions & Omit<EmbeddingCreateParams, "input"> & {
   documentOptions?: JsonObject;
   queryOptions?: JsonObject;
@@ -24,12 +29,12 @@ export class OpenAIEmbedding {
 
   constructor(configuration: OpenAIEmbeddingOptions) {
     if (!configuration || typeof configuration !== "object" || Array.isArray(configuration))
-      fail("InvalidConfiguration", "Embedding configuration must be an object");
+      fail(ERROR_CODE.INVALID_CONFIGURATION, "Embedding configuration must be an object");
     requireId(configuration.model, "embedding model");
     for (const key of ["batchSize", "concurrency"] as const) {
       const value = configuration[key];
       if (value !== undefined && (!Number.isSafeInteger(value) || value < 1))
-        fail("InvalidConfiguration", key + " must be a positive safe integer");
+        fail(ERROR_CODE.INVALID_CONFIGURATION, key + " must be a positive safe integer");
     }
     this.#batchSize = configuration.batchSize;
     this.#concurrency = configuration.concurrency ?? 1;
@@ -51,12 +56,12 @@ export class OpenAIEmbedding {
   }
 
   async embedDocuments(input: readonly (string | { text: string })[]): Promise<number[][]> {
-    if (!Array.isArray(input)) fail("InvalidData", "Embedding documents must be an array");
+    if (!Array.isArray(input)) fail(ERROR_CODE.INVALID_DATA, "Embedding documents must be an array");
     const texts = Array.from(input, document => {
       const text = typeof document === "string" ? document
         : document && typeof document === "object" ? document.text : undefined;
       if (typeof text !== "string")
-        fail("InvalidData", "Embedding documents must be strings or objects with string text");
+        fail(ERROR_CODE.INVALID_DATA, "Embedding documents must be strings or objects with string text");
       return text;
     });
     if (!texts.length) return [];
@@ -87,7 +92,7 @@ export class OpenAIEmbedding {
   }
 
   async embedQuery(input: string): Promise<number[]> {
-    if (typeof input !== "string") fail("InvalidData", "Embedding query must be a string");
+    if (typeof input !== "string") fail(ERROR_CODE.INVALID_DATA, "Embedding query must be a string");
     return (await this.#embed(input, this.#queryOptions))[0]!;
   }
 
@@ -115,14 +120,14 @@ export class OpenAIEmbedding {
 function methodOptions(value: JsonObject | undefined): JsonObject {
   if (value === undefined) return {};
   if (!value || typeof value !== "object" || Array.isArray(value))
-    fail("InvalidConfiguration", "Embedding method options must be a JSON object");
+    fail(ERROR_CODE.INVALID_CONFIGURATION, "Embedding method options must be a JSON object");
   for (const key of ["model", "input", "documentOptions", "queryOptions", "batchSize", "concurrency", ...clientKeys])
     if (key in value) fail("UnsupportedOption", key + " is not an embedding method option");
   return snapshotModelOptions(value);
 }
 
 function invalidResponse(message: string): never {
-  throw new TessarError("InvalidData", message, { source: "provider" });
+  throw new TessarError(ERROR_CODE.INVALID_DATA, message, { source: "provider" });
 }
 
 function decodeVector(value: unknown): number[] {

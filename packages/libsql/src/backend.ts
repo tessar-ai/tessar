@@ -39,6 +39,11 @@ import {
   assertOwnership,
   createOwnership,
 } from "./ownership.js";
+
+const ERROR_CODE = {
+  INVALID_CONFIGURATION: "InvalidConfiguration",
+  COMMIT_CONFLICT: "CommitConflict",
+} as const;
 export type { LibsqlStorageOptions } from "./database.js";
 export async function createLibsqlBackend(
   options: LibsqlStorageOptions,
@@ -214,7 +219,7 @@ export async function createLibsqlBackend(
     executions: {
       page: async (kind, threadId, query) => transaction(db, () => {
         if (!recordTables.includes(kind))
-          fail("InvalidConfiguration", "Unknown record kind");
+          fail(ERROR_CODE.INVALID_CONFIGURATION, "Unknown record kind");
         const cp = checkpointRow(
           query.atCheckpointId ?? head(threadId)?.currentCheckpointId ?? "",
         );
@@ -252,7 +257,7 @@ export async function createLibsqlBackend(
         query?: { threadId?: string; atCheckpointId?: string },
       ) => transaction(db, () => {
         if (!recordTables.includes(kind))
-          fail("InvalidConfiguration", "Unknown record kind");
+          fail(ERROR_CODE.INVALID_CONFIGURATION, "Unknown record kind");
         if (query?.threadId)
           return (records(kind, query.threadId, query.atCheckpointId).find(
             (r: any) => r.id === id,
@@ -290,7 +295,7 @@ export async function createLibsqlBackend(
         transaction(db, () => {
           if (!["agent", "session"].includes(state.ownerType))
             fail(
-              "InvalidConfiguration",
+              ERROR_CODE.INVALID_CONFIGURATION,
               "Execution state must use checkpoints",
             );
           const key = ownerKey(state),
@@ -302,7 +307,7 @@ export async function createLibsqlBackend(
             (old?.revision ?? 0) !== expected ||
             state.revision !== expected + 1
           )
-            fail("CommitConflict", "Owned state revision changed");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Owned state revision changed");
           db.prepare(
             `INSERT INTO ${db.prefix}tessar_owned_states VALUES(?,?,?) ON CONFLICT(owner_key) DO UPDATE SET revision=excluded.revision,body=excluded.body`,
           ).run(key, state.revision, canonicalJson(state));
@@ -320,7 +325,7 @@ export async function createLibsqlBackend(
             .get(batch.commitId) as { fingerprint: string } | undefined;
           if (published) {
             if (published.fingerprint !== fingerprint)
-              fail("CommitConflict", "commitId payload mismatch");
+              fail(ERROR_CODE.COMMIT_CONFLICT, "commitId payload mismatch");
             return;
           }
           const old = getJson<CommitBatch>(
@@ -328,7 +333,7 @@ export async function createLibsqlBackend(
             batch.commitId,
           );
           if (old && canonicalJson(old) !== canonicalJson(batch))
-            fail("CommitConflict", "commitId payload mismatch");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "commitId payload mismatch");
           if (!old)
             db.prepare(`INSERT INTO ${db.prefix}tessar_staging VALUES(?,?,?)`).run(
               batch.commitId,
@@ -353,7 +358,7 @@ export async function createLibsqlBackend(
               prior.threadId !== request.threadId ||
               prior.revision !== request.expectedRevision + 1
             )
-              fail("CommitConflict", "Commit request mismatch");
+              fail(ERROR_CODE.COMMIT_CONFLICT, "Commit request mismatch");
             return prior;
           }
           if (request.lease.threadId !== request.threadId)
@@ -368,7 +373,7 @@ export async function createLibsqlBackend(
             batch.threadId !== request.threadId ||
             batch.expectedRevision !== request.expectedRevision
           )
-            fail("CommitConflict", "Missing staged batch");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Missing staged batch");
           if (batch.lineage) {
             const parent = head(batch.lineage.parentThreadId);
             if (
@@ -386,9 +391,9 @@ export async function createLibsqlBackend(
             old?.deleted ||
             cp.parentCheckpointId !== (old?.currentCheckpointId ?? null)
           )
-            fail("CommitConflict", "Head changed");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Head changed");
           if (checkpointRow(cp.id))
-            fail("CommitConflict", "Checkpoint ID already exists");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Checkpoint ID already exists");
           const merged = new Map<string, RecordEntry>();
           for (const kind of recordTables)
             for (const data of records(kind, batch.threadId))
@@ -401,12 +406,12 @@ export async function createLibsqlBackend(
           for (const entry of batch.records)
             merged.set(entry.kind + ":" + entry.id, entry);
           if (cp.execution && !merged.has("streams:" + cp.execution.streamId))
-            fail("CommitConflict", "Missing stream reference");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Missing stream reference");
           if (
             cp.execution?.pendingInterruptId &&
             !merged.has("interrupts:" + cp.execution.pendingInterruptId)
           )
-            fail("CommitConflict", "Missing interrupt reference");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Missing interrupt reference");
           writeCheckpoint(db, cp);
           for (const kind of recordTables)
             writeVersions(

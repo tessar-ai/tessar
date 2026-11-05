@@ -1,4 +1,6 @@
 import { fail } from "./errors.js";
+
+const INVALID_DATA = "InvalidData";
 export type JsonValue =
   | null
   | boolean
@@ -15,16 +17,16 @@ export function assertJson(
     return;
   if (typeof value === "number" && Number.isFinite(value)) return;
   if (typeof value !== "object" || parents.has(value!))
-    fail("InvalidData", "Value is not serializable JSON");
+    fail(INVALID_DATA, "Value is not serializable JSON");
   const object = value as object;
   if (
     !Array.isArray(object) &&
     Object.getPrototypeOf(object) !== Object.prototype &&
     Object.getPrototypeOf(object) !== null
   )
-    fail("InvalidData", "JSON objects must be plain data");
+    fail(INVALID_DATA, "JSON objects must be plain data");
   if (Object.getOwnPropertySymbols(object).length)
-    fail("InvalidData", "Symbol keys are not JSON");
+    fail(INVALID_DATA, "Symbol keys are not JSON");
   parents.add(object);
   if (Array.isArray(object)) {
     for (let i = 0; i < object.length; i++) assertJson(object[i], parents);
@@ -33,7 +35,7 @@ export function assertJson(
       Object.getOwnPropertyDescriptors(object),
     )) {
       if (!("value" in descriptor))
-        fail("InvalidData", "Accessors are not JSON data");
+        fail(INVALID_DATA, "Accessors are not JSON data");
       assertJson(descriptor.value, parents);
     }
   }

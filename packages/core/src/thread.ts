@@ -17,6 +17,8 @@ import type { HistoryOptions } from "./state/queries.js";
 import type { DeliveryTarget, Stream } from "./engine/delivery.js";
 import { aggregateUsage } from "./trace/usage.js";
 import type { SessionHookHandle } from "./plugins/context.js";
+
+const INVALID_CONFIGURATION = "InvalidConfiguration";
 export interface ExecutionListOptions extends PageOptions {
   status?: string;
 }
@@ -28,26 +30,26 @@ export type ThreadStreamOptions = {
   modelOptions?: JsonObject;
   limits?: Partial<StreamLimits>;
 } & (
-  | {
+    | {
       input: MessageData | readonly MessageData[];
       model: Model | ModelRef;
       initialSignal?: { persist: boolean };
       resume?: never;
       recover?: never;
     }
-  | {
+    | {
       input?: never;
       resume: { interruptId: string; value: JsonValue };
       recover?: never;
       model?: Model | ModelRef;
     }
-  | {
+    | {
       input?: never;
       resume?: never;
       recover: { streamId: string };
       model?: Model | ModelRef;
     }
-);
+  );
 export class Thread {
   readonly id: string;
   private readonly threadScope: Scope;
@@ -120,7 +122,7 @@ export class Thread {
       Object.keys(options).some((key) => !["status", "limit", "cursor"].includes(key)) ||
       (options.status !== undefined && typeof options.status !== "string") ||
       (options.cursor !== undefined && typeof options.cursor !== "string")) {
-      fail("InvalidConfiguration", "Execution lists accept an optional object with status, limit and cursor");
+      fail(INVALID_CONFIGURATION, "Execution lists accept an optional object with status, limit and cursor");
     }
     return this.query.listRecords(kind, this.id, options, this.filter);
   }
@@ -160,7 +162,7 @@ export class Thread {
     };
     if (options.input !== undefined) {
       if (options.resume || options.recover)
-        fail("InvalidConfiguration", "Choose one execution command");
+        fail(INVALID_CONFIGURATION, "Choose one execution command");
       return controller.agent.admit(
         {
           ...common,
@@ -178,7 +180,7 @@ export class Thread {
     }
     if (options.resume) {
       if (options.recover)
-        fail("InvalidConfiguration", "Choose one execution command");
+        fail(INVALID_CONFIGURATION, "Choose one execution command");
       return controller.agent.admit(
         { ...common, kind: "resume", ...options.resume, model },
         target,
@@ -191,7 +193,7 @@ export class Thread {
         target,
         prepare,
       );
-    return fail("InvalidConfiguration", "Choose input, resume or recover");
+    return fail(INVALID_CONFIGURATION, "Choose input, resume or recover");
   }
   /** @internal */ async cancelStream(
     streamId: string,

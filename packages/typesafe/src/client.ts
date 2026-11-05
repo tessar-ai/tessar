@@ -18,6 +18,8 @@ import type {
   TypeSafeResponse,
 } from "./types.js";
 
+const INVALID_CONFIGURATION = "InvalidConfiguration";
+
 export class TypeSafe {
   readonly #url: string;
   readonly #headers: Headers;
@@ -29,7 +31,7 @@ export class TypeSafe {
   constructor(options: TypeSafeOptions = {}) {
     if ("state" in options || "questions" in options)
       fail(
-        "InvalidConfiguration",
+        INVALID_CONFIGURATION,
         "Pass state and questions to generate, not the constructor",
       );
     const apiKey = requireId(
@@ -44,7 +46,7 @@ export class TypeSafe {
     try {
       url = new URL(baseURL);
     } catch {
-      fail("InvalidConfiguration", "Invalid TypeSafe baseURL");
+      fail(INVALID_CONFIGURATION, "Invalid TypeSafe baseURL");
     }
     if (
       !["http:", "https:"].includes(url.protocol) ||
@@ -54,7 +56,7 @@ export class TypeSafe {
       url.hash
     )
       fail(
-        "InvalidConfiguration",
+        INVALID_CONFIGURATION,
         "TypeSafe baseURL must be an HTTP(S) service URL",
       );
     this.#url = url.href.replace(/\/+$/, "") + "/v1/systemone";
@@ -71,11 +73,11 @@ export class TypeSafe {
       this.#timeout > 2_147_483_647
     )
       fail(
-        "InvalidConfiguration",
+        INVALID_CONFIGURATION,
         "timeout must be a positive timer duration in milliseconds",
       );
     if (!Number.isSafeInteger(this.#maxRetries) || this.#maxRetries < 0)
-      fail("InvalidConfiguration", "maxRetries must be a nonnegative integer");
+      fail(INVALID_CONFIGURATION, "maxRetries must be a nonnegative integer");
     this.#records = options.records;
   }
 
@@ -93,7 +95,7 @@ export class TypeSafe {
         typeof options.metadata !== "object" ||
         Array.isArray(options.metadata)
       )
-        fail("InvalidConfiguration", "metadata must be a JSON object");
+        fail(INVALID_CONFIGURATION, "metadata must be a JSON object");
       metadata = immutable(options.metadata);
     }
     const startedAt = new Date().toISOString(),
@@ -130,15 +132,15 @@ export class TypeSafe {
           : "completed",
         error: failed
           ? errorInfo(
-              failure,
-              options.signal?.aborted
-                ? { source: "application" }
-                : {
-                    source: "provider",
-                    providerId: "typesafe",
-                    modelId: request.model,
-                  },
-            )
+            failure,
+            options.signal?.aborted
+              ? { source: "application" }
+              : {
+                source: "provider",
+                providerId: "typesafe",
+                modelId: request.model,
+              },
+          )
           : null,
         startedAt,
         endedAt: new Date().toISOString(),

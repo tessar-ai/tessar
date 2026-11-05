@@ -11,6 +11,8 @@ import {
 } from "@tessar/rag";
 import { contentsInput, vectorsInput, invalid, keys, nonempty, object, predicate } from "./vector-validation.js";
 
+const INVALID_CONFIGURATION = "InvalidConfiguration";
+
 export interface LibsqlVectorStoreOptions extends LibsqlStorageOptions {
   collection?: string;
   embedding: EmbeddingModel;
@@ -43,7 +45,7 @@ export class LibsqlVectorStore implements VectorStore {
       this.#model = immutable(modelIdentity(options.embedding.ref));
     } catch (error) {
       if (TessarError.isInstance(error))
-        throw new TessarRagError("InvalidConfiguration", error.message, { cause: error });
+        throw new TessarRagError(INVALID_CONFIGURATION, error.message, { cause: error });
       throw error;
     }
     this.#collection = options.collection ?? "default";
@@ -70,9 +72,9 @@ export class LibsqlVectorStore implements VectorStore {
       const saved = this.#db.prepare(`SELECT model FROM ${this.#db.prefix}tessar_vector_models WHERE name=?`).get(this.#collection) as { model: string } | undefined;
       const dimensions = this.#dimensions();
       if (!saved && dimensions !== null)
-        invalid("Existing collection has no embedding model identity; automatic adoption is not supported", "InvalidConfiguration");
+        invalid("Existing collection has no embedding model identity; automatic adoption is not supported", INVALID_CONFIGURATION);
       if (saved && canonicalJson(JSON.parse(saved.model)) !== canonicalJson(this.#model))
-        invalid("Existing collection has a different embedding model", "InvalidConfiguration");
+        invalid("Existing collection has a different embedding model", INVALID_CONFIGURATION);
       this.#db.prepare(`INSERT INTO ${this.#db.prefix}tessar_vector_models(name,model) VALUES(?,?) ON CONFLICT(name) DO NOTHING`)
         .run(this.#collection, canonicalJson(this.#model));
       if (dimensions !== null) this.#ensureIndex(dimensions);
@@ -253,7 +255,7 @@ export class LibsqlVectorStore implements VectorStore {
 
   #assertModel(): void {
     if (canonicalJson(modelIdentity(this.#embedding.ref)) !== canonicalJson(this.#model))
-      invalid("Embedding model identity changed after opening the collection", "InvalidConfiguration");
+      invalid("Embedding model identity changed after opening the collection", INVALID_CONFIGURATION);
   }
 
   #ensureIndex(dimensions: number): void {

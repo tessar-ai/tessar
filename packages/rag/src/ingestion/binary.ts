@@ -1,3 +1,4 @@
+import { MIME_TYPE } from "./source.js";
 import { TessarRagError } from "../errors.js";
 
 export type ExtractedContent = {
@@ -15,7 +16,7 @@ export async function extractBinary(
 ): Promise<ExtractedContent[]> {
   signal.throwIfAborted();
   try {
-    if (mimeType === "application/pdf") {
+    if (mimeType === MIME_TYPE.PDF) {
       const result = await extractPdf(data, signal, uri);
       signal.throwIfAborted();
       return result;
@@ -23,7 +24,7 @@ export async function extractBinary(
     const source = uri === undefined ? undefined : { uri };
     if (
       mimeType ===
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      MIME_TYPE.DOCX
     ) {
       const { default: mammoth } = await import("mammoth");
       signal.throwIfAborted();
@@ -37,7 +38,7 @@ export async function extractBinary(
     }
     if (
       mimeType ===
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      MIME_TYPE.XLSX
     ) {
       const { default: readXlsxFile } = await import("read-excel-file/node");
       signal.throwIfAborted();
@@ -79,7 +80,7 @@ async function extractPdf(
   let cleanup: Promise<void> | undefined;
   const destroy = () => (cleanup ??= task.destroy());
   const onAbort = () => {
-    void destroy().catch(() => {});
+    void destroy().catch(() => { });
   };
   signal.addEventListener("abort", onAbort, { once: true });
   let failed = false;

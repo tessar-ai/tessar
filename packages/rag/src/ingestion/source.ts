@@ -6,24 +6,37 @@ import { TessarRagError } from "../errors.js";
 import type { ReadSource } from "./types.js";
 import { keys, object } from "./validation.js";
 
+export const MIME_TYPE = {
+  TEXT: "text/plain",
+  MARKDOWN: "text/markdown",
+  HTML: "text/html",
+  JSON: "application/json",
+  CSV: "text/csv",
+  PDF: "application/pdf",
+  DOCX: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  XLSX: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+} as const;
+
+const INVALID_CONFIGURATION = "InvalidConfiguration";
+
 const extensions: Record<string, string> = {
-  ".txt": "text/plain",
-  ".md": "text/markdown",
-  ".markdown": "text/markdown",
-  ".html": "text/html",
-  ".htm": "text/html",
-  ".json": "application/json",
-  ".csv": "text/csv",
-  ".pdf": "application/pdf",
+  ".txt": MIME_TYPE.TEXT,
+  ".md": MIME_TYPE.MARKDOWN,
+  ".markdown": MIME_TYPE.MARKDOWN,
+  ".html": MIME_TYPE.HTML,
+  ".htm": MIME_TYPE.HTML,
+  ".json": MIME_TYPE.JSON,
+  ".csv": MIME_TYPE.CSV,
+  ".pdf": MIME_TYPE.PDF,
   ".docx":
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    MIME_TYPE.DOCX,
+  ".xlsx": MIME_TYPE.XLSX,
 };
 const aliases: Record<string, string> = {
-  "text/x-markdown": "text/markdown",
-  "application/xhtml+xml": "text/html",
-  "text/json": "application/json",
-  "application/csv": "text/csv",
+  "text/x-markdown": MIME_TYPE.MARKDOWN,
+  "application/xhtml+xml": MIME_TYPE.HTML,
+  "text/json": MIME_TYPE.JSON,
+  "application/csv": MIME_TYPE.CSV,
 };
 const supported = new Set(Object.values(extensions));
 
@@ -50,7 +63,7 @@ export function snapshotSource(value: unknown): ReadSource {
   );
   if (variants.length !== 1)
     fail(
-      "InvalidConfiguration",
+      INVALID_CONFIGURATION,
       "Provide exactly one source: path, url, text or data",
     );
   const kind = variants[0]!;
@@ -63,7 +76,7 @@ export function snapshotSource(value: unknown): ReadSource {
     try {
       url = new URL(address);
     } catch (cause) {
-      throw new TessarRagError("InvalidConfiguration", "Invalid source URL", {
+      throw new TessarRagError(INVALID_CONFIGURATION, "Invalid source URL", {
         cause,
       });
     }
@@ -73,14 +86,14 @@ export function snapshotSource(value: unknown): ReadSource {
       url.password
     )
       fail(
-        "InvalidConfiguration",
+        INVALID_CONFIGURATION,
         "source URL must be an HTTP(S) URL without credentials",
       );
     return { url: url.href };
   }
   if (kind === "text") {
     if (typeof value.text !== "string")
-      fail("InvalidConfiguration", "source text must be a string");
+      fail(INVALID_CONFIGURATION, "source text must be a string");
     if (value.mimeType !== undefined)
       requireId(value.mimeType as string, "source MIME type");
     return {
@@ -91,7 +104,7 @@ export function snapshotSource(value: unknown): ReadSource {
     };
   }
   if (!(value.data instanceof Uint8Array))
-    fail("InvalidConfiguration", "source data must be Uint8Array");
+    fail(INVALID_CONFIGURATION, "source data must be Uint8Array");
   return {
     data: new Uint8Array(value.data),
     mimeType: requireId(value.mimeType as string, "source MIME type"),
@@ -112,7 +125,7 @@ export async function loadSource(
   if ("text" in source && source.text !== undefined)
     return {
       data: source.text,
-      mimeType: mimeOf(source.mimeType ?? "text/plain"),
+      mimeType: mimeOf(source.mimeType ?? MIME_TYPE.TEXT),
     };
   if ("data" in source && source.data !== undefined)
     return { data: source.data, mimeType: mimeOf(source.mimeType) };
@@ -152,6 +165,6 @@ export async function loadSource(
     };
   } finally {
     if (response.body && !response.body.locked)
-      await response.body.cancel().catch(() => {});
+      await response.body.cancel().catch(() => { });
   }
 }

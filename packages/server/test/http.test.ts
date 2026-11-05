@@ -4,7 +4,7 @@ import type { Tessar } from "../src/index.js";
 import { Agent, Controller } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 let server: Tessar;
-afterEach(async () => { await server?.close(); });
+afterEach(async () => { await server?.shutdown(); });
 
 test("Session and Thread routes retain SDK shapes and selection across HTTP requests", async () => {
   const host = await start(); server = host.server;

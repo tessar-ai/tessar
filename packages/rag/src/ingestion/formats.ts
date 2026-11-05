@@ -2,7 +2,9 @@ import { NodeHtmlMarkdown } from "node-html-markdown";
 import { parse } from "csv-parse/sync";
 import { fail } from "@tessar/core";
 import type { ExtractedContent } from "./binary.js";
-import type { LoadedSource } from "./source.js";
+import { MIME_TYPE, type LoadedSource } from "./source.js";
+
+const BINARY_MIME_TYPES: readonly string[] = [MIME_TYPE.PDF, MIME_TYPE.DOCX, MIME_TYPE.XLSX];
 
 function cell(value: string): string {
   return value
@@ -18,11 +20,7 @@ export async function extract(
   signal.throwIfAborted();
   const { data, mimeType, uri } = source;
   if (
-    [
-      "application/pdf",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ].includes(mimeType)
+    BINARY_MIME_TYPES.includes(mimeType)
   ) {
     if (typeof data === "string")
       fail("InvalidData", "Binary document formats require byte data");
@@ -36,13 +34,13 @@ export async function extract(
       : new TextDecoder("utf-8", { fatal: true }).decode(data);
   let result = text;
   let format: "text" | "markdown" =
-    mimeType === "text/markdown" ? "markdown" : "text";
-  if (mimeType === "application/json") JSON.parse(text);
-  if (mimeType === "text/html") {
+    mimeType === MIME_TYPE.MARKDOWN ? "markdown" : "text";
+  if (mimeType === MIME_TYPE.JSON) JSON.parse(text);
+  if (mimeType === MIME_TYPE.HTML) {
     result = NodeHtmlMarkdown.translate(text);
     format = "markdown";
   }
-  if (mimeType === "text/csv") {
+  if (mimeType === MIME_TYPE.CSV) {
     const rows = parse(text, {
       bom: true,
       skip_empty_lines: true,

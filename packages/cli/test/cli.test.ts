@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TessarCLI } from "../src/cli.js";
 import type { ScaffoldMetadata } from "../src/templates.js";
 import { defaultProjectOptions } from "../src/project-options.js";
+import { TessarError } from "@tessar/core";
 
 const metadata: ScaffoldMetadata = {
   coreVersion: "0.1.5", openaiVersion: "0.1.4", zodVersion: "^4.6.7",
@@ -25,6 +26,23 @@ async function fixture() {
   return { cwd, cli, output };
 }
 describe("CLI scaffolding", () => {
+  it("uses a CLI-specific TessarError for its own validation failures", async () => {
+    const { cli } = await fixture();
+    const error = await cli.run(["new", "../escape"]).catch(error => error);
+    expect(error).toBeInstanceOf(TessarError);
+    expect(error).toMatchObject({ name: "TessarCLIError", code: "InvalidName", source: "tessar" });
+    const command = await cli.run(["unknown"]).catch(error => error);
+    expect(command).toMatchObject({ name: "TessarCLIError", code: "InvalidArguments" });
+  });
+
+  it("preserves native filesystem failures when a generated file already exists", async () => {
+    const { cwd, cli } = await fixture();
+    await writeFile(join(cwd, "package.json"), "{}");
+    await cli.run(["g", "agent", "helper"]);
+    const error = await cli.run(["g", "agent", "helper"]).catch(error => error);
+    expect(error.code).toBe("EEXIST");
+    expect(error).not.toBeInstanceOf(TessarError);
+  });
   it("does not write files until confirmed, and cancellation leaves nothing", async () => {
     const { cwd } = await fixture();
     const cli = new TessarCLI(cwd, metadata, "0.1.0", () => {}, async () => {

@@ -4,6 +4,7 @@ import { parseArgs } from "node:util";
 import { componentFile, projectFiles, type ScaffoldMetadata } from "./templates.js";
 import { ProjectWizard } from "./project-wizard.js";
 import type { ProjectOptions } from "./project-options.js";
+import { CLI_ERROR_CODE, TessarCLIError } from "./errors.js";
 
 const help = `Usage:
   tessar new <name>
@@ -25,7 +26,7 @@ src/controllers, src/sessions or src/plugins. Existing files are never overwritt
 function validateName(name: string | undefined): asserts name is string {
   if (!name || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(name) ||
     /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/.test(name) || name.length > 100) {
-    throw new Error("Use a lowercase kebab-case name, at most 100 characters (no paths or reserved device names).");
+    throw new TessarCLIError(CLI_ERROR_CODE.INVALID_NAME, "Use a lowercase kebab-case name, at most 100 characters (no paths or reserved device names).");
   }
 }
 
@@ -53,7 +54,7 @@ export class TessarCLI {
     });
     const [command, ...rest] = positionals;
     if (command === "new") {
-      if (rest.length !== 1 || Object.keys(values).length) throw new Error("Usage: tessar new <name>");
+      if (rest.length !== 1 || Object.keys(values).length) throw new TessarCLIError(CLI_ERROR_CODE.INVALID_ARGUMENTS, "Usage: tessar new <name>");
       const name = rest[0];
       validateName(name);
       const target = join(this.cwd, name);
@@ -61,7 +62,7 @@ export class TessarCLI {
         if (error.code !== "ENOENT") throw error;
         return null;
       });
-      if (existing) throw new Error(`Target already exists: ${name}`);
+      if (existing) throw new TessarCLIError(CLI_ERROR_CODE.TARGET_EXISTS, `Target already exists: ${name}`);
       const options = await this.chooseProject(name);
       if (!options) {
         this.print("Project creation cancelled.");
@@ -73,15 +74,15 @@ export class TessarCLI {
       this.print(`Created ${name}.\n\n  cd ${name}\n  npm install\n\nCopy .env.example to .env and fill in the model and selected backend settings.\nThen run: npm start -- "Hello!"`);
       return;
     }
-    if (command !== "g" && command !== "generate") throw new Error(`Unknown command: ${command}. Run tessar --help.`);
-    if (rest.length !== 2) throw new Error("Usage: tessar generate <kind> <name>");
+    if (command !== "g" && command !== "generate") throw new TessarCLIError(CLI_ERROR_CODE.INVALID_ARGUMENTS, `Unknown command: ${command}. Run tessar --help.`);
+    if (rest.length !== 2) throw new TessarCLIError(CLI_ERROR_CODE.INVALID_ARGUMENTS, "Usage: tessar generate <kind> <name>");
     const [kind, name] = rest;
     validateName(name);
     const file = componentFile(kind!, name, values, this.metadata);
     try {
       JSON.parse(await readFile(join(this.cwd, "package.json"), "utf8"));
-    } catch {
-      throw new Error("Run generators from a project root containing a valid package.json.");
+    } catch (cause) {
+      throw new TessarCLIError(CLI_ERROR_CODE.INVALID_PROJECT, "Run generators from a project root containing a valid package.json.", { cause });
     }
     await this.write(this.cwd, file.path, file.content);
     this.print(`Created ${file.path}. Import and use it in your project.`);
@@ -100,7 +101,7 @@ export class TessarCLI {
       const resolved = await realpath(parent);
       const offset = relative(base, resolved);
       if (offset === ".." || offset.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) || isAbsolute(offset)) {
-        throw new Error(`Refusing to write outside the project: ${path}`);
+        throw new TessarCLIError(CLI_ERROR_CODE.UNSAFE_PATH, `Refusing to write outside the project: ${path}`);
       }
     }
     await writeFile(destination, content, { flag: "wx" });

@@ -1,7 +1,7 @@
 import type { Hono, Context } from "hono";
 import { errorInfo } from "@tessar/core";
 import { sessionDescriptor } from "../descriptors.js";
-import { body, query, required, bad, ROUTE_PARAM, HTTP_ERROR_MESSAGE, HTTP_STATUS, SCOPED_PAGE_QUERY_FIELDS, HTTP_ERROR_CODE } from "../http.js";
+import { body, query, required, bad, ROUTE_PARAM, HTTP_ERROR_MESSAGE, HTTP_STATUS, SCOPED_PAGE_QUERY_FIELDS, HTTP_ERROR_CODE } from "../protocol/http.js";
 import type { RuntimeRegistry } from "../runtime/runtime-registry.js";
 import type { SessionRegistry } from "../runtime/session-registry.js";
 

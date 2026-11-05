@@ -1,5 +1,5 @@
 import { bindExecutionModel } from "../models/stream.js";
-import { model as modelHooks } from "../events/type.js";
+import { model as modelHooks, stream as streamHooks, tool as toolHooks, turn as turnHooks } from "../events/type.js";
 
 import type { StreamRecord, ToolExecutionRecord } from "../trace/records.js";
 import type { Attachment } from "./delivery.js";
@@ -21,18 +21,25 @@ import type { RegistryLease } from "../plugins/registry.js";
 import type { InterruptionDefinition } from "./interrupt.js";
 import type { ControlDecision } from "../events/type.js";
 import { validateDecision } from "../events/decision.js";
-import type { ExecutionPhase, InterruptRecord } from "../state/schema.js";
+import { ExecutionPhase, type InterruptRecord } from "../state/schema.js";
+
+const EXECUTION_TRANSITION = "ExecutionTransition";
+
+const ERROR_CODE = {
+  RESUME_INCOMPATIBLE: "ResumeIncompatible",
+  INVALID_RESUME_RESPONSE: "InvalidResumeResponse",
+} as const;
 export function phaseForEvent(id: string): ExecutionPhase {
   const phases: Record<string, ExecutionPhase> = {
-    "stream.before": "BeforeTurn",
-    "tool.before": "BeforeTool",
-    "model.select": "BeforeModel",
-    "model.recover": "ModelPending",
-    "turn.decision": "TurnBoundary",
+    [streamHooks.before]: ExecutionPhase.BeforeTurn,
+    [toolHooks.before]: ExecutionPhase.BeforeTool,
+    [modelHooks.select]: ExecutionPhase.BeforeModel,
+    [modelHooks.recover]: ExecutionPhase.ModelPending,
+    [turnHooks.decision]: ExecutionPhase.TurnBoundary,
   };
   return (
     phases[id] ??
-    fail("ResumeIncompatible", "Unsupported interruption boundary")
+    fail(ERROR_CODE.RESUME_INCOMPATIBLE, "Unsupported interruption boundary")
   );
 }
 export function validateManifest(
@@ -53,17 +60,17 @@ export function validateManifest(
     const present =
       requirement.kind === "handler"
         ? registry.handlers.find(
-            (r) => r.id === requirement.id && r.version === requirement.version,
-          )
+          (r) => r.id === requirement.id && r.version === requirement.version,
+        )
         : registry.values.find(
-            (r) =>
-              r.kind === requirement.kind &&
-              r.id === requirement.id &&
-              r.version === requirement.version,
-          );
+          (r) =>
+            r.kind === requirement.kind &&
+            r.id === requirement.id &&
+            r.version === requirement.version,
+        );
     if (!present)
       fail(
-        "ResumeIncompatible",
+        ERROR_CODE.RESUME_INCOMPATIBLE,
         "Required contract is missing: " + requirement.id,
       );
     if (
@@ -72,7 +79,7 @@ export function validateManifest(
       (requirement.configurationId !== undefined &&
         present.configurationId !== requirement.configurationId)
     )
-      fail("ResumeIncompatible", "Plugin configuration/version changed");
+      fail(ERROR_CODE.RESUME_INCOMPATIBLE, "Plugin configuration/version changed");
   }
 }
 export async function validateResume(
@@ -103,9 +110,9 @@ export async function validateResume(
       registration!.pluginId !== interrupt.pluginId ||
       registration!.version !== interrupt.definitionVersion ||
       canonicalJson(tool.resumeJsonSchema) !==
-        canonicalJson(interrupt.responseSchema)
+      canonicalJson(interrupt.responseSchema)
     )
-      fail("ResumeIncompatible", "Waiting tool contract changed");
+      fail(ERROR_CODE.RESUME_INCOMPATIBLE, "Waiting tool contract changed");
     try {
       const parsed = tool.resumeSchema ? tool.resumeSchema.parse(value) : value;
       assertJson(parsed);
@@ -116,7 +123,7 @@ export async function validateResume(
       };
     } catch {
       fail(
-        "InvalidResumeResponse",
+        ERROR_CODE.INVALID_RESUME_RESPONSE,
         "Response does not satisfy tool resume schema",
       );
     }
@@ -131,7 +138,7 @@ export async function validateResume(
     binding.definition.version !== interrupt.definitionVersion
   )
     fail(
-      "ResumeIncompatible",
+      ERROR_CODE.RESUME_INCOMPATIBLE,
       "Interruption definition is missing or incompatible",
     );
   let decision: ControlDecision;
@@ -141,12 +148,12 @@ export async function validateResume(
     immutable(decision);
   } catch (error) {
     throw new TessarError(
-      "InvalidResumeResponse",
+      ERROR_CODE.INVALID_RESUME_RESPONSE,
       "Response does not satisfy interruption contract",
     );
   }
   if ((decision as ControlDecision).decision === "suspend")
-    fail("InvalidResumeResponse", "Resolver must return a resolved decision");
+    fail(ERROR_CODE.INVALID_RESUME_RESPONSE, "Resolver must return a resolved decision");
   return { interrupt, decision: immutable(decision) };
 }
 
@@ -225,12 +232,12 @@ export async function prepareRecovery(
       execution.rows(frame, "tool_executions"),
     );
     if (plan.kind === "pending-interrupt") {
-      if (request.model) await execution.commit(frame, "ExecutionTransition");
+      if (request.model) await execution.commit(frame, EXECUTION_TRANSITION);
       return frame;
     }
     frame.stream.status = "interrupted";
     if (plan.kind === "incompatible")
-      fail("ResumeIncompatible", "Invalid recovery cursor");
+      fail(ERROR_CODE.RESUME_INCOMPATIBLE, "Invalid recovery cursor");
     if (plan.kind === "model") {
       plan.attempt.status = "interrupted";
       plan.attempt.endedAt = execution.clock.now();
@@ -241,7 +248,7 @@ export async function prepareRecovery(
         message: "Provider outcome was not committed",
         retryable: true,
       };
-      await execution.commit(frame, "ExecutionTransition");
+      await execution.commit(frame, EXECUTION_TRANSITION);
       const decision = await execution.hook(frame, modelHooks.recover, {
         attemptId: plan.attempt.id,
         error: plan.attempt.error,
@@ -251,7 +258,7 @@ export async function prepareRecovery(
           "RecoveryRequired",
           "Model retry requires an explicit recovery policy",
         );
-      frame.cp.execution!.phase = "BeforeModel";
+      frame.cp.execution!.phase = ExecutionPhase.BeforeModel;
     }
     if (plan.kind === "tools") await recoverTools(frame, execution);
     frame.stream.status = "running";
@@ -324,12 +331,12 @@ async function prepareResumeFrame(
       records = await loadRecords(execution, request.threadId, interrupt.streamId);
     if (interrupt.kind !== "tool-result") {
       const eventId = cp.execution?.handlerCursor?.eventId;
-      if (!eventId) fail("ResumeIncompatible", "Missing continuation cursor");
+      if (!eventId) fail(ERROR_CODE.RESUME_INCOMPATIBLE, "Missing continuation cursor");
       try {
         validateDecision(eventId, decision);
       } catch {
         fail(
-          "InvalidResumeResponse",
+          ERROR_CODE.INVALID_RESUME_RESPONSE,
           "Resolved decision is invalid for " + eventId,
         );
       }
@@ -349,7 +356,7 @@ async function prepareResumeFrame(
         !tool ||
         canonicalJson(tool.arguments) !== interrupt.actionRef.argumentsDigest
       )
-        fail("ResumeIncompatible", "Pending operation payload changed");
+        fail(ERROR_CODE.RESUME_INCOMPATIBLE, "Pending operation payload changed");
       waitingTool = tool;
     }
     const frame = createFrame(execution, {
@@ -373,13 +380,13 @@ async function prepareResumeFrame(
     let resolved = decision;
     if (interrupt.kind === "tool-result") {
       if (!waitingTool || waitingTool.status !== "suspended")
-        fail("ResumeIncompatible", "Tool is not waiting for a response");
+        fail(ERROR_CODE.RESUME_INCOMPATIBLE, "Tool is not waiting for a response");
       waitingTool.resume = { interruptId: interrupt.id, value: value! };
       waitingTool.status = "resuming";
       position.handlerCursor = null;
-      position.phase = "BeforeTool";
+      position.phase = ExecutionPhase.BeforeTool;
     } else {
-      if (!cursor) fail("ResumeIncompatible", "Missing continuation cursor");
+      if (!cursor) fail(ERROR_CODE.RESUME_INCOMPATIBLE, "Missing continuation cursor");
       const previous = cursor.decisions.at(-2) as ControlDecision | undefined;
       resolved =
         previous && ["deny", "stop"].includes(previous.decision)

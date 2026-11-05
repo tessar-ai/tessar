@@ -16,7 +16,7 @@ test("public hooks share admitted Thread state while Session selections and queu
   runtimes = new RuntimeRegistry({ controllers: [controller] });
   const hub = new ThreadStateHub();
   await controller.initialize();
-  await controller.plugins.attach(new ObserverPlugin(store => runtimes.records.set(controller.id, store), event => hub.observe(event)));
+  await controller.plugins.attach(new ObserverPlugin(store => runtimes.records.set(controller.id, store), hub));
   expect(runtimes.records.get(controller.id)).toBeDefined();
   const a = await controller.createSession();
   const shared = await a.thread.create();
@@ -51,7 +51,7 @@ test("deletion invalidates the other Session view without choosing another Threa
   runtimes = new RuntimeRegistry({ controllers: [controller] });
   const hub = new ThreadStateHub();
   await controller.initialize();
-  await controller.plugins.attach(new ObserverPlugin(() => { }, event => hub.observe(event)));
+  await controller.plugins.attach(new ObserverPlugin(() => { }, hub));
   const a = await controller.createSession(), b = await controller.createSession();
   const shared = await a.thread.create(); await b.thread.switch(shared.id);
   hub.attach(controller.id, a); hub.attach(controller.id, b);
@@ -71,7 +71,7 @@ test("old execution frames cannot overwrite the currently admitted Thread", asyn
   const hub = new ThreadStateHub(); hub.attach(controller.id, session);
   const identity = { controllerId: controller.id, threadId: selected.id, sessionId: session.id };
   const state = { ...session.state.get(), status: "running" } as RuntimeState;
-  hub.observe(new EventEnvelope(stream.started, {}, { ...identity, streamId: "new" }));
+  hub.observe(new EventEnvelope(stream.started, {}, { ...identity, streamId: "new", handleId: "current" }));
   hub.observe(new EventEnvelope(stateChanged, { state }, { ...identity, streamId: "new", handleId: "current" }));
   hub.observe(new EventEnvelope(stateChanged, { state: { ...state, status: "failed" } }, { ...identity, streamId: "old", handleId: "old" }));
   expect((await hub.getSnapshot(controller.id, session)).status).toBe("running");
@@ -96,7 +96,7 @@ test("shared Thread viewers receive reasoning and transient tool progress withou
   const controller = new Controller({ id: crypto.randomUUID(), agent: new Agent({ id: crypto.randomUUID(), model, tools: { work } }) });
   runtimes = new RuntimeRegistry({ controllers: [controller] }); await controller.initialize();
   const hub = new ThreadStateHub();
-  await controller.plugins.attach(new ObserverPlugin(() => { }, event => hub.observe(event)));
+  await controller.plugins.attach(new ObserverPlugin(() => { }, hub));
   const a = await controller.createSession(), b = await controller.createSession(), unrelated = await controller.createSession();
   const shared = await a.thread.create(); await b.thread.switch(shared.id); await unrelated.thread.create();
   for (const session of [a, b, unrelated]) hub.attach(controller.id, session);

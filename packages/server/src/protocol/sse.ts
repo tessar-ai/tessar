@@ -1,6 +1,6 @@
 import { streamSSE } from "hono/streaming";
 import type { Context } from "hono";
-import type { EventEnvelope, RuntimeState } from "@tessar/core";
+import { stateChanged, type EventEnvelope, type RuntimeState } from "@tessar/core";
 import { safeState } from "./http.js";
 
 export type StateEvent = EventEnvelope<{ state: RuntimeState }>;
@@ -41,7 +41,7 @@ export class SseTransport {
     return streamSSE(c, async stream => {
       let sequence = 0;
       const writer = new LatestStateWriter(event => stream.writeSSE({
-        event: "state_changed", id: String(++sequence),
+        event: stateChanged, id: String(++sequence),
         data: JSON.stringify({ ...event, payload: { state: safeState(event.payload.state) } })
       }));
       const stop = () => { writer.cancel(); };

@@ -4,6 +4,11 @@ import { characterMeasure, chunkSpans } from "./chunking.js";
 import type { Chunk, Content, SplitOptions, SplitStrategy } from "./types.js";
 import { keys, object } from "./validation.js";
 
+const ERROR_CODE = {
+  INVALID_CONFIGURATION: "InvalidConfiguration",
+  INVALID_DATA: "InvalidData",
+} as const;
+
 export class DocumentSplitter {
   readonly #strategy: SplitStrategy;
   readonly #maxSize: number;
@@ -20,7 +25,7 @@ export class DocumentSplitter {
         )
       )
         throw new TessarRagError(
-          "InvalidConfiguration",
+          ERROR_CODE.INVALID_CONFIGURATION,
           "Unknown split strategy",
         );
       const overlap = options.overlap === undefined ? 0 : options.overlap;
@@ -32,15 +37,15 @@ export class DocumentSplitter {
         overlap >= options.maxSize
       )
         throw new TessarRagError(
-          "InvalidConfiguration",
+          ERROR_CODE.INVALID_CONFIGURATION,
           "Require positive integer maxSize and 0 <= overlap < maxSize",
         );
       const unit = options.unit === undefined ? "characters" : options.unit;
       if (unit !== "characters" && unit !== "tokens")
-        throw new TessarRagError("InvalidConfiguration", "Unknown split unit");
+        throw new TessarRagError(ERROR_CODE.INVALID_CONFIGURATION, "Unknown split unit");
       if (unit === "tokens" && typeof options.tokenizer?.count !== "function")
         throw new TessarRagError(
-          "InvalidConfiguration",
+          ERROR_CODE.INVALID_CONFIGURATION,
           "Token units require tokenizer.count(text)",
         );
       this.#strategy = options.strategy;
@@ -62,14 +67,14 @@ export class DocumentSplitter {
       const text = content.text;
       const measure = this.#count
         ? (start: number, end: number) => {
-            const count = this.#count!(text.slice(start, end));
-            if (!Number.isSafeInteger(count) || count < 0)
-              throw new TessarRagError(
-                "InvalidData",
-                "Tokenizer count must be a nonnegative safe integer",
-              );
-            return count;
-          }
+          const count = this.#count!(text.slice(start, end));
+          if (!Number.isSafeInteger(count) || count < 0)
+            throw new TessarRagError(
+              ERROR_CODE.INVALID_DATA,
+              "Tokenizer count must be a nonnegative safe integer",
+            );
+          return count;
+        }
         : characterMeasure(text);
       return chunkSpans(
         text,
@@ -99,7 +104,7 @@ function snapshot(value: unknown): Content {
       !["text", "markdown"].includes(content.format as string)
     )
       throw new TessarRagError(
-        "InvalidData",
+        ERROR_CODE.INVALID_DATA,
         "Content requires text and format text/markdown",
       );
     object(content.metadata, "Content metadata");
@@ -111,7 +116,7 @@ function snapshot(value: unknown): Content {
         typeof content.source.uri !== "string"
       )
         throw new TessarRagError(
-          "InvalidData",
+          ERROR_CODE.INVALID_DATA,
           "Content source URI must be a string",
         );
       if (
@@ -120,7 +125,7 @@ function snapshot(value: unknown): Content {
           (content.source.page as number) < 1)
       )
         throw new TessarRagError(
-          "InvalidData",
+          ERROR_CODE.INVALID_DATA,
           "Content source page must be a positive integer",
         );
     }

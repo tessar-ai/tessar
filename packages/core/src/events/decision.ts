@@ -1,6 +1,8 @@
 import { fail } from "../errors.js";
 import { assertJson } from "../json.js";
 
+const INVALID_HOOK_RESULT = "InvalidHookResult";
+
 const allowed: Readonly<Record<string, readonly string[]>> = {
   "stream.before": ["allow", "deny", "stop", "suspend"],
   "tool.before": ["allow", "deny", "stop", "suspend"],
@@ -26,7 +28,7 @@ export function validateDecision(name: string, result: unknown): void {
     !values.includes(value.decision) ||
     (value.reason !== undefined && typeof value.reason !== "string")
   )
-    fail("InvalidHookResult", "Unsupported decision for " + name);
+    fail(INVALID_HOOK_RESULT, "Unsupported decision for " + name);
   if (value.decision === "select") {
     const model = value.model as Record<string, unknown> | null;
     if (
@@ -40,7 +42,7 @@ export function validateDecision(name: string, result: unknown): void {
       (model.connectionId !== undefined &&
         (typeof model.connectionId !== "string" || !model.connectionId.trim()))
     )
-      fail("InvalidHookResult", "Model selection requires model identity");
+      fail(INVALID_HOOK_RESULT, "Model selection requires model identity");
   }
   if (value.decision === "suspend") {
     if (
@@ -52,13 +54,13 @@ export function validateDecision(name: string, result: unknown): void {
       (value.definitionVersion as number) < 1
     )
       fail(
-        "InvalidHookResult",
+        INVALID_HOOK_RESULT,
         "Suspension requires a registered interruption identity",
       );
     try {
       assertJson(value.payload);
     } catch {
-      fail("InvalidHookResult", "Suspension payload must be JSON");
+      fail(INVALID_HOOK_RESULT, "Suspension payload must be JSON");
     }
   }
 }

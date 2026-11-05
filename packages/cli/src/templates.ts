@@ -2,6 +2,9 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defaultProjectOptions, type ProjectOptions } from "./project-options.js";
+import { CLI_ERROR_CODE, TessarCLIError } from "./errors.js";
+
+const PACKAGE_MANIFEST = "package.json";
 
 export interface ScaffoldMetadata {
   coreVersion: string;
@@ -19,7 +22,7 @@ const templates = new URL("../templates/", import.meta.url);
 function render(path: string, values: Readonly<Record<string, string>>): string {
   return readFileSync(new URL(path, templates), "utf8").replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
     if (!Object.hasOwn(values, key) || typeof values[key] !== "string") {
-      throw new Error(`Missing template value: ${key} (${path}).`);
+      throw new TessarCLIError(CLI_ERROR_CODE.INVALID_TEMPLATE, `Missing template value: ${key} (${path}).`);
     }
     return values[key];
   });
@@ -29,7 +32,7 @@ export function projectFiles(name: string, metadata: ScaffoldMetadata, options: 
   if (typeof options.controller !== "boolean" || typeof options.session !== "boolean" ||
     !["memory", "libsql", "postgresql", "mongodb"].includes(options.backend) ||
     (!options.controller && (options.session || options.backend !== "memory"))) {
-    throw new Error("Session and storage require a Controller and a supported backend.");
+    throw new TessarCLIError(CLI_ERROR_CODE.INVALID_CONFIGURATION, "Session and storage require a Controller and a supported backend.");
   }
   const files: Record<string, string> = {};
   const root = fileURLToPath(new URL("project/", templates));
@@ -60,17 +63,17 @@ export function projectFiles(name: string, metadata: ScaffoldMetadata, options: 
       files["src/storage.ts"] = render(`composition/${options.backend}/storage.ts.tpl`, {});
       files[".env.example"] += render(`composition/${options.backend}/env.tpl`, {});
       files["README.md"] += render(`composition/${options.backend}/readme.tpl`, {});
-      const manifest = JSON.parse(files["package.json"]!);
+      const manifest = JSON.parse(files[PACKAGE_MANIFEST]!);
       const backendVersion = metadata.backendVersions[options.backend as keyof ScaffoldMetadata["backendVersions"]];
       const driver = options.backend === "postgresql" ? "pg" : options.backend;
       const driverVersion = metadata.driverVersions[driver as "libsql" | "pg" | "mongodb"];
       if (!backendVersion || !driverVersion || (options.backend === "postgresql" && !metadata.driverVersions.pgTypes)) {
-        throw new Error(`Missing dependency versions for ${options.backend}.`);
+        throw new TessarCLIError(CLI_ERROR_CODE.INVALID_CONFIGURATION, `Missing dependency versions for ${options.backend}.`);
       }
       manifest.dependencies[`@tessar/${options.backend}`] = backendVersion;
       manifest.dependencies[driver] = driverVersion;
       if (options.backend === "postgresql") manifest.devDependencies["@types/pg"] = metadata.driverVersions.pgTypes;
-      files["package.json"] = JSON.stringify(manifest, null, 2) + "\n";
+      files[PACKAGE_MANIFEST] = JSON.stringify(manifest, null, 2) + "\n";
       if (options.backend === "libsql") files[".gitignore"] += render("composition/libsql/gitignore.tpl", {});
     }
   }
@@ -78,18 +81,18 @@ export function projectFiles(name: string, metadata: ScaffoldMetadata, options: 
 }
 
 export function componentFile(kind: string, name: string, options: { type?: string; event?: string }, metadata: ScaffoldMetadata): { path: string; content: string } {
-  if (!["agent", "tool", "controller", "session", "plugin"].includes(kind)) throw new Error(`Unsupported component kind: ${kind}.`);
+  if (!["agent", "tool", "controller", "session", "plugin"].includes(kind)) throw new TessarCLIError(CLI_ERROR_CODE.INVALID_ARGUMENTS, `Unsupported component kind: ${kind}.`);
   if (kind !== "plugin" && (options.type !== undefined || options.event !== undefined)) {
-    throw new Error("--type and --event are only supported for plugins.");
+    throw new TessarCLIError(CLI_ERROR_CODE.INVALID_ARGUMENTS, "--type and --event are only supported for plugins.");
   }
   let template = `${kind}/${kind}.ts.tpl`;
   if (kind === "plugin") {
     const type = options.type ?? "basic";
-    if (!["basic", "tool", "hook", "provider", "storage", "capability"].includes(type)) throw new Error(`Unsupported plugin type: ${type}.`);
-    if (type !== "hook" && options.event !== undefined) throw new Error("--event is only supported for hook plugins.");
+    if (!["basic", "tool", "hook", "provider", "storage", "capability"].includes(type)) throw new TessarCLIError(CLI_ERROR_CODE.INVALID_ARGUMENTS, `Unsupported plugin type: ${type}.`);
+    if (type !== "hook" && options.event !== undefined) throw new TessarCLIError(CLI_ERROR_CODE.INVALID_ARGUMENTS, "--event is only supported for hook plugins.");
     if (type === "hook") {
-      if (!options.event) throw new Error("Hook plugins require --event <event>.");
-      if (!Object.hasOwn(metadata.hooks, options.event)) throw new Error(`Unsupported hook event: ${options.event}.`);
+      if (!options.event) throw new TessarCLIError(CLI_ERROR_CODE.INVALID_ARGUMENTS, "Hook plugins require --event <event>.");
+      if (!Object.hasOwn(metadata.hooks, options.event)) throw new TessarCLIError(CLI_ERROR_CODE.INVALID_ARGUMENTS, `Unsupported hook event: ${options.event}.`);
     }
     template = `plugin/${type === "hook" && metadata.hooks[options.event!] === "transformation" ? "hook-transformation" : type}.ts.tpl`;
   }

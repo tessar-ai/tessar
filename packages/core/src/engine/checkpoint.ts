@@ -1,3 +1,4 @@
+import { ExecutionPhase } from "../state/schema.js";
 import {
   checkpoint as checkpointHooks,
   message as messageHooks,
@@ -69,7 +70,7 @@ export async function commit(
   const queued = (frame.commitQueue ?? Promise.resolve()).then(() =>
     commitNow(execution, frame, cause, change),
   );
-  frame.commitQueue = queued.catch(() => {});
+  frame.commitQueue = queued.catch(() => { });
   return queued;
 }
 
@@ -180,7 +181,7 @@ export async function finish(
   error: ErrorInfo | null = null,
 ): Promise<void> {
   if (!(await closeSignals(frame, status === "completed"))) {
-    frame.cp.execution!.phase = "BeforeTurn";
+    frame.cp.execution!.phase = ExecutionPhase.BeforeTurn;
     return;
   }
   const pending = new Set<string>();

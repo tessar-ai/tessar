@@ -6,7 +6,7 @@ import Database from "libsql";
 import { LibsqlStoragePlugin } from "@tessar/libsql";
 
 const servers: Tessar[] = [];
-afterEach(async () => { await Promise.all(servers.map(server => server.close())); vi.restoreAllMocks(); });
+afterEach(async () => { await Promise.all(servers.map(server => server.shutdown())); vi.restoreAllMocks(); });
 
 export async function start(options: Partial<ConstructorParameters<typeof Tessar>[0]> = {}) {
   let resolve!: (url: string) => void;
@@ -39,8 +39,8 @@ test("auto boots and applies middleware in declaration order to built-in and cus
   order.length = 0;
   expect((await fetch(url + "/api/agents")).status).toBe(200);
   expect(order).toEqual(["one", "two", "after two", "after one"]);
-  await server.close();
-  await server.close();
+  await server.shutdown();
+  await server.shutdown();
 });
 
 test("short circuit preserves developer response", async () => {
@@ -50,7 +50,7 @@ test("short circuit preserves developer response", async () => {
   expect(await response.text()).toBe("private");
 });
 
-test("close during initialization prevents listening and disposes supplied Controller", async () => {
+test("shutdown during initialization prevents listening and disposes supplied Controller", async () => {
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
   const controller = new Controller({
@@ -60,7 +60,7 @@ test("close during initialization prevents listening and disposes supplied Contr
   });
   const server = new Tessar({ controllers: [controller], server: { port: 0 } });
   servers.push(server);
-  const closed = server.close();
+  const closed = server.shutdown();
   release();
   await closed;
   expect(controller.isReady()).toBe(false);
@@ -75,7 +75,7 @@ test("host shutdown leaves the developer database connection open", async () => 
       plugins: [new LibsqlStoragePlugin({ database })]
     });
     const { server } = await start({ agents: [], controllers: [controller] });
-    await server.close();
+    await server.shutdown();
     expect(close).not.toHaveBeenCalled();
     expect(database.prepare("SELECT 1 AS value").get()).toMatchObject({ value: 1 });
   } finally { close.mockRestore(); database.close(); }

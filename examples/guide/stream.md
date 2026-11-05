@@ -178,7 +178,7 @@ In turn 0, the model reads the prompt, reasons, and decides to call a tool. In t
 | `tool.call.start/end` | The model generates a tool call | Arguments appear only at completed end; this does not execute the tool. There is no tool.call.delta. |
 | `"tool.start"` | Model requested a tool call, execution begins | `toolCallId`, `toolExecutionId`, `startedAt` |
 | `"tool.end"` | Tool result was published | `status` (`"succeeded"` / `"failed"`), `result.content`, `startedAt`, `endedAt` |
-| `"stream.end"` | Entire execution completed | `status`, `usage.metrics`, `output`, `startedAt`, `endedAt` |
+| `"stream.end"` | Execution ended, including a failed/cancelled outcome | `status`, `error`, `usage.metrics`, `output`, `startedAt`, `endedAt` |
 | `"stream.error"` | Execution failure or consumer delivery failure | `error`, `target` (`"execution"` / `"consumer"`), available record times |
 
 Every event envelope has `timestamp`, the publication time. Lifecycle payloads

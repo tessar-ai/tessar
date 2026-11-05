@@ -32,6 +32,12 @@ import type {
   Lease,
   StorageBackend,
 } from "./storage-ports.js";
+
+const ERROR_CODE = {
+  INVALID_CONFIGURATION: "InvalidConfiguration",
+  COMMIT_CONFLICT: "CommitConflict",
+  THREAD_NOT_FOUND: "ThreadNotFound",
+} as const;
 export function createMemoryBackend(
   options: { clock?: Clock } = {},
 ): StorageBackend {
@@ -155,7 +161,7 @@ export function createMemoryBackend(
         guard();
         if (!["agent", "session"].includes(state.ownerType))
           fail(
-            "InvalidConfiguration",
+            ERROR_CODE.INVALID_CONFIGURATION,
             "Thread/stream/turn state must use checkpoint commits",
           );
         const key = ownerKey(state);
@@ -163,7 +169,7 @@ export function createMemoryBackend(
           (ownedStates.get(key)?.revision ?? 0) !== expectedRevision ||
           state.revision !== expectedRevision + 1
         )
-          fail("CommitConflict", "Owned state revision changed");
+          fail(ERROR_CODE.COMMIT_CONFLICT, "Owned state revision changed");
         ownedStates.set(key, immutable(state));
       },
     },
@@ -178,7 +184,7 @@ export function createMemoryBackend(
         guard();
         const head = heads.get(id);
         if (!head || !matchesScope(head.scope, query.scope))
-          fail("ThreadNotFound", "Thread does not match query");
+          fail(ERROR_CODE.THREAD_NOT_FOUND, "Thread does not match query");
         if (!head.deleted)
           fail("ThreadNotDeleted", "Soft-delete the thread before purging");
         const lease = leases.get(id);
@@ -258,7 +264,7 @@ export function createMemoryBackend(
         guard();
         const head = heads.get(id);
         if (!head || head.deleted || !matchesScope(head.scope, query.scope))
-          fail("ThreadNotFound", "Thread does not match query");
+          fail(ERROR_CODE.THREAD_NOT_FOUND, "Thread does not match query");
         const { binding, cursor } = historyCursor(id, options, query),
           limit = limitOf(options.limit);
         const cp = snapshots.get(
@@ -343,12 +349,12 @@ export function createMemoryBackend(
         guard();
         if (fingerprints.has(batch.commitId)) {
           if (fingerprints.get(batch.commitId) !== hash)
-            fail("CommitConflict", "commitId reused with different payload");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "commitId reused with different payload");
           return;
         }
         const prior = staged.get(batch.commitId);
         if (prior && canonicalJson(prior) !== canonicalJson(batch))
-          fail("CommitConflict", "commitId reused with different payload");
+          fail(ERROR_CODE.COMMIT_CONFLICT, "commitId reused with different payload");
         if (!prior) {
           staged.set(batch.commitId, batch);
           stagedFingerprints.set(batch.commitId, hash);
@@ -366,7 +372,7 @@ export function createMemoryBackend(
             prior.threadId !== request.threadId ||
             prior.revision !== request.expectedRevision + 1
           )
-            fail("CommitConflict", "Commit request mismatch");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Commit request mismatch");
           return prior;
         }
         if (request.lease.threadId !== request.threadId)
@@ -378,7 +384,7 @@ export function createMemoryBackend(
           batch.threadId !== request.threadId ||
           batch.expectedRevision !== request.expectedRevision
         )
-          fail("CommitConflict", "Missing staged batch");
+          fail(ERROR_CODE.COMMIT_CONFLICT, "Missing staged batch");
         if (batch.lineage) {
           const parent = heads.get(batch.lineage.parentThreadId);
           if (
@@ -387,18 +393,18 @@ export function createMemoryBackend(
             snapshots.get(batch.lineage.sourceCheckpointId)?.threadId !==
             parent.id
           )
-            fail("ThreadNotFound", "Fork source is no longer available");
+            fail(ERROR_CODE.THREAD_NOT_FOUND, "Fork source is no longer available");
         }
         const head = heads.get(batch.threadId);
         if ((head?.revision ?? 0) !== batch.expectedRevision || head?.deleted)
-          fail("CommitConflict", "Head revision changed");
+          fail(ERROR_CODE.COMMIT_CONFLICT, "Head revision changed");
         if (
           batch.checkpoint.parentCheckpointId !==
           (head?.currentCheckpointId ?? null)
         )
-          fail("CommitConflict", "Checkpoint parent mismatch");
+          fail(ERROR_CODE.COMMIT_CONFLICT, "Checkpoint parent mismatch");
         if (snapshots.has(batch.checkpoint.id))
-          fail("CommitConflict", "Checkpoint ID already published");
+          fail(ERROR_CODE.COMMIT_CONFLICT, "Checkpoint ID already published");
         const merged = new Map(
           currentRecords(batch.threadId).map((r) => [r.kind + ":" + r.id, r]),
         );
@@ -406,12 +412,12 @@ export function createMemoryBackend(
           merged.set(record.kind + ":" + record.id, record);
         const execution = batch.checkpoint.execution;
         if (execution && !merged.has("streams:" + execution.streamId))
-          fail("CommitConflict", "Execution references missing stream");
+          fail(ERROR_CODE.COMMIT_CONFLICT, "Execution references missing stream");
         if (
           execution?.pendingInterruptId &&
           !merged.has("interrupts:" + execution.pendingInterruptId)
         )
-          fail("CommitConflict", "Execution references missing interrupt");
+          fail(ERROR_CODE.COMMIT_CONFLICT, "Execution references missing interrupt");
         const cp = batch.checkpoint;
         const stream = execution
           ? (merged.get("streams:" + execution.streamId)
@@ -455,7 +461,7 @@ export function createMemoryBackend(
         const now = Date.parse(clock.now()),
           active = leases.get(request.threadId);
         if (!Number.isFinite(request.ttlMs) || request.ttlMs <= 0)
-          fail("InvalidConfiguration", "Invalid lease duration");
+          fail(ERROR_CODE.INVALID_CONFIGURATION, "Invalid lease duration");
         if (active && Date.parse(active.expiresAt) > now)
           fail("OwnerActive", "Thread has active owner");
         const fencingToken = (fences.get(request.threadId) ?? 0) + 1;
@@ -471,7 +477,7 @@ export function createMemoryBackend(
       renew: async (lease, ttlMs) => {
         assertLease(lease);
         if (!Number.isFinite(ttlMs) || ttlMs <= 0)
-          fail("InvalidConfiguration", "Invalid lease duration");
+          fail(ERROR_CODE.INVALID_CONFIGURATION, "Invalid lease duration");
         const renewed = immutable({
           ...lease,
           expiresAt: new Date(Date.parse(clock.now()) + ttlMs).toISOString(),

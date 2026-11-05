@@ -43,6 +43,11 @@ import {
 import { decode, mongoPage, scopeFilter, scopeTokens } from "./queries.js";
 import { createRecordStore } from "./records.js";
 
+const ERROR_CODE = {
+  COMMIT_CONFLICT: "CommitConflict",
+  THREAD_NOT_FOUND: "ThreadNotFound",
+} as const;
+
 const kinds = [
   "streams",
   "turns",
@@ -84,8 +89,8 @@ export async function createMongoDBBackend(
   ) {
     const row = await cpRow(
       atCheckpointId ??
-        (await head(threadId, session))?.currentCheckpointId ??
-        "",
+      (await head(threadId, session))?.currentCheckpointId ??
+      "",
       session,
     );
     return row?.threadId === threadId ? row : null;
@@ -171,7 +176,7 @@ export async function createMongoDBBackend(
             (old?.revision ?? 0) !== expected ||
             value.revision !== expected + 1
           )
-            fail("CommitConflict", "Owned state revision changed");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Owned state revision changed");
           await owned.replaceOne(
             { _id: id },
             { _id: id, body: canonicalJson(value) },
@@ -211,7 +216,7 @@ export async function createMongoDBBackend(
           );
           const info = await head(id, session);
           if (!info || !matchesScope(info.scope, query.scope))
-            fail("ThreadNotFound", "Thread does not match query");
+            fail(ERROR_CODE.THREAD_NOT_FOUND, "Thread does not match query");
           if (!info.deleted)
             fail("ThreadNotDeleted", "Soft-delete the thread before purging");
           if (!free.matchedCount || info.activeStreamId)
@@ -248,9 +253,9 @@ export async function createMongoDBBackend(
       list: (threadId) =>
         transaction(db, async (session) => {
           const rows = await checkpoints
-              .find({ threadId }, { session })
-              .sort({ revision: 1 })
-              .toArray(),
+            .find({ threadId }, { session })
+            .sort({ revision: 1 })
+            .toArray(),
             result: Checkpoint[] = [];
           for (const row of rows)
             result.push(await hydrateCheckpoint(versions, row, session));
@@ -277,14 +282,14 @@ export async function createMongoDBBackend(
         transaction(db, async (session) => {
           const info = await head(threadId, session);
           if (!info || info.deleted || !matchesScope(info.scope, query.scope))
-            fail("ThreadNotFound", "Thread does not match query");
+            fail(ERROR_CODE.THREAD_NOT_FOUND, "Thread does not match query");
           const { binding, cursor } = historyCursor(threadId, options, query),
             limit = limitOf(options.limit);
           const cp = await recordCheckpoint(
             threadId,
             cursor?.checkpointId ??
-              options.atCheckpointId ??
-              info.currentCheckpointId,
+            options.atCheckpointId ??
+            info.currentCheckpointId,
             session,
           );
           if (!cp) fail("CheckpointNotFound", "No checkpoint for history");
@@ -311,11 +316,11 @@ export async function createMongoDBBackend(
             revision: cp.revision,
             nextCursor: begin
               ? encodeCursor({
-                  v: 1,
-                  binding,
-                  checkpointId: cp._id,
-                  end: begin,
-                })
+                v: 1,
+                binding,
+                checkpointId: cp._id,
+                end: begin,
+              })
               : null,
           };
         }),
@@ -355,12 +360,12 @@ export async function createMongoDBBackend(
           );
           return cp
             ? readVersions<RecordTypes[K]>(
-                versions,
-                kind,
-                threadId,
-                cp.revision,
-                session,
-              )
+              versions,
+              kind,
+              threadId,
+              cp.revision,
+              session,
+            )
             : [];
         }),
       get: <K extends RecordKind>(
@@ -373,18 +378,18 @@ export async function createMongoDBBackend(
           if (query?.threadId || query?.atCheckpointId) {
             const cp = query.threadId
               ? await recordCheckpoint(
-                  query.threadId,
-                  query.atCheckpointId,
-                  session,
-                )
+                query.threadId,
+                query.atCheckpointId,
+                session,
+              )
               : await cpRow(query.atCheckpointId!, session);
             return cp
               ? decode<RecordTypes[K]>(
-                  await versions.findOne(
-                    { ...interval(cp.threadId, kind, cp.revision), id },
-                    { session },
-                  ),
-                )
+                await versions.findOne(
+                  { ...interval(cp.threadId, kind, cp.revision), id },
+                  { session },
+                ),
+              )
               : null;
           }
           for await (const row of versions.find(
@@ -413,7 +418,7 @@ export async function createMongoDBBackend(
             (await staging.findOne({ _id: batch.commitId }, { session }));
           if (old) {
             if (old.fingerprint !== fingerprint)
-              fail("CommitConflict", "commitId payload mismatch");
+              fail(ERROR_CODE.COMMIT_CONFLICT, "commitId payload mismatch");
             return;
           }
           const { messages, ...state } = batch.checkpoint.state;
@@ -468,7 +473,7 @@ export async function createMongoDBBackend(
               prior.threadId !== request.threadId ||
               prior.revision !== request.expectedRevision + 1
             )
-              fail("CommitConflict", "Commit request mismatch");
+              fail(ERROR_CODE.COMMIT_CONFLICT, "Commit request mismatch");
             return prior;
           }
           if (request.lease.threadId !== request.threadId)
@@ -484,7 +489,7 @@ export async function createMongoDBBackend(
             batch.threadId !== request.threadId ||
             batch.expectedRevision !== request.expectedRevision
           )
-            fail("CommitConflict", "Missing staged batch");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Missing staged batch");
           const messages = (
             await pieces
               .find({ commitId: batch.commitId, kind: "messages" }, { session })
@@ -509,7 +514,7 @@ export async function createMongoDBBackend(
               session,
             );
             if (!parent || parent.deleted || source?.threadId !== parent.id)
-              fail("ThreadNotFound", "Fork source is no longer available");
+              fail(ERROR_CODE.THREAD_NOT_FOUND, "Fork source is no longer available");
           }
           const old = await head(batch.threadId, session);
           if (
@@ -517,9 +522,9 @@ export async function createMongoDBBackend(
             old?.deleted ||
             cp.parentCheckpointId !== (old?.currentCheckpointId ?? null)
           )
-            fail("CommitConflict", "Head changed");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Head changed");
           if (await cpRow(cp.id, session))
-            fail("CommitConflict", "Checkpoint ID already exists");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Checkpoint ID already exists");
           const merged = new Map<string, RecordEntry>();
           for (const entry of records)
             merged.set(key(entry.kind, entry.id), entry);
@@ -531,22 +536,22 @@ export async function createMongoDBBackend(
             return entry
               ? (entry.data as RecordTypes[K])
               : decode<RecordTypes[K]>(
-                  await versions.findOne(
-                    { threadId: batch!.threadId, kind, id, toRevision: null },
-                    { session },
-                  ),
-                );
+                await versions.findOne(
+                  { threadId: batch!.threadId, kind, id, toRevision: null },
+                  { session },
+                ),
+              );
           }
           const stream = cp.execution
             ? await record("streams", cp.execution.streamId)
             : null;
           if (cp.execution && !stream)
-            fail("CommitConflict", "Missing stream reference");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Missing stream reference");
           if (
             cp.execution?.pendingInterruptId &&
             !(await record("interrupts", cp.execution.pendingInterruptId))
           )
-            fail("CommitConflict", "Missing interrupt reference");
+            fail(ERROR_CODE.COMMIT_CONFLICT, "Missing interrupt reference");
           await writeCheckpoint(checkpoints, versions, cp, session);
           for (const kind of kinds)
             await writeVersions(

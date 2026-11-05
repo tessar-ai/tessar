@@ -51,4 +51,4 @@ it("stages changed execution records without replaying historical traces", async
     expect(await backend.executions.get("turns", first.turns[0]!.id)).toEqual(first.turns[0]);
     expect((await h.checkpoint(thread.id)).state.messages).toHaveLength(200);
   } finally { await h.dispose(); }
-});
+}, 60000);

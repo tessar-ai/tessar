@@ -35,6 +35,11 @@ import {
   writeCheckpoint,
   hydrate,
 } from "./versions.js";
+
+const ERROR_CODE = {
+  COMMIT_CONFLICT: "CommitConflict",
+  THREAD_NOT_FOUND: "ThreadNotFound",
+} as const;
 export type { PostgresqlStorageOptions } from "./database.js";
 
 export async function createPostgresqlBackend(
@@ -97,7 +102,7 @@ export async function createPostgresqlBackend(
       atomicPublish: true,
       coordination: "multi-process",
     },
-    close: async () => {},
+    close: async () => { },
     sessions: {
       get: (id, query = {}) =>
         storageTransaction(db, async (client) => {
@@ -188,7 +193,7 @@ export async function createPostgresqlBackend(
               (old?.revision ?? 0) !== expected ||
               state.revision !== expected + 1
             )
-              fail("CommitConflict", "Owned state revision changed");
+              fail(ERROR_CODE.COMMIT_CONFLICT, "Owned state revision changed");
             await client.query(
               `INSERT INTO ${table("owned_states")}(owner_key,revision,body) VALUES($1,$2,$3) ON CONFLICT(owner_key) DO UPDATE SET revision=excluded.revision,body=excluded.body`,
               [key, state.revision, canonicalJson(state)],
@@ -235,7 +240,7 @@ export async function createPostgresqlBackend(
           async (client) => {
             const info = await head(client, id);
             if (!info || !matchesScope(info.scope, query.scope))
-              fail("ThreadNotFound", "Thread does not match query");
+              fail(ERROR_CODE.THREAD_NOT_FOUND, "Thread does not match query");
             if (!info.deleted)
               fail("ThreadNotDeleted", "Soft-delete the thread before purging");
             const active = await client.query(
@@ -309,7 +314,7 @@ export async function createPostgresqlBackend(
         storageTransaction(db, async (client) => {
           const info = await head(client, threadId);
           if (!info || info.deleted || !matchesScope(info.scope, query.scope))
-            fail("ThreadNotFound", "Thread does not match query");
+            fail(ERROR_CODE.THREAD_NOT_FOUND, "Thread does not match query");
           const { binding, cursor } = historyCursor(threadId, options, query),
             limit = limitOf(options.limit);
           const { rows } = await client.query(
@@ -317,8 +322,8 @@ export async function createPostgresqlBackend(
             [
               threadId,
               cursor?.checkpointId ??
-                options.atCheckpointId ??
-                info.currentCheckpointId,
+              options.atCheckpointId ??
+              info.currentCheckpointId,
             ],
           );
           const cp = rows[0];
@@ -378,8 +383,8 @@ export async function createPostgresqlBackend(
           const cp = await checkpoint(
             client,
             query.atCheckpointId ??
-              (await head(client, threadId))?.currentCheckpointId ??
-              "",
+            (await head(client, threadId))?.currentCheckpointId ??
+            "",
           );
           if (!cp || cp.threadId !== threadId)
             fail("CheckpointNotFound", "No checkpoint for records");
@@ -420,7 +425,7 @@ export async function createPostgresqlBackend(
             );
             if (prior.rows[0]) {
               if (prior.rows[0].fingerprint !== fingerprint)
-                fail("CommitConflict", "commitId payload mismatch");
+                fail(ERROR_CODE.COMMIT_CONFLICT, "commitId payload mismatch");
               return;
             }
             await client.query(
@@ -466,7 +471,7 @@ export async function createPostgresqlBackend(
                 prior.threadId !== request.threadId ||
                 prior.revision !== request.expectedRevision + 1
               )
-                fail("CommitConflict", "Commit request mismatch");
+                fail(ERROR_CODE.COMMIT_CONFLICT, "Commit request mismatch");
               return prior;
             }
             if (request.lease.threadId !== request.threadId)
@@ -482,14 +487,14 @@ export async function createPostgresqlBackend(
               batch.threadId !== request.threadId ||
               batch.expectedRevision !== request.expectedRevision
             )
-              fail("CommitConflict", "Missing staged batch");
+              fail(ERROR_CODE.COMMIT_CONFLICT, "Missing staged batch");
             if (batch.lineage) {
               // A stage inserted after discovery must be retried with the source lock.
               if (
                 staged?.lineage?.parentThreadId !== batch.lineage.parentThreadId
               )
                 fail(
-                  "CommitConflict",
+                  ERROR_CODE.COMMIT_CONFLICT,
                   "Fork staging changed; retry publication",
                 );
               const parent = await head(client, batch.lineage.parentThreadId),
@@ -498,7 +503,7 @@ export async function createPostgresqlBackend(
                   batch.lineage.sourceCheckpointId,
                 );
               if (!parent || parent.deleted || source?.threadId !== parent.id)
-                fail("ThreadNotFound", "Fork source is no longer available");
+                fail(ERROR_CODE.THREAD_NOT_FOUND, "Fork source is no longer available");
             }
             const old = await head(client, batch.threadId),
               cp = batch.checkpoint;
@@ -507,7 +512,7 @@ export async function createPostgresqlBackend(
               old?.deleted ||
               cp.parentCheckpointId !== (old?.currentCheckpointId ?? null)
             )
-              fail("CommitConflict", "Head changed");
+              fail(ERROR_CODE.COMMIT_CONFLICT, "Head changed");
             const referenced = async <K extends RecordKind>(
               kind: K,
               id: string,
@@ -518,21 +523,21 @@ export async function createPostgresqlBackend(
               return entry
                 ? (entry.data as RecordTypes[K])
                 : get<RecordTypes[K]>(
-                    client,
-                    `SELECT body FROM ${table(kind)} WHERE thread_id=$1 AND id=$2 AND to_revision IS NULL`,
-                    [cp.threadId, id],
-                  );
+                  client,
+                  `SELECT body FROM ${table(kind)} WHERE thread_id=$1 AND id=$2 AND to_revision IS NULL`,
+                  [cp.threadId, id],
+                );
             };
             const stream = cp.execution
               ? await referenced("streams", cp.execution.streamId)
               : null;
             if (cp.execution && !stream)
-              fail("CommitConflict", "Missing stream reference");
+              fail(ERROR_CODE.COMMIT_CONFLICT, "Missing stream reference");
             if (
               cp.execution?.pendingInterruptId &&
               !(await referenced("interrupts", cp.execution.pendingInterruptId))
             )
-              fail("CommitConflict", "Missing interrupt reference");
+              fail(ERROR_CODE.COMMIT_CONFLICT, "Missing interrupt reference");
             await writeCheckpoint(db, client, cp);
             for (const kind of recordTables)
               await writeVersions(

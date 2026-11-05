@@ -44,7 +44,7 @@ const health: RouteHandler = c => c.json({ok:true});
 const middleware: MiddlewareHandler = async (_, next) => { await next(); };
 const host = new Tessar({ agents: [new Agent({id:"packed",model:new ScriptedProvider([])})], server:{port:0,
   routes:[registerRoute("/health", {method:"GET",handler:health})], middlewares:[registerMiddleware("*",middleware)]} });
-await host.close();
+await host.shutdown();
 `);
     await execute(process.execPath, [resolve("node_modules/typescript/bin/tsc"), "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2023", "--module", "NodeNext", "usage.ts"], { cwd: project, windowsHide: true });
     await execute(process.execPath, ["usage.ts"], { cwd: project, windowsHide: true, timeout: 10000 });
