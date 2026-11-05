@@ -1,3 +1,7 @@
+import { Hono } from "hono";
+import { createAdaptorServer } from "@hono/node-server";
+import { TessarServer } from "@tessar/server/hono";
+import type { Server } from "node:http";
 import Database from "libsql";
 import { appendFileSync } from "node:fs";
 import { z } from "zod";
@@ -30,11 +34,33 @@ const tessar = new Tessar({ controllers: [controller], server: {
   routes: [registerRoute("/calls", { method: "GET", handler: c => c.json({ count: model.calls.length }) })],
 } });
 
+const app = new Hono();
+const adapter = new TessarServer({ app, tessar });
+let listener: Server | undefined;
+try {
+  await adapter.init();
+  listener = createAdaptorServer({ fetch: app.fetch, overrideGlobalObjects: false }) as Server;
+  await new Promise<void>((resolve, reject) => {
+    listener!.once("error", reject);
+    listener!.listen(tessar.server.port, "127.0.0.1", resolve);
+  });
+  const address = listener.address();
+  if (address && typeof address !== "string") console.log(`Tessar listening at http://127.0.0.1:${address.port}`);
+} catch (error) {
+  console.error(error); process.exitCode = 1;
+  await adapter.shutdown(); await tessar.shutdown();
+}
 let closing = false;
 async function close() {
   if (closing) return;
   closing = true;
-  try { await tessar.shutdown(); } finally { database?.close(); }
+  try {
+    await adapter.shutdown();
+    if (listener?.listening) await new Promise<void>((resolve, reject) => {
+      listener!.close(error => error ? reject(error) : resolve()); listener!.closeAllConnections();
+    });
+    await tessar.shutdown();
+  } finally { database?.close(); }
 }
 process.stdin.on("data", () => { void close(); });
 process.stdin.on("end", () => { void close(); });

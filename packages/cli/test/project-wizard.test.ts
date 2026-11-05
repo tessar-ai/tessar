@@ -1,6 +1,6 @@
 import { PassThrough, Readable } from "node:stream";
 import { describe, expect, it } from "vitest";
-import { ProjectWizard } from "../src/project-wizard.js";
+import { ProjectWizard } from "../src/scaffolding/project-wizard.js";
 
 async function choose(answers: string) {
   const output = new PassThrough();

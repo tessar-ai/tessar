@@ -155,7 +155,7 @@ Install the packages your application uses:
 | [`@tessar/rag`](packages/rag/README.md)               | Independent document reading and structure-aware chunking                      |
 | [`@tessar/opentelemetry`](packages/opentelemetry/README.md)     | OTLP tracing with Langfuse and Laminar adapters                 |
 | [`@tessar/libsql`](packages/libsql/README.md)         | State/checkpoint storage using a borrowed libSQL database; optional `/vector` entry for vector/BM25 search                 |
-| [`@tessar/server`](packages/server/README.md)         | Optional standalone HTTP/SSE host for Agents and Controllers |
+| [`@tessar/server`](packages/server/README.md)         | Runtime registration, standalone HTTP/SSE and Express/Hono adapters |
 | [`@tessar/postgresql`](packages/postgresql/README.md) | PostgreSQL persistence                                                         |
 | [`@tessar/mongodb`](packages/mongodb/README.md)       | MongoDB persistence                                                            |
 

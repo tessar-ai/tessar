@@ -3,7 +3,7 @@ import { start } from "./helpers.js";
 import type { Tessar } from "../src/index.js";
 import { Agent, Controller } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
-let server: Tessar;
+let server: { shutdown(): Promise<void> };
 afterEach(async () => { await server?.shutdown(); });
 
 test("Session and Thread routes retain SDK shapes and selection across HTTP requests", async () => {

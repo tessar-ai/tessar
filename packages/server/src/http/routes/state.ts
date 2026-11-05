@@ -1,10 +1,10 @@
 import { EventEnvelope, stateChanged } from "@tessar/core";
 import type { Hono } from "hono";
-import type { SessionRegistry } from "../runtime/session-registry.js";
-import type { ThreadStateHub } from "../runtime/thread-state-hub.js";
-import type { SseTransport } from "../protocol/sse.js";
+import type { SessionRegistry } from "../../runtime/session-registry.js";
+import type { ThreadStateHub } from "../../runtime/thread-state-hub.js";
+import type { SseTransport } from "../sse.js";
 import { S } from "./sessions.js";
-import { safeState, ROUTE_PARAM } from "../protocol/http.js";
+import { safeState, ROUTE_PARAM } from "../protocol.js";
 
 export function registerState(app: Hono, sessions: () => SessionRegistry, hub: ThreadStateHub, transport: SseTransport) {
   app.get(S + "/state", async c => c.json(safeState(await hub.getSnapshot(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!,

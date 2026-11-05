@@ -1,6 +1,6 @@
 import type { Session, SessionOptions } from "@tessar/core";
 import type { RuntimeRegistry } from "./runtime-registry.js";
-import { required } from "../protocol/http.js";
+import { required } from "../http/protocol.js";
 
 export class SessionRegistry {
   private readonly sessions = new Map<string, Promise<Session>>();

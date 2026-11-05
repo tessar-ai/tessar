@@ -1,7 +1,7 @@
 import { TessarError, errorInfo, MessageCodec, normalizeContent, normalizeScope, type ErrorInfo, type RuntimeState } from "@tessar/core";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { TessarServerError } from "../errors.js";
+import { TessarServerError, SERVER_ERROR_CODE } from "../errors.js";
 
 export const HTTP_STATUS = {
   CREATED: 201,
@@ -53,7 +53,8 @@ const ERROR_STATUS_BY_CODE = new Map<string, ContentfulStatusCode>([
     "UnsupportedBoundary", "UnsupportedModelSelection", "UnsupportedOption",
   ].map(code => [code, HTTP_STATUS.BAD_REQUEST] as const),
   ...[
-    HTTP_ERROR_CODE.NOT_FOUND, "CheckpointNotFound", "InterruptNotFound", "StreamNotFound", "ThreadNotFound",
+    HTTP_ERROR_CODE.NOT_FOUND, SERVER_ERROR_CODE.AGENT_NOT_FOUND, SERVER_ERROR_CODE.CONTROLLER_NOT_FOUND,
+    "CheckpointNotFound", "InterruptNotFound", "StreamNotFound", "ThreadNotFound",
   ].map(code => [code, HTTP_STATUS.NOT_FOUND] as const),
   ...[
     HTTP_ERROR_CODE.COMMIT_CONFLICT, "AgentAlreadyBound", "AlreadyResumed", "AlreadyTerminal", "Cancelled",
@@ -63,7 +64,7 @@ const ERROR_STATUS_BY_CODE = new Map<string, ContentfulStatusCode>([
     "ThreadReferenced", "ThreadScopeMismatch", "UnsafeForkPoint",
   ].map(code => [code, HTTP_STATUS.CONFLICT] as const),
   ...[
-    "ControllerNotReady", "Disposed", "MissingModel", "MissingProvider", "StorageUnavailable",
+    "ControllerNotReady", SERVER_ERROR_CODE.DISPOSED, "MissingModel", "MissingProvider", "StorageUnavailable",
   ].map(code => [code, HTTP_STATUS.SERVICE_UNAVAILABLE] as const),
 ]);
 

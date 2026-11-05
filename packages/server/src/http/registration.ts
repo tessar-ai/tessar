@@ -1,16 +1,9 @@
-import { TessarServerError } from "./errors.js";
-import type { MiddlewareHandler, MiddlewareRegistration, RouteRegistration } from "./types.js";
+import { fields, invalid } from "../runtime/validation.js";
+import type { MiddlewareHandler, MiddlewareRegistration, RouteRegistration } from "../types.js";
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
 const ROUTE_FIELDS = ["method", "handler"];
 
-export function invalid(message: string): never {
-  throw new TessarServerError("InvalidConfiguration", message);
-}
-export function fields(value: unknown, allowed: readonly string[]): void {
-  if (!value || typeof value !== "object" || Array.isArray(value) ||
-    Object.keys(value).some(key => !allowed.includes(key))) invalid("Unexpected configuration fields");
-}
 export function registerRoute(path: string, options: Omit<RouteRegistration, "path">): RouteRegistration {
   fields(options, ROUTE_FIELDS);
   if (typeof path !== "string" || !path.startsWith("/") ||

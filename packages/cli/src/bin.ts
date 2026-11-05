@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { TessarCLI } from "./cli.js";
-import type { ScaffoldMetadata } from "./templates.js";
+import type { ScaffoldMetadata } from "./scaffolding/templates.js";
 
 try {
   const manifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")) as { version: string };

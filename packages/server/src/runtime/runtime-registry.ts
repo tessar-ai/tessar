@@ -1,5 +1,5 @@
 import { Agent, Controller, type RecordStore } from "@tessar/core";
-import { invalid } from "../registration.js";
+import { invalid } from "../runtime/validation.js";
 import type { TessarOptions } from "../types.js";
 
 export class RuntimeRegistry {

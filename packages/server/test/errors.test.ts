@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
 import { Hono } from "hono";
 import { TessarError, errorInfo } from "@tessar/core";
-import { bad, required, httpError } from "../src/protocal/http.js";
+import { bad, required, httpError } from "../src/http/protocol.js";
 import { TessarServerError, registerRoute } from "../src/index.js";
 
 test("server-owned errors use the public subclass and preserve cause and serialization", () => {

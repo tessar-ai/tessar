@@ -1,24 +1,38 @@
 {
   "name": "tessar",
   "version": "0.1.0",
-  "description": "Project and file scaffolding for Tessar.",
+  "description": "Project scaffolding and standalone development server for Tessar.",
   "license": "Apache-2.0",
   "type": "module",
-  "engines": { "node": ">=24.22.1" },
-  "bin": { "tessar": "dist/bin.js" },
-  "files": ["dist", "templates"],
+  "engines": {
+    "node": ">=24.22.1"
+  },
+  "bin": {
+    "tessar": "dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tessar-ai/tessar.git",
     "directory": "packages/cli"
   },
-  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/build-metadata.mjs",
     "prepack": "tsc -p tsconfig.json && node scripts/build-metadata.mjs && node ../../scripts/copy-license.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "dependencies": { "@tessar/core": "workspace:*" },
+  "dependencies": {
+    "@tessar/core": "workspace:*",
+    "hono": "4.13.16",
+    "@hono/node-server": "2.1.6"
+  },
   "devDependencies": {
     "@tessar/openai": "workspace:*",
     "@tessar/libsql": "workspace:*",

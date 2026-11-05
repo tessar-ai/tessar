@@ -1,24 +1,57 @@
-# Standalone server
+# Server and application integration
 
-Install `@tessar/server` alongside core and your provider. Your Agent and Controller
-configuration stays the same. Add a host in your application's composition file:
+Create `src/index.ts` and export a Tessar runtime:
 
 ```ts
 import { Tessar } from "@tessar/server";
-import { support } from "./controllers/support.js";
+import { assistant } from "./agents/assistant.js";
 
-export const tessar = new Tessar({ controllers: [support] });
+export default new Tessar({ agents: [assistant] });
 ```
 
-It listens at `http://127.0.0.1:3000`. Optional `server.hostname` and `server.port`
-override the address. The owning process calls `await tessar.shutdown()` on shutdown.
-This disposes runtimes but never closes borrowed database clients.
+Install `@tessar/server` alongside core and your provider, then run
+`npx tessar dev` from the project root. The CLI loads the entry and optional
+`.env`, initializes Hono routes and opens `127.0.0.1:4117`. It does not watch or
+restart files yet. `new Tessar()` itself never listens.
+
+Register `controllers: [support]` instead when you need explicit Controller
+configuration. Agent-only projects do not need extra plugin or storage setup.
+Optional `server: { hostname, port, prefix, openapiPath, routes, middlewares }`
+configures standalone hosting. Defaults are `127.0.0.1`, `4117`, empty prefix and
+`/openapi.json`. Swagger/playground UI is deferred.
+
+For an existing backend, use the same runtime with a built-in adapter:
+
+```ts
+import express from "express";
+import { TessarServer } from "@tessar/server/express";
+import tessar from "./index.js";
+
+const app = express();
+app.use(express.json());
+const server = new TessarServer({ app, tessar, prefix: "/tessar" });
+await server.init();
+const listener = app.listen(3000);
+```
+
+Hono uses `TessarServer` from `@tessar/server/hono` with the application's Hono app.
+The application starts with its existing command and owns auth, middleware and
+listening. It shuts down adapter SSE, then its listener, then the runtime via
+`tessar.shutdown()`; borrowed database clients remain developer-owned.
+With that prefix, APIs start at `/tessar/api` and OpenAPI JSON is served at
+`/tessar/openapi.json`. Without prefix, existing `/api/...` paths below apply.
+
+`getAgent(id)` and `getController(id)` return existing runtime instances for direct
+SDK use. Session operations remain on Controller/Session. Unsupported frameworks
+extend the root `TessarServerAdapter<App>` and implement `registerHandler()` with
+Web Request/Response conversion. See the [package README](../../packages/server/README.md)
+for ownership, initialization and custom adapter details.
 
 Use `GET /api/controllers` to discover IDs. Create an independent working Session
 for each tab/client:
 
 ```ts
-const base = "http://127.0.0.1:3000";
+const base = "http://127.0.0.1:4117";
 const controllers = await fetch(`${base}/api/controllers`).then(r => r.json());
 const path = `${base}/api/controllers/${encodeURIComponent(controllers[0].id)}`;
 const session = await fetch(`${path}/sessions`, {

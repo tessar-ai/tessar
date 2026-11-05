@@ -1,3 +1,4 @@
+import { startServer } from "./helpers.js";
 import { afterEach, expect, test, vi } from "vitest";
 import { Agent, Controller } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
@@ -5,7 +6,7 @@ import { Tessar, registerMiddleware, registerRoute } from "../src/index.js";
 import Database from "libsql";
 import { LibsqlStoragePlugin } from "@tessar/libsql";
 
-const servers: Tessar[] = [];
+const servers: { shutdown(): Promise<void> }[] = [];
 afterEach(async () => { await Promise.all(servers.map(server => server.shutdown())); vi.restoreAllMocks(); });
 
 export async function start(options: Partial<ConstructorParameters<typeof Tessar>[0]> = {}) {
@@ -15,10 +16,11 @@ export async function start(options: Partial<ConstructorParameters<typeof Tessar
     const match = String(value).match(/http:\/\/[^ ]+/);
     if (match) resolve(match[0]);
   });
-  const server = new Tessar({
+  const tessar = new Tessar({
     agents: [new Agent({ id: crypto.randomUUID(), model: new ScriptedProvider([]) })], ...options,
     server: { port: 0, ...options.server }
   });
+  const server = await startServer(tessar);
   servers.push(server);
   return { server, url: await listening };
 }
@@ -58,9 +60,9 @@ test("shutdown during initialization prevents listening and disposes supplied Co
     agent: new Agent({ id: crypto.randomUUID(), model: new ScriptedProvider([]) }),
     plugins: [{ id: "gate", async setup() { await gate; } }],
   });
-  const server = new Tessar({ controllers: [controller], server: { port: 0 } });
-  servers.push(server);
-  const closed = server.shutdown();
+  const tessar = new Tessar({ controllers: [controller], server: { port: 0 } });
+  servers.push(tessar);
+  const closed = tessar.shutdown();
   release();
   await closed;
   expect(controller.isReady()).toBe(false);
@@ -79,4 +81,17 @@ test("host shutdown leaves the developer database connection open", async () => 
     expect(close).not.toHaveBeenCalled();
     expect(database.prepare("SELECT 1 AS value").get()).toMatchObject({ value: 1 });
   } finally { close.mockRestore(); database.close(); }
+});
+
+test("invalid adapter configuration during standalone startup disposes its runtime", async () => {
+  let disposed = 0;
+  const controller = new Controller({ id: crypto.randomUUID(),
+    agent: new Agent({ id: crypto.randomUUID(), model: new ScriptedProvider([]) }),
+    plugins: [{ id: "owned", setup(context) { context.defer(() => { disposed++; }); } }],
+  });
+  const tessar = new Tessar({ controllers: [controller], server: { prefix: "/bad/" } });
+  servers.push(tessar);
+  await expect(startServer(tessar)).rejects.toMatchObject({ code: "InvalidConfiguration" });
+  expect(controller.isReady()).toBe(false);
+  expect(disposed).toBe(1);
 });

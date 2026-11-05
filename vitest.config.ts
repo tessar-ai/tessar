@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 const path = (name: string) => fileURLToPath(new URL(name, import.meta.url));
 export default defineConfig({
   resolve: { alias: [
+    { find: "@tessar/server/hono", replacement: path("./packages/server/src/framework/hono.ts") },
+    { find: "@tessar/server/express", replacement: path("./packages/server/src/framework/express.ts") },
     { find: "@tessar/server", replacement: path("./packages/server/src/index.ts") },
     { find: "@tessar/rag", replacement: path("./packages/rag/src/index.ts") },
     { find: "@tessar/plugins/logger", replacement: path("./packages/plugins/src/build-in/logger.ts") },

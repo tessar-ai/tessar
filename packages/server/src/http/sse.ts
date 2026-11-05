@@ -1,7 +1,7 @@
 import { streamSSE } from "hono/streaming";
 import type { Context } from "hono";
 import { stateChanged, type EventEnvelope, type RuntimeState } from "@tessar/core";
-import { safeState } from "./http.js";
+import { safeState } from "./protocol.js";
 
 export type StateEvent = EventEnvelope<{ state: RuntimeState }>;
 
