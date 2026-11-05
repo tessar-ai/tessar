@@ -109,6 +109,44 @@ same conversation without duplicate model/tool execution. Process ownership and
 startup, transport, APIs and packaging remain undecided and require a separate
 design. A Controller plugin alone does not establish a shared runtime.
 
+## TD-006 — Production build, start and deployment
+
+**Status:** deferred (2026-11-05). **Scope:** production CLI capabilities;
+infrastructure and a managed Tessar Cloud are separate concerns.
+
+### Gap
+
+`tessar dev` loads the default Tessar export from `src/index.ts` and runs a local
+HTTP server using TypeScript source loading. Tessar does not yet provide a
+production artifact, production start command or deployment command.
+
+### Direction
+
+- `tessar build`: produce a runnable JavaScript artifact with the application
+  files and dependency information needed for production, including native
+  dependencies when used. Do not package credentials or local secrets.
+- `tessar start`: load the built artifact without the development TypeScript
+  loader, initialize the server, accept deployment environment configuration
+  and handle startup failure and bounded shutdown.
+- Define production health/readiness, stdout/stderr logging and SSE behavior
+  behind a reverse proxy as part of the build/start contract.
+- `tessar deploy`: use a developer-selected deployment adapter to deliver the
+  artifact to a target and report deployment results. Deployment requires a
+  target, but the framework must not require a particular cloud provider.
+- Keep infrastructure (servers, containers, networking, databases, domains and
+  deployment operations) separate from the framework. A managed Tessar Cloud
+  could be a future deployment target; it is not a prerequisite for self-hosting.
+- Applications integrating Tessar into their existing backend may retain their
+  own build/start/deploy pipeline without using these CLI commands.
+
+Design build and its artifact first, production start second, then the deployment
+adapter contract and an explicitly selected target. Command options, artifact
+layout, adapters and infrastructure provisioning are not yet decided.
+
+Completion requires building and starting an artifact in a clean production
+environment and verifying a deployment through the agreed adapter. Running
+`tessar dev` alone is not evidence of production deployment support.
+
 ## Boundaries
 
 Preserve the minimal core and the "anything are plugin" direction. Server,

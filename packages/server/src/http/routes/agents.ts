@@ -1,11 +1,11 @@
 import { EventEnvelope, stateChanged, errorInfo, type Stream } from "@tessar/core";
 import type { Context, Hono } from "hono";
 import { agentDescriptor, controllerDescriptor } from "../descriptors.js";
-import { body, required, bad, safeError, validateFields, ROUTE_PARAM, HTTP_ERROR_MESSAGE, HTTP_STATUS } from "../protocol/http.js";
-import type { RuntimeRegistry } from "../runtime/runtime-registry.js";
-import type { SseTransport, StateEvent } from "../protocol/sse.js";
+import { body, required, bad, safeError, validateFields, ROUTE_PARAM, HTTP_ERROR_MESSAGE, HTTP_STATUS } from "../protocol.js";
+import type { RuntimeRegistry } from "../../runtime/runtime-registry.js";
+import type { SseTransport, StateEvent } from "../sse.js";
 import { C, wireModel } from "./sessions.js";
-import type { ThreadStateHub } from "../runtime/thread-state-hub.js";
+import type { ThreadStateHub } from "../../runtime/thread-state-hub.js";
 
 const A = "/api/agents/:agentId";
 export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, transport: SseTransport, hub: ThreadStateHub) {

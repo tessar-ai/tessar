@@ -34,17 +34,31 @@ test("server tarball installs independently and public declarations compile", as
     await command(["install", "--offline", "--ignore-scripts"], project);
     const manifest = JSON.parse(await readFile(join(project, "node_modules/@tessar/server/package.json"), "utf8"));
     expect(manifest.peerDependencies["@tessar/core"]).not.toContain("workspace:");
+    expect(manifest.exports["./standalone"]).toBeUndefined();
+    for (const adapter of ["./hono", "./express"]) {
+      expect(existsSync(join(project, "node_modules/@tessar/server", manifest.exports[adapter].import))).toBe(true);
+      expect(existsSync(join(project, "node_modules/@tessar/server", manifest.exports[adapter].types))).toBe(true);
+    }
     expect(Object.keys(manifest.dependencies).sort()).toEqual(["@hono/node-server", "hono"]);
     expect(await readFile(join(project, "node_modules/@tessar/server/LICENSE"), "utf8")).toContain("Apache");
     await writeFile(join(project, "usage.ts"), `
 import { Agent } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
-import { Tessar, registerRoute, registerMiddleware, type RouteHandler, type MiddlewareHandler } from "@tessar/server";
+import { Tessar, TessarServerAdapter, registerRoute, registerMiddleware, type RouteHandler, type MiddlewareHandler } from "@tessar/server";
+import type { TessarRequestHandler } from "@tessar/server";
 const health: RouteHandler = c => c.json({ok:true});
 const middleware: MiddlewareHandler = async (_, next) => { await next(); };
-const host = new Tessar({ agents: [new Agent({id:"packed",model:new ScriptedProvider([])})], server:{port:0,
+const tessar = new Tessar({ agents: [new Agent({id:"packed",model:new ScriptedProvider([])})], server:{port:0,
   routes:[registerRoute("/health", {method:"GET",handler:health})], middlewares:[registerMiddleware("*",middleware)]} });
+class Adapter extends TessarServerAdapter<{ handler?: TessarRequestHandler }> {
+  protected registerHandler(handler: TessarRequestHandler) { this.app.handler = handler; }
+}
+const app: { handler?: TessarRequestHandler } = {};
+const host = new Adapter({ app, tessar });
+await host.init();
+if ((await app.handler!(new Request("http://test/health"))).status !== 200) throw new Error("Route failed");
 await host.shutdown();
+await tessar.shutdown();
 `);
     await execute(process.execPath, [resolve("node_modules/typescript/bin/tsc"), "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2023", "--module", "NodeNext", "usage.ts"], { cwd: project, windowsHide: true });
     await execute(process.execPath, ["usage.ts"], { cwd: project, windowsHide: true, timeout: 10000 });

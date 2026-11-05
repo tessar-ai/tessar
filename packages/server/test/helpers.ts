@@ -1,3 +1,5 @@
+import { startServer as bootstrap } from "../../cli/src/development/server.js";
+import { TessarServer } from "../src/framework/hono.js";
 import { vi } from "vitest";
 import { Agent } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
@@ -11,10 +13,11 @@ export async function start(options: TessarOptions = {}) {
     const match = String(value).match(/http:\/\/[^ ]+/);
     if (match) resolve(match[0]);
   });
-  const server = new Tessar({
+  const tessar = new Tessar({
     agents: [new Agent({ id: crypto.randomUUID(), model: new ScriptedProvider([{ text: "Hello" }]) })],
     ...options, server: { port: 0, ...options.server }
   });
+  const server = await startServer(tessar);
   const url = await listening;
   log.mockRestore();
   const request = async (path: string, method = "GET", body?: unknown) => {
@@ -27,3 +30,5 @@ export async function start(options: TessarOptions = {}) {
   };
   return { server, url, request };
 }
+
+export function startServer(tessar: Tessar) { return bootstrap(tessar, app => new TessarServer({ app, tessar })); }

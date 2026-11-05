@@ -1,7 +1,7 @@
 import type { Context, Hono } from "hono";
 import { threadDescriptor } from "../descriptors.js";
-import { body, query, required, bad, safeError, ROUTE_PARAM, HTTP_STATUS, PAGE_QUERY_FIELDS } from "../protocol/http.js";
-import type { SessionRegistry } from "../runtime/session-registry.js";
+import { body, query, required, bad, safeError, ROUTE_PARAM, HTTP_STATUS, PAGE_QUERY_FIELDS } from "../protocol.js";
+import type { SessionRegistry } from "../../runtime/session-registry.js";
 import { S } from "./sessions.js";
 
 const THREADS_PATH = S + "/threads";

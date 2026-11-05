@@ -1,43 +1,108 @@
 # @tessar/server
 
-Standalone HTTP/SSE hosting for Tessar on Node.js >=24.22.1.
+Tessar runtime registration, standalone HTTP/SSE hosting and application adapters.
+Requires Node.js >=24.22.1.
 
-```sh
-npm install @tessar/core @tessar/server
-```
+## Runtime and standalone development
+
+Install `@tessar/core`, `@tessar/server` and your provider. Export a Tessar instance
+from `src/index.ts`:
 
 ```ts
-import { Tessar, registerRoute, registerMiddleware } from "@tessar/server";
+import { Tessar } from "@tessar/server";
 import { assistant } from "./agents/assistant.js";
-import { health } from "./handlers/health.js";
 
-const tessar = new Tessar({
-  agents: [assistant],
-  server: {
-    middlewares: [registerMiddleware("/api/*", async (c, next) => {
-      // Application authentication/authorization belongs here.
-      await next();
-    })],
-    routes: [registerRoute("/health", { method: "GET", handler: health })],
-  },
-});
+export default new Tessar({ agents: [assistant] });
 ```
 
-`new Tessar()` initializes the registered runtimes and starts listening. Register
-`agents`, `controllers`, or both; at least one runtime is required. Standalone
-Agents get a managed Controller with the Agent ID. Agents already supplied through
-a Controller must not be registered again. Supplied Controllers retain their plugins.
+```sh
+npx tessar dev
+```
 
-All server options are optional: `hostname` defaults to `127.0.0.1`, `port` to
-`3000`, and route/middleware arrays to empty. `port: 0` chooses an available port;
-the listening URL is printed after successful bootstrap. No `ready()` call is needed.
-Invalid configuration throws synchronously. Initialization/listening failures
-print the original error, dispose acquired runtimes and set `process.exitCode = 1`.
+The CLI loads that default export, reads the project's optional `.env`, initializes
+HTTP routes and listens on `127.0.0.1:4117`. It supports local TypeScript files with
+ESM `.js` imports through Node's type transformation. There is no watch/reload,
+path-alias resolution, JSX compilation or playground in this release.
 
-`await tessar.shutdown()` stops serving and disposes managed Controllers, including
-those passed in. It is idempotent and may be called during initialization.
-Developer-owned database connections remain developer-owned. The host installs
-no process signal handlers; the launcher decides when to call `shutdown()`.
+`new Tessar()` registers and begins initializing runtimes; it does not open a port.
+Register Agents, Controllers, or both. An Agent alone gets an internal Controller
+using its ID, so Controller/plugin/storage configuration is optional. Do not
+register the same Agent separately and through a Controller.
+
+`tessar.getAgent(id)` and `tessar.getController(id)` return the registered instances,
+including Controller-owned Agents. Missing IDs throw `TessarServerError` with
+`AgentNotFound` or `ControllerNotFound`. For SDK use before adapter initialization,
+await the Controller's existing `initialize()` method before executing operations.
+
+Optional `server` configuration on Tessar contains `hostname`, `port`, `prefix`,
+`openapiPath`, `routes` and `middlewares`. Port defaults to `4117`; `port: 0`
+selects a free port. The CLI handles SIGINT/SIGTERM, stops HTTP/SSE, then calls
+`tessar.shutdown()`. Startup failures print the original exception and exit nonzero.
+Borrowed database connections remain developer-owned.
+
+## Existing applications
+
+Express and Hono adapters expose the same built-in API and OpenAPI JSON document.
+The application owns auth, middleware ordering, the HTTP listener and its port.
+Adapters never call `listen()` or change `process.exitCode`.
+
+```ts
+import express from "express";
+import { TessarServer } from "@tessar/server/express";
+import { tessar } from "./tessar.js";
+
+const app = express();
+app.use(express.json());
+// Register application auth/middleware here.
+const server = new TessarServer({ app, tessar, prefix: "/tessar" });
+await server.init();
+app.get("/health", (_, response) => response.json({ ok: true }));
+const listener = app.listen(3000);
+```
+
+Install Express yourself. Importing the root package or Hono adapter does not load
+Express. For Hono use `TessarServer` from `@tessar/server/hono`, pass your Hono app,
+call `await server.init()`, then use your application's Hono serving mechanism.
+Run either application with its normal command, not `tessar dev`.
+
+`server.init()` registers one handler and resolves only after runtime initialization.
+Repeated calls share initialization; failures reject. Shutdown is idempotent and
+prevents further requests through the adapter (503); it does not remove framework
+middleware, close the application listener, dispose shared runtime or abort SDK
+execution. Re-initializing a shut-down adapter rejects. At application shutdown,
+close SSE with `await server.shutdown()`, stop your listener, then
+`await tessar.shutdown()`. Close your own database client last.
+
+`prefix` defaults to empty. With `prefix: "/tessar"`, the Agents endpoint is
+`/tessar/api/agents`. `openapiPath` defaults to `/openapi.json`, so the document is
+`/tessar/openapi.json`. Paths must start with `/`, contain no query/fragment or
+trailing slash, and OpenAPI must be outside `/api`. Omitted options use the Tessar
+server configuration. OpenAPI 3.1 describes built-in routes, parameters, request
+bodies, success/error responses and SSE. Provider-specific payloads remain open
+objects. Custom application routes are not automatically documented. Swagger UI
+is deferred to the self-hosted playground work.
+
+## Custom adapters
+
+Unsupported frameworks extend the root export; no separate adapter package is required:
+
+```ts
+import { TessarServerAdapter, type TessarRequestHandler } from "@tessar/server";
+
+class CustomServer extends TessarServerAdapter<MyApp> {
+  protected registerHandler(handler: TessarRequestHandler): void {
+    // Register with this.app, converting its requests to standard Web Request
+    // and writing the returned Response, including streamed bodies.
+  }
+}
+```
+
+The base class supplies `protected accepts(pathname)` to select only Tessar paths;
+other requests must continue through the application. Preserve URL/method/headers,
+body and cancellation, then response status/headers, streaming and backpressure.
+When JSON parsing middleware already consumed the body, rebuild it from the parsed
+value. The built-in Express bridge covers both parsed and raw request bodies.
+A client disconnect detaches an SSE viewer; it does not abort or replay execution.
 
 ## Custom handlers
 

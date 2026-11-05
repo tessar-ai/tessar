@@ -1,3 +1,4 @@
+import { startServer } from "./helpers.js";
 import { afterEach, expect, test } from "vitest";
 import { Agent } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
@@ -25,12 +26,13 @@ test("validates declarations and prevents duplicate runtime registration", () =>
   expect(() => new Tessar({ agents: [value, value] })).toThrow();
 });
 
-test("rejects collisions with built-in endpoints synchronously", () => {
-  expect(() => new Tessar({
+test("rejects collisions with built-in endpoints before listening", async () => {
+  const tessar = new Tessar({
     agents: [agent()], server: {
       routes: [
         registerRoute("/api/agents", { method: "GET", handler: c => c.text("override") }),
       ]
     }
-  })).toThrow();
+  });
+  await expect(startServer(tessar)).rejects.toThrow();
 });

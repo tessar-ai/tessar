@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defaultProjectOptions, type ProjectOptions } from "./project-options.js";
-import { CLI_ERROR_CODE, TessarCLIError } from "./errors.js";
+import { CLI_ERROR_CODE, TessarCLIError } from "../errors.js";
 
 const PACKAGE_MANIFEST = "package.json";
 
@@ -17,7 +17,7 @@ export interface ScaffoldMetadata {
   hooks: Readonly<Record<string, string>>;
 }
 
-const templates = new URL("../templates/", import.meta.url);
+const templates = new URL("../../templates/", import.meta.url);
 
 function render(path: string, values: Readonly<Record<string, string>>): string {
   return readFileSync(new URL(path, templates), "utf8").replace(/\{\{(\w+)\}\}/g, (_, key: string) => {

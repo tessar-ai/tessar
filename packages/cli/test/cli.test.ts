@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { TessarCLI } from "../src/cli.js";
-import type { ScaffoldMetadata } from "../src/templates.js";
-import { defaultProjectOptions } from "../src/project-options.js";
+import type { ScaffoldMetadata } from "../src/scaffolding/templates.js";
+import { defaultProjectOptions } from "../src/scaffolding/project-options.js";
 import { TessarError } from "@tessar/core";
 
 const metadata: ScaffoldMetadata = {
@@ -45,7 +45,7 @@ describe("CLI scaffolding", () => {
   });
   it("does not write files until confirmed, and cancellation leaves nothing", async () => {
     const { cwd } = await fixture();
-    const cli = new TessarCLI(cwd, metadata, "0.1.0", () => {}, async () => {
+    const cli = new TessarCLI(cwd, metadata, "0.1.0", () => { }, async () => {
       expect(await readdir(cwd)).toEqual([]);
       return null;
     });
@@ -56,7 +56,7 @@ describe("CLI scaffolding", () => {
     const { cwd } = await fixture();
     await mkdir(join(cwd, "existing"));
     let prompted = false;
-    const cli = new TessarCLI(cwd, metadata, "0.1.0", () => {}, async () => {
+    const cli = new TessarCLI(cwd, metadata, "0.1.0", () => { }, async () => {
       prompted = true;
       return { ...defaultProjectOptions };
     });

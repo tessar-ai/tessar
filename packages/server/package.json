@@ -2,19 +2,62 @@
   "name": "@tessar/server",
   "version": "0.1.0",
   "license": "Apache-2.0",
-  "description": "Standalone HTTP and SSE server for Tessar runtimes.",
+  "description": "Tessar runtime hosting, HTTP/SSE APIs and application server adapters.",
   "type": "module",
-  "repository": { "type": "git", "url": "git+https://github.com/tessar-ai/tessar.git", "directory": "packages/server" },
-  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "files": ["dist"],
-  "engines": { "node": ">=24.22.1" },
-  "peerDependencies": { "@tessar/core": "workspace:^" },
-  "devDependencies": { "@tessar/core": "workspace:*" },
-  "dependencies": { "hono": "4.13.16", "@hono/node-server": "2.1.6" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tessar-ai/tessar.git",
+    "directory": "packages/server"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./hono": {
+      "types": "./dist/framework/hono.d.ts",
+      "import": "./dist/framework/hono.js"
+    },
+    "./express": {
+      "types": "./dist/framework/express.d.ts",
+      "import": "./dist/framework/express.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24.22.1"
+  },
+  "peerDependencies": {
+    "@tessar/core": "workspace:^",
+    "express": ">=4 <6",
+    "@types/express": ">=4 <6"
+  },
+  "devDependencies": {
+    "@tessar/core": "workspace:*",
+    "@types/express": "^5.0.6",
+    "express": "^5.3.0"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.6",
+    "hono": "4.13.16"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    },
+    "@types/express": {
+      "optional": true
+    }
   }
 }

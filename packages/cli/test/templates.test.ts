@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { componentFile, projectFiles, type ScaffoldMetadata } from "../src/templates.js";
+import { componentFile, projectFiles, type ScaffoldMetadata } from "../src/scaffolding/templates.js";
 import * as events from "../../core/src/events/type.js";
-import type { Backend, ProjectOptions } from "../src/project-options.js";
+import type { Backend, ProjectOptions } from "../src/scaffolding/project-options.js";
 
 const metadata: ScaffoldMetadata = {
   coreVersion: "0.1.5", openaiVersion: "0.1.4", zodVersion: "^4.6.7",
