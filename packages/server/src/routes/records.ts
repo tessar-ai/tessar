@@ -1,5 +1,5 @@
 import type { Context, Hono } from "hono";
-import { body, query, required, ROUTE_PARAM, HTTP_STATUS, SCOPED_PAGE_QUERY_FIELDS } from "../http.js";
+import { body, query, required, ROUTE_PARAM, HTTP_STATUS, SCOPED_PAGE_QUERY_FIELDS } from "../protocol/http.js";
 import type { RuntimeRegistry } from "../runtime/runtime-registry.js";
 import { C } from "./sessions.js";
 

@@ -34,10 +34,10 @@ the listening URL is printed after successful bootstrap. No `ready()` call is ne
 Invalid configuration throws synchronously. Initialization/listening failures
 print the original error, dispose acquired runtimes and set `process.exitCode = 1`.
 
-`await tessar.close()` stops serving and disposes managed Controllers, including
+`await tessar.shutdown()` stops serving and disposes managed Controllers, including
 those passed in. It is idempotent and may be called during initialization.
 Developer-owned database connections remain developer-owned. The host installs
-no process signal handlers; the launcher decides when to call `close()`.
+no process signal handlers; the launcher decides when to call `shutdown()`.
 
 ## Custom handlers
 
@@ -99,3 +99,7 @@ Controller lifecycle and Thread handle disposal remain local configuration.
 No RAG, browser UI, client SDK, authentication service or CLI watch mode is added.
 
 See the [server guide](../../examples/guide/server.md) for a complete usage flow.
+
+Server-owned validation and resource errors use the exported `TessarServerError`,
+which extends `TessarError` from core. Core, provider and I/O exceptions retain
+their original types and origins; HTTP responses use the safe serialization above.

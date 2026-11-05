@@ -1,11 +1,11 @@
-import { TessarError } from "@tessar/core";
+import { TessarServerError } from "./errors.js";
 import type { MiddlewareHandler, MiddlewareRegistration, RouteRegistration } from "./types.js";
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
 const ROUTE_FIELDS = ["method", "handler"];
 
 export function invalid(message: string): never {
-  throw new TessarError("InvalidConfiguration", message);
+  throw new TessarServerError("InvalidConfiguration", message);
 }
 export function fields(value: unknown, allowed: readonly string[]): void {
   if (!value || typeof value !== "object" || Array.isArray(value) ||

@@ -7,6 +7,8 @@ import {
   type JsonValue,
 } from "../json.js";
 import type { ContentPart } from "./parts.js";
+
+const INVALID_MESSAGE = "InvalidMessage";
 export type MessageRole = "system" | "user" | "assistant" | "tool";
 export interface MessageOptions {
   id?: string;
@@ -31,22 +33,22 @@ export function normalizeContent(
       : content;
   assertJson(parts);
   if (!Array.isArray(parts))
-    fail("InvalidMessage", "Message content must be text or parts");
+    fail(INVALID_MESSAGE, "Message content must be text or parts");
   for (const part of parts) {
     if (!part || typeof part !== "object")
-      fail("InvalidMessage", "Invalid message part");
+      fail(INVALID_MESSAGE, "Invalid message part");
     if (
       part.metadata !== undefined &&
       (!part.metadata ||
         typeof part.metadata !== "object" ||
         Array.isArray(part.metadata))
     )
-      fail("InvalidMessage", "Part metadata must be a JSON object");
+      fail(INVALID_MESSAGE, "Part metadata must be a JSON object");
     switch (part.type) {
       case "text":
       case "reasoning":
         if (typeof part.text !== "string")
-          fail("InvalidMessage", "Text is required");
+          fail(INVALID_MESSAGE, "Text is required");
         break;
       case "tool-call":
         requireId(part.toolCallId, "toolCallId");
@@ -56,21 +58,21 @@ export function normalizeContent(
           typeof part.arguments !== "object" ||
           Array.isArray(part.arguments)
         )
-          fail("InvalidMessage", "Arguments must be an object");
+          fail(INVALID_MESSAGE, "Arguments must be an object");
         break;
       case "image":
       case "audio":
       case "file":
         requireId(part.mediaType, "mediaType");
         if (typeof part.data !== "string")
-          fail("InvalidMessage", "Media data required");
+          fail(INVALID_MESSAGE, "Media data required");
         break;
       case "data":
         if (!Object.hasOwn(part, "data"))
-          fail("InvalidMessage", "Data is required");
+          fail(INVALID_MESSAGE, "Data is required");
         break;
       default:
-        fail("InvalidMessage", "Unknown content part");
+        fail(INVALID_MESSAGE, "Unknown content part");
     }
   }
   return immutable(parts);

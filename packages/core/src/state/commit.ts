@@ -10,6 +10,8 @@ import type {
   StorageBackend,
 } from "./storage-ports.js";
 
+const INVALID_MESSAGE = "InvalidMessage";
+
 export function buildThreadInfo(
   batch: CommitBatch,
   head: ThreadInfo | null | undefined,
@@ -24,7 +26,7 @@ export function buildThreadInfo(
     currentCheckpointId: cp.id,
     activeStreamId:
       stream &&
-      !["completed", "failed", "stopped", "cancelled"].includes(stream.status)
+        !["completed", "failed", "stopped", "cancelled"].includes(stream.status)
         ? stream.id
         : null,
     createdAt: head?.createdAt ?? cp.createdAt,
@@ -43,11 +45,11 @@ export function canonicalJson(value: unknown): string {
       ? "[" + x.map(encode).join(",") + "]"
       : x && typeof x === "object"
         ? "{" +
-          Object.keys(x)
-            .sort()
-            .map((k) => JSON.stringify(k) + ":" + encode(x[k]))
-            .join(",") +
-          "}"
+        Object.keys(x)
+          .sort()
+          .map((k) => JSON.stringify(k) + ":" + encode(x[k]))
+          .join(",") +
+        "}"
         : JSON.stringify(x);
   return encode(value);
 }
@@ -76,7 +78,7 @@ export function validateBatch(batch: CommitBatch): void {
     resolved = new Set<string>();
   for (const wire of cp.state.messages) {
     const message = MessageCodec.decode(wire);
-    if (ids.has(message.id)) fail("InvalidMessage", "Duplicate message ID");
+    if (ids.has(message.id)) fail(INVALID_MESSAGE, "Duplicate message ID");
     ids.add(message.id);
     for (const part of message.content)
       if (part.type === "tool-call") {
@@ -85,19 +87,19 @@ export function validateBatch(batch: CommitBatch): void {
           pending.has(part.toolCallId) ||
           resolved.has(part.toolCallId)
         )
-          fail("InvalidMessage", "Invalid tool call");
+          fail(INVALID_MESSAGE, "Invalid tool call");
         pending.add(part.toolCallId);
       }
     if (message.role === "tool") {
       if (!pending.has(message.toolCallId!))
-        fail("InvalidMessage", "Unmatched tool result");
+        fail(INVALID_MESSAGE, "Unmatched tool result");
       pending.delete(message.toolCallId!);
       resolved.add(message.toolCallId!);
     }
   }
   if (cp.cause === "Terminal" && pending.size)
     fail(
-      "InvalidMessage",
+      INVALID_MESSAGE,
       "Terminal checkpoint contains unresolved tool calls",
     );
   for (const entry of batch.records)
@@ -108,7 +110,7 @@ export function validateBatch(batch: CommitBatch): void {
       fail("CommitConflict", "Record membership mismatch");
 }
 export class CommitCoordinator {
-  constructor(private readonly backend: StorageBackend) {}
+  constructor(private readonly backend: StorageBackend) { }
   async commit(batch: CommitBatch, lease: Lease): Promise<CommitReceipt> {
     validateBatch(batch);
     try {

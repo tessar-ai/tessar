@@ -6,12 +6,12 @@ import { registerThreads, T } from "../src/routes/threads.js";
 import { registerRecords } from "../src/routes/records.js";
 import { registerState } from "../src/routes/state.js";
 import { ThreadStateHub } from "../src/runtime/thread-state-hub.js";
-import { SseTransport } from "../src/sse.js";
+import { SseTransport } from "../src/protocal/sse.js";
 
 test("route inventory covers the reviewed public SDK runtime surface", () => {
   const app = new Hono(), transport = new SseTransport();
   const unused = (): never => { throw Error("Registration must not read runtimes"); };
-  registerAgents(app, unused, transport); registerSessions(app, unused, unused);
+  registerAgents(app, unused, transport, new ThreadStateHub()); registerSessions(app, unused, unused);
   registerThreads(app, unused); registerRecords(app, unused);
   registerState(app, unused, new ThreadStateHub(), transport);
   const a = "/api/agents/:agentId";

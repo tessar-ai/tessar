@@ -1,3 +1,4 @@
+import { ExecutionPhase } from "../state/schema.js";
 import {
   stream as streamHooks,
   model as modelHooks,
@@ -82,7 +83,7 @@ export async function execute(
         );
         if (result?.decision !== "retry")
           fail("ProviderError", "Recovery policy declined retry");
-        frame.cp.execution!.phase = "BeforeModel";
+        frame.cp.execution!.phase = ExecutionPhase.BeforeModel;
         await execution.commit(frame, "ExecutionTransition");
       }
       await loop(frame, execution);
@@ -166,7 +167,7 @@ export async function execute(
       timing: { completedActiveMs: 0, segmentOpen: true, complete: true },
       streamId,
       turnId: null,
-      phase: "BeforeTurn",
+      phase: ExecutionPhase.BeforeTurn,
       modelRef: request.model,
       ...(request.modelOptions ? { modelOptions: request.modelOptions } : {}),
       baseInstructions: execution.agent.getInstruction(),
@@ -346,7 +347,7 @@ export async function cancel(
   threadId: string,
   streamId: string,
   reason = "Cancelled",
-  target: DeliveryTarget = { kind: "observer", observe: () => {} },
+  target: DeliveryTarget = { kind: "observer", observe: () => { } },
   context: Pick<ExecutionRequest, "session" | "thread"> = {},
 ): Promise<void> {
   const active = execution.active.get(streamId);

@@ -118,11 +118,15 @@ it("packs and installs the standalone CLI and scaffolds from a different working
     await writeFile(join(host, "package.json"), JSON.stringify({ private: true }));
     const packed = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", root], resolve("packages/cli"), cache);
     const tarball = resolve(root, JSON.parse(packed.stdout).filename);
-    await command("npm", ["install", "--global", "--prefix", host, "--offline", "--ignore-scripts", "--no-audit", "--no-fund", tarball], work, cache);
+    const corePacked = await command("pnpm", ["pack", "--json", "--pack-destination", root], resolve("packages/core"), cache);
+    const zodPacked = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--config.manage-package-manager-versions=false", "--json", "--pack-destination", root], realpathSync(resolve("node_modules/zod")), cache);
+    const archives = [resolve(root, JSON.parse(corePacked.stdout).filename), resolve(root, JSON.parse(zodPacked.stdout).filename), tarball];
+    await command("npm", ["install", "--global", "--prefix", host, "--offline", "--ignore-scripts", "--no-audit", "--no-fund", ...archives], work, cache);
     const installed = join(host, process.platform === "win32" ? "node_modules" : "lib/node_modules", "tessar");
     const manifest = JSON.parse(await readFile(join(installed, "package.json"), "utf8"));
     expect(manifest.name).toBe("tessar");
-    expect(Object.keys(manifest.dependencies ?? {})).toHaveLength(0);
+    const coreManifest = JSON.parse(await readFile(resolve("packages/core/package.json"), "utf8"));
+    expect(manifest.dependencies).toEqual({ "@tessar/core": coreManifest.version });
     expect(typeof manifest.bin.tessar).toBe("string");
     const bin = join(installed, manifest.bin.tessar);
     expect(existsSync(bin)).toBe(true);
@@ -148,7 +152,7 @@ it("packs and installs the standalone CLI and scaffolds from a different working
     const local = join(root, "local");
     await mkdir(local);
     await writeFile(join(local, "package.json"), JSON.stringify({ private: true }));
-    await command("npm", ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", tarball], local, cache);
+    await command("npm", ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", ...archives], local, cache);
     expect((await command("npx", ["--offline", "tessar", "--version"], local, cache)).stdout.trim()).toBe(manifest.version);
     await run(bin, ["new", "installed-app"], work, "y\ny\n1\ny\n");
     const project = join(work, "installed-app");

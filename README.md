@@ -77,6 +77,9 @@ for await (const event of agent.stream("Explain agent tools briefly.")) {
     process.stdout.write(event.payload.delta);
   }
   if (event.type === stream.error) throw Error(event.payload.error.message);
+  if (event.type === stream.end && event.payload.error) {
+    throw Error(event.payload.error.message);
+  }
 }
 ```
 

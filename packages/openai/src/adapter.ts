@@ -25,6 +25,9 @@ import {
   responseError,
 } from "./response-error.js";
 import { decodeOutput, encodeInput } from "./codec.js";
+
+const UNSUPPORTED_OPTION = "UnsupportedOption";
+export const OPENAI_API = { RESPONSES: "responses", CHAT_COMPLETIONS: "chat-completions" } as const;
 export interface OpenAIOptions extends ClientOptions {
   providerId?: string;
   metadataPartition?: string;
@@ -61,7 +64,7 @@ export function validateRequest(
   ref: ModelRef,
   api: "responses" | "chat-completions",
 ): void {
-  const chat = api === "chat-completions";
+  const chat = api === OPENAI_API.CHAT_COMPLETIONS;
   if (
     request.model.providerId !== ref.providerId ||
     request.model.modelId !== ref.modelId
@@ -93,11 +96,11 @@ export function validateRequest(
   ])
     if (request.options && key in request.options)
       fail(
-        "UnsupportedOption",
+        UNSUPPORTED_OPTION,
         key +
-          (chat
-            ? " is owned by the connection or Agent runtime"
-            : " is owned by the model connection or Agent runtime"),
+        (chat
+          ? " is owned by the connection or Agent runtime"
+          : " is owned by the model connection or Agent runtime"),
       );
   validateLoopOptions(request.options ?? {}, api);
 }
@@ -105,7 +108,7 @@ function validateLoopOptions(
   options: Record<string, unknown>,
   api: "responses" | "chat-completions",
 ): void {
-  if (api === "responses") {
+  if (api === OPENAI_API.RESPONSES) {
     if (
       options.background === true ||
       options.conversation != null ||
@@ -113,15 +116,15 @@ function validateLoopOptions(
       options.context_management != null
     )
       fail(
-        "UnsupportedOption",
+        UNSUPPORTED_OPTION,
         "Provider-managed conversations and background execution are not supported by the Agent loop",
       );
   } else {
     if (options.n != null && options.n !== 1)
-      fail("UnsupportedOption", "An Agent consumes one Chat completion choice");
+      fail(UNSUPPORTED_OPTION, "An Agent consumes one Chat completion choice");
     if ("functions" in options || "function_call" in options)
       fail(
-        "UnsupportedOption",
+        UNSUPPORTED_OPTION,
         "Legacy function calls are not supported by the Agent loop",
       );
   }
@@ -137,11 +140,11 @@ function usage(value: ResponseUsage | null | undefined) {
       reasoningOutputTokens: value?.output_tokens_details?.reasoning_tokens,
       uncachedInputTokens:
         value?.input_tokens !== undefined &&
-        value?.input_tokens_details?.cached_tokens !== undefined
+          value?.input_tokens_details?.cached_tokens !== undefined
           ? Math.max(
-              0,
-              value.input_tokens - value.input_tokens_details.cached_tokens,
-            )
+            0,
+            value.input_tokens - value.input_tokens_details.cached_tokens,
+          )
           : null,
     },
     value ? JSON.parse(JSON.stringify(value)) : null,
@@ -177,7 +180,7 @@ export class OpenAIAdapter implements ModelAdapter {
       fail("InvalidHookResult", "Provider request body must be an object");
     if (prepared.model !== this.ref.modelId || prepared.stream !== true)
       fail(
-        "UnsupportedOption",
+        UNSUPPORTED_OPTION,
         "Provider request cannot change the model or disable streaming",
       );
     // Native OpenRouter routing may use a body field named provider; it is not
@@ -188,13 +191,13 @@ export class OpenAIAdapter implements ModelAdapter {
       "api",
     ])
       if (key in prepared)
-        fail("UnsupportedOption", key + " belongs to the provider connection");
+        fail(UNSUPPORTED_OPTION, key + " belongs to the provider connection");
     validateLoopOptions(prepared, api);
     return prepared;
   }
   validate(request: ModelRequest): void {
     try {
-      validateRequest(request, this.ref, "responses");
+      validateRequest(request, this.ref, OPENAI_API.RESPONSES);
       encodeInput(request, this.connection);
     } catch (error) {
       errorInfo(error, { source: "tessar", ...this.ref });
@@ -216,26 +219,26 @@ export class OpenAIAdapter implements ModelAdapter {
             (section) => section.content.length > 0,
           )
             ? {
-                instructions: request.instructions.sections
-                  .map((s) => s.content)
-                  .join("\n\n"),
-              }
+              instructions: request.instructions.sections
+                .map((s) => s.content)
+                .join("\n\n"),
+            }
             : {}),
           input: encodeInput(request, this.connection),
           ...(request.tools.length
             ? {
-                tools: request.tools.map((t) => ({
-                  type: "function" as const,
-                  name: t.name,
-                  description: t.description,
-                  parameters: t.inputSchema,
-                  strict: false,
-                })),
-              }
+              tools: request.tools.map((t) => ({
+                type: "function" as const,
+                name: t.name,
+                description: t.description,
+                parameters: t.inputSchema,
+                strict: false,
+              })),
+            }
             : {}),
           stream: true,
         },
-        "responses",
+        OPENAI_API.RESPONSES,
         context,
       );
       const stream = await this.client.responses.create(
@@ -397,7 +400,7 @@ export class OpenAIAdapter implements ModelAdapter {
             throw responseError(
               this.ref,
               event.response.error?.message ??
-                "OpenAI response did not complete",
+              "OpenAI response did not complete",
               event.response.error?.code ?? "ProviderIncomplete",
             );
           case "error":

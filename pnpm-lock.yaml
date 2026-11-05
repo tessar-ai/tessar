@@ -67,10 +67,11 @@ importers:
         version: 4.6.7
 
   packages/cli:
-    devDependencies:
+    dependencies:
       '@tessar/core':
         specifier: workspace:*
         version: link:../core
+    devDependencies:
       '@tessar/libsql':
         specifier: workspace:*
         version: link:../libsql

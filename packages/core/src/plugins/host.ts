@@ -24,6 +24,8 @@ import { definePluginState } from "../state/plugin-state.js";
 import { systemClock } from "../json.js";
 import { guardStorage } from "../state/storage-errors.js";
 import type { StorageBackend } from "../state/storage-ports.js";
+
+const REGISTRATION_CONFLICT = "RegistrationConflict";
 export class PluginHost {
   private slots: PluginSlot[] = [];
   private definitions = new Map<string, { kind: EventKind; version: number }>(
@@ -67,7 +69,7 @@ export class PluginHost {
       storage?: () => StorageBackend;
     } = {},
   ) {
-    this.diagnostics = options.diagnostics ?? (() => {});
+    this.diagnostics = options.diagnostics ?? (() => { });
     this.values = options.values ?? [];
     this.storage = options.storage;
   }
@@ -81,7 +83,7 @@ export class PluginHost {
   }
   private serialize(action: () => Promise<void>): Promise<void> {
     const next = this.mutation.then(action);
-    this.mutation = next.catch(() => {});
+    this.mutation = next.catch(() => { });
     return next;
   }
   attach(plugin: Plugin): Promise<void> {
@@ -89,7 +91,7 @@ export class PluginHost {
       if (this.closed) fail("Disposed", "Plugin host is closed");
       requireId(plugin.id, "plugin id");
       if (this.slots.some((s) => !s.detached && s.plugin.id === plugin.id))
-        fail("RegistrationConflict", "Plugin ID already attached");
+        fail(REGISTRATION_CONFLICT, "Plugin ID already attached");
       const slot: PluginSlot = {
         plugin,
         handlers: [],
@@ -120,7 +122,7 @@ export class PluginHost {
             ...slot.values,
           ].some((v) => v.kind === kind && v.id === id)
         )
-          fail("RegistrationConflict", "Capability already registered");
+          fail(REGISTRATION_CONFLICT, "Capability already registered");
         slot.values.push({
           kind,
           id,
@@ -194,9 +196,9 @@ export class PluginHost {
               plugin.configurationId === undefined
                 ? tool.configurationId
                 : JSON.stringify([
-                    plugin.configurationId,
-                    tool.configurationId,
-                  ]),
+                  plugin.configurationId,
+                  tool.configurationId,
+                ]),
             ),
         },
         models: {
@@ -225,7 +227,7 @@ export class PluginHost {
           if (!Number.isInteger(version) || version < 1)
             fail("InvalidConfiguration", "Invalid hook version");
           if (prior && (prior.kind !== kind || prior.version !== version))
-            fail("RegistrationConflict", "Hook contract conflict");
+            fail(REGISTRATION_CONFLICT, "Hook contract conflict");
           definitions.set(name, { kind, version });
           const registration = {
             name,
@@ -302,7 +304,7 @@ export class PluginHost {
         definition,
         payload,
         context,
-        definition === diagnosticHooks ? () => {} : this.diagnostics,
+        definition === diagnosticHooks ? () => { } : this.diagnostics,
         this.kind(definition),
       );
     } catch (error) {

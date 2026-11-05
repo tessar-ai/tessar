@@ -3,6 +3,8 @@ import { fail } from "@tessar/core";
 import type { Database } from "./database.js";
 import type { Row } from "./queries.js";
 
+const INVALID_CONFIGURATION = "InvalidConfiguration";
+
 export interface StateSchema {
   threads: Collection<Row>;
   checkpoints: Collection<Row>;
@@ -20,7 +22,7 @@ export async function initializeSchema({ database: db, prefix }: Database): Prom
   const hello = await db.command({ hello: 1 });
   if (!hello.setName && hello.msg !== "isdbgrid")
     fail(
-      "InvalidConfiguration",
+      INVALID_CONFIGURATION,
       "MongoDB storage requires a replica set or sharded deployment supporting transactions",
     );
   const metadata = db.collection<{ _id: string; version: number }>(
@@ -28,7 +30,7 @@ export async function initializeSchema({ database: db, prefix }: Database): Prom
   );
   const previous = await metadata.findOne({ _id: "schema" });
   if (previous && previous.version !== 1)
-    fail("InvalidConfiguration", "Unsupported MongoDB schema version");
+    fail(INVALID_CONFIGURATION, "Unsupported MongoDB schema version");
   const threads = db.collection<Row>(`${prefix}tessar_threads`),
     checkpoints = db.collection<Row>(`${prefix}tessar_checkpoints`),
     versions = db.collection<Row>(`${prefix}tessar_versions`),
@@ -107,7 +109,7 @@ export async function initializeSchema({ database: db, prefix }: Database): Prom
   );
   const current = await metadata.findOne({ _id: "schema" });
   if (current?.version !== 1)
-    fail("InvalidConfiguration", "Unsupported MongoDB schema version");
+    fail(INVALID_CONFIGURATION, "Unsupported MongoDB schema version");
   return {
     threads,
     checkpoints,

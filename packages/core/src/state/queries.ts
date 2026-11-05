@@ -16,6 +16,8 @@ import type {
   RecordTypes,
 } from "./schema.js";
 import { matchesScope } from "./scope.js";
+
+const INVALID_CURSOR = "InvalidCursor";
 export type { HistoryOptions, CheckpointInfo } from "./schema.js";
 export interface HistoryPage extends Page<Message> {
   checkpointId: string;
@@ -47,7 +49,7 @@ export function decodeCursor(value: string): any {
   try {
     return JSON.parse(decodeURIComponent(value));
   } catch {
-    fail("InvalidCursor", "Malformed cursor");
+    fail(INVALID_CURSOR, "Malformed cursor");
   }
 }
 export function compareOrdinal(a: string, b: string): number {
@@ -71,7 +73,7 @@ export function pageAfter(
     cursor.after.length !== 2 ||
     cursor.after.some((v: unknown) => typeof v !== "string")
   )
-    fail("InvalidCursor", "Cursor belongs to another query");
+    fail(INVALID_CURSOR, "Cursor belongs to another query");
   return cursor.after;
 }
 export function pageRows<T extends { id: string }>(
@@ -81,8 +83,8 @@ export function pageRows<T extends { id: string }>(
 ): Page<T> {
   const key = (row: T): [string, string] => [
     (row as T & { createdAt?: string; startedAt?: string }).createdAt ??
-      (row as T & { startedAt?: string }).startedAt ??
-      "",
+    (row as T & { startedAt?: string }).startedAt ??
+    "",
     row.id,
   ];
   const compare = (a: [string, string], b: [string, string]) =>
@@ -133,14 +135,14 @@ export function historyCursor(
       (options.atCheckpointId &&
         options.atCheckpointId !== cursor.checkpointId))
   )
-    fail("InvalidCursor", "History cursor mismatch");
+    fail(INVALID_CURSOR, "History cursor mismatch");
   return {
     binding,
     cursor: cursor as { checkpointId: string; end: number } | null,
   };
 }
 export class StateQueries {
-  constructor(readonly backend: StorageBackend) {}
+  constructor(readonly backend: StorageBackend) { }
   async getThread(
     id: string,
     query: StateQuery = {},

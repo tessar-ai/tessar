@@ -11,7 +11,7 @@ export const tessar = new Tessar({ controllers: [support] });
 ```
 
 It listens at `http://127.0.0.1:3000`. Optional `server.hostname` and `server.port`
-override the address. The owning process calls `await tessar.close()` on shutdown.
+override the address. The owning process calls `await tessar.shutdown()` on shutdown.
 This disposes runtimes but never closes borrowed database clients.
 
 Use `GET /api/controllers` to discover IDs. Create an independent working Session

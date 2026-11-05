@@ -2,6 +2,12 @@
 
 Create Tessar projects and project-local TypeScript files. Requires Node.js 24.22.1 or newer.
 
+CLI validation and scaffolding errors use `TessarCLIError`, extending core's
+`TessarError`. Core is installed as a runtime dependency of the CLI. Native
+filesystem and library failures retain their original errors; contextual project
+validation errors keep the original failure as `cause`. Errors still print to
+stderr with a nonzero exit status.
+
 ```sh
 npm install -g tessar
 tessar new my-agent

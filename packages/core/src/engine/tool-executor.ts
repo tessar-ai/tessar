@@ -1,3 +1,4 @@
+import { ExecutionPhase } from "../state/schema.js";
 import { tool as toolHooks } from "../events/type.js";
 import { ToolMessage, type MessageData } from "../messages/message.js";
 import {
@@ -16,6 +17,13 @@ import { abortable } from "./abort.js";
 import { Suspension } from "./interrupt.js";
 import { ToolSuspension } from "../tools/suspension.js";
 import { waitForTool, suspendWaitingTool } from "./tool-suspension.js";
+
+const EXECUTION_TRANSITION = "ExecutionTransition";
+
+const ERROR_CODE = {
+  CANCELLED: "Cancelled",
+  RECOVERY_REQUIRED: "RecoveryRequired",
+} as const;
 export async function executeTool(
   tool: Tool,
   input: unknown,
@@ -23,24 +31,24 @@ export async function executeTool(
   response?: { value: import("../json.js").JsonValue },
 ): Promise<ToolMessage | ToolSuspension> {
   if (context.signal.aborted)
-    throw new TessarError("Cancelled", "Tool cancelled before dispatch");
+    throw new TessarError(ERROR_CODE.CANCELLED, "Tool cancelled before dispatch");
   try {
     return await abortable(
       response
         ? Promise.resolve(
-            tool.resume
-              ? tool.resume(response.value, input, context)
-              : response.value,
-          ).then((value) =>
-            value instanceof ToolSuspension
-              ? value
-              : normalizeToolOutput(value),
-          )
+          tool.resume
+            ? tool.resume(response.value, input, context)
+            : response.value,
+        ).then((value) =>
+          value instanceof ToolSuspension
+            ? value
+            : normalizeToolOutput(value),
+        )
         : tool.execute(input, context),
       context.signal,
       () =>
         new TessarError(
-          "RecoveryRequired",
+          ERROR_CODE.RECOVERY_REQUIRED,
           "In-flight tool cancellation has unknown external outcome",
         ),
     );
@@ -69,7 +77,7 @@ function toolFailure(record: ToolExecutionRecord, error: unknown): ToolMessage {
       "CommitConflict",
       "OwnershipLost",
       "PluginError",
-      "RecoveryRequired",
+      ERROR_CODE.RECOVERY_REQUIRED,
     ].includes(info.code) ||
     ["plugin", "storage", "provider"].includes(info.source)
   )
@@ -142,9 +150,9 @@ async function publishResults(
       );
     frame.cp.execution!.phase = frame.cp.execution!.pendingToolExecutionIds
       .length
-      ? "BeforeTool"
-      : "TurnBoundary";
-    await context.commit(frame, "ExecutionTransition");
+      ? ExecutionPhase.BeforeTool
+      : ExecutionPhase.TurnBoundary;
+    await context.commit(frame, EXECUTION_TRANSITION);
     await context.hook(
       frame,
       toolHooks.end,
@@ -186,14 +194,27 @@ export async function callTools(
         throw new TessarError("UnknownTool", "No registered tool executor");
       const saved =
         position.handlerCursor?.eventId === toolHooks.before &&
-        (position.handlerCursor.payload as unknown as ToolPreparation)
-          .toolExecutionId === record.id
+          (position.handlerCursor.payload as unknown as ToolPreparation)
+            .toolExecutionId === record.id
           ? (position.handlerCursor.payload as unknown as ToolPreparation)
           : null;
       const payload: ToolPreparation =
         saved ??
         (record.policyDecision
           ? {
+            tool: {
+              name: tool.name,
+              description: tool.description,
+              inputSchema: tool.jsonSchema,
+            },
+            toolExecutionId: record.id,
+            toolCallId: record.toolCallId,
+            arguments: record.arguments,
+          }
+          : await context.hook(
+            frame,
+            toolHooks.prepare,
+            {
               tool: {
                 name: tool.name,
                 description: tool.description,
@@ -202,38 +223,25 @@ export async function callTools(
               toolExecutionId: record.id,
               toolCallId: record.toolCallId,
               arguments: record.arguments,
-            }
-          : await context.hook(
-              frame,
-              toolHooks.prepare,
-              {
-                tool: {
-                  name: tool.name,
-                  description: tool.description,
-                  inputSchema: tool.jsonSchema,
-                },
-                toolExecutionId: record.id,
-                toolCallId: record.toolCallId,
-                arguments: record.arguments,
-              },
-              record.id,
-            ));
+            },
+            record.id,
+          ));
       record.arguments = immutable(payload.arguments);
       const input = tool.schema.parse(record.arguments);
       const decision = record.policyDecision
         ? {
-            decision:
-              record.policyDecision.decision === "allowed"
-                ? ("allow" as const)
-                : ("deny" as const),
-            reason: record.policyDecision.reason,
-          }
+          decision:
+            record.policyDecision.decision === "allowed"
+              ? ("allow" as const)
+              : ("deny" as const),
+          reason: record.policyDecision.reason,
+        }
         : await context.hook(
-            frame,
-            toolHooks.before,
-            immutable(payload),
-            record.id,
-          );
+          frame,
+          toolHooks.before,
+          immutable(payload),
+          record.id,
+        );
       if (decision?.decision === "stop") {
         await context.finish(
           frame,
@@ -277,7 +285,7 @@ export async function callTools(
         record.id,
       );
     }
-    await context.commit(frame, "ExecutionTransition");
+    await context.commit(frame, EXECUTION_TRANSITION);
   }
 
   let next = 0,
@@ -297,8 +305,8 @@ export async function callTools(
         record.status = "running";
         if (!continuing) record.startedAt = context.clock.now();
         if (!continuing) position.budgets.toolCalls++;
-        position.phase = "ToolPending";
-        await context.commit(frame, "ExecutionTransition");
+        position.phase = ExecutionPhase.ToolPending;
+        await context.commit(frame, EXECUTION_TRANSITION);
         await context.hook(
           frame,
           toolHooks.start,
@@ -313,7 +321,7 @@ export async function callTools(
           record.id,
         );
         if (frame.sink.controller.signal.aborted)
-          throw new TessarError("Cancelled", "Tool cancelled before dispatch");
+          throw new TessarError(ERROR_CODE.CANCELLED, "Tool cancelled before dispatch");
         let result: ToolMessage | ToolSuspension;
         try {
           dispatched = true;
@@ -342,7 +350,7 @@ export async function callTools(
           if (result instanceof ToolSuspension) {
             waitForTool(frame, context, record, tool, result);
             waiting = true;
-            await context.commit(frame, "ExecutionTransition");
+            await context.commit(frame, EXECUTION_TRANSITION);
             continue;
           }
           // Bind here so an incorrect explicit correlation is reported as a tool failure.
@@ -364,7 +372,7 @@ export async function callTools(
           );
         }
         saveResult(record, result, context);
-        await context.commit(frame, "ExecutionTransition");
+        await context.commit(frame, EXECUTION_TRANSITION);
       } catch (error) {
         if (record.status === "running") {
           record.status = dispatched
@@ -389,21 +397,21 @@ export async function callTools(
   );
   // A pre-dispatch cancellation must not hide an unknown in-flight outcome.
   const failure =
-    failures.find((value) => errorInfo(value.error).code !== "Cancelled") ??
+    failures.find((value) => errorInfo(value.error).code !== ERROR_CODE.CANCELLED) ??
     failures[0];
   if (failure) {
     frame.stream.status = "interrupted";
-    await context.commit(frame, "ExecutionTransition");
+    await context.commit(frame, EXECUTION_TRANSITION);
     throw failure.error;
   }
   if (frame.sink.controller.signal.aborted)
-    throw new TessarError("Cancelled", "Execution cancelled");
+    throw new TessarError(ERROR_CODE.CANCELLED, "Execution cancelled");
   await publishResults(frame, context);
   await suspendWaitingTool(frame, context);
   position.phase = position.pendingToolExecutionIds.length
-    ? "BeforeTool"
-    : "TurnBoundary";
-  await context.commit(frame, "ExecutionTransition");
+    ? ExecutionPhase.BeforeTool
+    : ExecutionPhase.TurnBoundary;
+  await context.commit(frame, EXECUTION_TRANSITION);
   if (
     position.pendingToolExecutionIds.length &&
     position.budgets.toolCalls >= position.budgets.limits.maxToolCalls
@@ -421,21 +429,21 @@ export async function recoverTools(
     if (record.result) continue;
     if (record.status === "running" || record.status === "interrupted") {
       record.status = "interrupted";
-      await context.commit(frame, "ExecutionTransition");
+      await context.commit(frame, EXECUTION_TRANSITION);
       const tool = frame.registry.find<Tool>("tool", record.toolName);
       const outcome =
         tool?.recovery && record.idempotencyKey
           ? await tool.recovery.reconcile({
-              id: record.id,
-              input: tool.schema.parse(record.arguments),
-              key: record.idempotencyKey,
-            })
+            id: record.id,
+            input: tool.schema.parse(record.arguments),
+            key: record.idempotencyKey,
+          })
           : { status: "unknown" as const };
       if (outcome.status === "unknown") {
         frame.stream.status = "interrupted";
-        await context.commit(frame, "ExecutionTransition");
+        await context.commit(frame, EXECUTION_TRANSITION);
         throw new TessarError(
-          "RecoveryRequired",
+          ERROR_CODE.RECOVERY_REQUIRED,
           "Tool dispatch outcome is unknown",
         );
       }
@@ -448,10 +456,10 @@ export async function recoverTools(
       record.status = "cancelled";
       saveResult(record, new ToolMessage("Execution cancelled"), context);
     }
-    await context.commit(frame, "ExecutionTransition");
+    await context.commit(frame, EXECUTION_TRANSITION);
   }
   await publishResults(frame, context);
   frame.cp.execution!.phase = frame.cp.execution!.pendingToolExecutionIds.length
-    ? "BeforeTool"
-    : "TurnBoundary";
+    ? ExecutionPhase.BeforeTool
+    : ExecutionPhase.TurnBoundary;
 }

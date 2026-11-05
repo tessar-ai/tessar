@@ -1,6 +1,7 @@
 import { TessarError, errorInfo, MessageCodec, normalizeContent, normalizeScope, type ErrorInfo, type RuntimeState } from "@tessar/core";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { TessarServerError } from "../errors.js";
 
 export const HTTP_STATUS = {
   CREATED: 201,
@@ -45,16 +46,30 @@ export const SCOPED_PAGE_QUERY_FIELDS = ["scope", ...PAGE_QUERY_FIELDS] as const
 const STRING_FIELDS = ["id", "threadId", "interruptId", "streamId", "modelId", "level", "atCheckpointId", "atMessageId", "reason", "title", "tagName"];
 const EMPTY_STRING_FIELDS = ["reason", "title"];
 const OBJECT_FIELDS = ["metadata", "scope", "options", "modelOptions", "context", "limits", "attributes"];
-const ERROR_CODE_PATTERN = {
-  BAD_REQUEST: /^(Invalid|Unsupported|UnknownCursor|Cursor|SchemaIncompatible)/,
-  NOT_FOUND: /NotFound|MissingThread|MissingSession|ThreadDeleted/,
-  CONFLICT: /Busy|Conflict|Already|Ownership|Lease|ThreadNotSelected|Mismatch|Incompatible/,
-  UNAVAILABLE: /NotReady|Disposed|Unavailable/,
-};
+const ERROR_STATUS_BY_CODE = new Map<string, ContentfulStatusCode>([
+  ...[
+    HTTP_ERROR_CODE.INVALID_REQUEST, "InvalidConfiguration", "InvalidCursor", "InvalidData", "InvalidEvent",
+    "InvalidMessage", "InvalidResumeResponse", "InvalidUsage", "SchemaIncompatible", "UnknownTool",
+    "UnsupportedBoundary", "UnsupportedModelSelection", "UnsupportedOption",
+  ].map(code => [code, HTTP_STATUS.BAD_REQUEST] as const),
+  ...[
+    HTTP_ERROR_CODE.NOT_FOUND, "CheckpointNotFound", "InterruptNotFound", "StreamNotFound", "ThreadNotFound",
+  ].map(code => [code, HTTP_STATUS.NOT_FOUND] as const),
+  ...[
+    HTTP_ERROR_CODE.COMMIT_CONFLICT, "AgentAlreadyBound", "AlreadyResumed", "AlreadyTerminal", "Cancelled",
+    "ConsumerAlreadyAttached", "InvalidTransition", "ModelContextIncompatible", "OperationDenied", "OwnerActive",
+    "OwnershipLost", "PluginStateIncompatible", "RecoveryRequired", "RegistrationConflict", "ResumeIncompatible",
+    "SessionAgentMismatch", "SessionBusy", "StreamLimit", "ThreadBusy", "ThreadNotDeleted", "ThreadNotSelected",
+    "ThreadReferenced", "ThreadScopeMismatch", "UnsafeForkPoint",
+  ].map(code => [code, HTTP_STATUS.CONFLICT] as const),
+  ...[
+    "ControllerNotReady", "Disposed", "MissingModel", "MissingProvider", "StorageUnavailable",
+  ].map(code => [code, HTTP_STATUS.SERVICE_UNAVAILABLE] as const),
+]);
 
-export function bad(message: string): never { throw new TessarError(HTTP_ERROR_CODE.INVALID_REQUEST, message); }
+export function bad(message: string): never { throw new TessarServerError(HTTP_ERROR_CODE.INVALID_REQUEST, message); }
 export function required<T>(value: T | null | undefined): T {
-  if (value == null) throw new TessarError(HTTP_ERROR_CODE.NOT_FOUND, HTTP_ERROR_MESSAGE.NOT_FOUND);
+  if (value == null) throw new TessarServerError(HTTP_ERROR_CODE.NOT_FOUND, HTTP_ERROR_MESSAGE.NOT_FOUND);
   return value;
 }
 export async function body(c: Context, allowed: readonly string[]): Promise<Record<string, any>> {
@@ -107,10 +122,7 @@ export function httpError(error: unknown, c: Context): Response {
   if (info.source === "provider") status = HTTP_STATUS.BAD_GATEWAY;
   else if (info.source === "storage") status = HTTP_STATUS.SERVICE_UNAVAILABLE;
   else if (info.source === "tessar" && TessarError.isInstance(error)) {
-    if (ERROR_CODE_PATTERN.BAD_REQUEST.test(info.code)) status = HTTP_STATUS.BAD_REQUEST;
-    else if (ERROR_CODE_PATTERN.NOT_FOUND.test(info.code)) status = HTTP_STATUS.NOT_FOUND;
-    else if (ERROR_CODE_PATTERN.CONFLICT.test(info.code)) status = HTTP_STATUS.CONFLICT;
-    else if (ERROR_CODE_PATTERN.UNAVAILABLE.test(info.code)) status = HTTP_STATUS.SERVICE_UNAVAILABLE;
+    status = ERROR_STATUS_BY_CODE.get(info.code) ?? HTTP_STATUS.INTERNAL_SERVER_ERROR;
   }
   if (status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) console.error(error);
   return c.json({ error: safeError(info, status < HTTP_STATUS.INTERNAL_SERVER_ERROR) }, status);

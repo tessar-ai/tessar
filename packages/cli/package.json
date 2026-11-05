@@ -18,8 +18,8 @@
     "prepack": "tsc -p tsconfig.json && node scripts/build-metadata.mjs && node ../../scripts/copy-license.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
+  "dependencies": { "@tessar/core": "workspace:*" },
   "devDependencies": {
-    "@tessar/core": "workspace:*",
     "@tessar/openai": "workspace:*",
     "@tessar/libsql": "workspace:*",
     "@tessar/postgresql": "workspace:*",

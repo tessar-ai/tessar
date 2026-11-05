@@ -17,9 +17,13 @@ import {
   OpenAIAdapter,
   createClient,
   clientKeys,
+  OPENAI_API,
   type OpenAIOptions,
 } from "./adapter.js";
 import { OpenAIChatAdapter } from "./chat-adapter.js";
+
+const UNSUPPORTED_OPTION = "UnsupportedOption";
+const OPENAI_ENDPOINT = "https://api.openai.com/v1";
 
 export type OpenAIModelOptions = Omit<
   ResponseCreateParamsStreaming,
@@ -86,10 +90,10 @@ export class OpenAIChat<
       providerId = "openai",
       metadataPartition,
       connectionId,
-      api = "responses",
+      api = OPENAI_API.RESPONSES,
       ...fields
     } = configuration;
-    if (api !== "responses" && api !== "chat-completions")
+    if (api !== OPENAI_API.RESPONSES && api !== OPENAI_API.CHAT_COMPLETIONS)
       fail("InvalidConfiguration", "Choose responses or chat-completions");
     requireId(model, "model id");
     requireId(providerId, "provider id");
@@ -114,7 +118,7 @@ export class OpenAIChat<
       "function_call",
     ])
       if (key in body)
-        fail("UnsupportedOption", key + " is owned by the Agent runtime");
+        fail(UNSUPPORTED_OPTION, key + " is owned by the Agent runtime");
     if (
       body.background === true ||
       body.conversation != null ||
@@ -122,11 +126,11 @@ export class OpenAIChat<
       body.context_management != null
     )
       fail(
-        "UnsupportedOption",
+        UNSUPPORTED_OPTION,
         "Background, provider-managed conversations and compaction are not supported by the Agent loop",
       );
-    if (api === "chat-completions" && body.n != null && body.n !== 1)
-      fail("UnsupportedOption", "An Agent consumes one Chat completion choice");
+    if (api === OPENAI_API.CHAT_COMPLETIONS && body.n != null && body.n !== 1)
+      fail(UNSUPPORTED_OPTION, "An Agent consumes one Chat completion choice");
     const requestOptions = snapshotModelOptions(body);
     const selected = connection ?? {
       client: createClient(clientOptions),
@@ -154,7 +158,7 @@ export class OpenAIChat<
     );
     this.options = requestOptions as Readonly<OptionsFor<A>>;
     this.api = api as A;
-    if (api === "chat-completions")
+    if (api === OPENAI_API.CHAT_COMPLETIONS)
       this.chat = new OpenAIChatAdapter(
         clientOptions,
         this.ref,
@@ -165,11 +169,11 @@ export class OpenAIChat<
     this.sharedConnection = selected;
     const officialEndpoint =
       !clientOptions.baseURL ||
-      clientOptions.baseURL.replace(/\/$/, "") === "https://api.openai.com/v1";
+      clientOptions.baseURL.replace(/\/$/, "") === OPENAI_ENDPOINT;
     this.registration = {
       id: providerId,
       create: (modelId) => this.withModel(modelId),
-      endpoint: clientOptions.baseURL ?? "https://api.openai.com/v1",
+      endpoint: clientOptions.baseURL ?? OPENAI_ENDPOINT,
       metadataPartition: metadataPartition ?? selected.identity,
       catalogModelRef: (ref) =>
         officialEndpoint
@@ -205,8 +209,8 @@ export class OpenAIChat<
       null
     >[];
     if (!(levels as readonly string[]).includes(level))
-      fail("UnsupportedOption", "Unsupported OpenAI effort level: " + level);
-    if (this.api === "chat-completions")
+      fail(UNSUPPORTED_OPTION, "Unsupported OpenAI effort level: " + level);
+    if (this.api === OPENAI_API.CHAT_COMPLETIONS)
       return { ...options, reasoning_effort: level };
     const reasoning = options.reasoning;
     return {

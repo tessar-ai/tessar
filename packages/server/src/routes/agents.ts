@@ -1,13 +1,14 @@
 import { EventEnvelope, stateChanged, errorInfo, type Stream } from "@tessar/core";
 import type { Context, Hono } from "hono";
 import { agentDescriptor, controllerDescriptor } from "../descriptors.js";
-import { body, required, bad, safeError, validateFields, ROUTE_PARAM, HTTP_ERROR_MESSAGE, HTTP_STATUS } from "../http.js";
+import { body, required, bad, safeError, validateFields, ROUTE_PARAM, HTTP_ERROR_MESSAGE, HTTP_STATUS } from "../protocol/http.js";
 import type { RuntimeRegistry } from "../runtime/runtime-registry.js";
-import type { SseTransport, StateEvent } from "../sse.js";
+import type { SseTransport, StateEvent } from "../protocol/sse.js";
 import { C, wireModel } from "./sessions.js";
+import type { ThreadStateHub } from "../runtime/thread-state-hub.js";
 
 const A = "/api/agents/:agentId";
-export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, transport: SseTransport) {
+export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, transport: SseTransport, hub: ThreadStateHub) {
   const controller = (c: Context) => required([...runtimes().controllers.values()].find(value => value.agent.id === c.req.param(ROUTE_PARAM.AGENT_ID)));
   const active = new Map<string, Stream>();
   const streamKey = (agentId: string, streamId: string) => JSON.stringify([agentId, streamId]);
@@ -30,6 +31,7 @@ export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, trans
     void (async () => {
       try {
         for await (const event of stream) {
+          hub.observe(event);
           if (stream.id && !key) { key = streamKey(agentId, stream.id); active.set(key, stream); }
           if (event.type === stateChanged) { last = event as StateEvent; viewer?.(last); }
         }

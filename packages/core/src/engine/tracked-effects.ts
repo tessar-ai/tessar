@@ -23,6 +23,8 @@ import {
 } from "../state/plugin-state.js";
 import { canonicalJson } from "../state/commit.js";
 import { abortable } from "./abort.js";
+
+const RECOVERY_REQUIRED = "RecoveryRequired";
 export interface EffectContext {
   signal: AbortSignal;
   threadId: string;
@@ -101,7 +103,7 @@ export class EffectService {
     private readonly context: Omit<EffectContext, "key" | "operationId">,
     private readonly nextId: () => string,
     private readonly locks: Map<string, Promise<unknown>>,
-  ) {}
+  ) { }
   async execute<I, O>(
     definition: EffectDefinition<I, O>,
     input: I,
@@ -160,7 +162,7 @@ export class EffectService {
         ? await definition.reconcile({ input, key, id: operationId })
         : { status: "unknown" as const };
       if (outcome.status === "unknown")
-        fail("RecoveryRequired", "Effect dispatch outcome is unknown");
+        fail(RECOVERY_REQUIRED, "Effect dispatch outcome is unknown");
       if (outcome.status === "completed") {
         const output = definition.output.parse(outcome.output);
         assertJson(output);
@@ -187,7 +189,7 @@ export class EffectService {
           this.context.signal,
           () =>
             new TessarError(
-              "RecoveryRequired",
+              RECOVERY_REQUIRED,
               "Effect cancelled with unknown external outcome",
             ),
         ),
@@ -203,11 +205,11 @@ export class EffectService {
       return immutable(output) as O;
     } catch (error) {
       const info = errorInfo(error, {
-          source: "plugin",
-          pluginId: binding.pluginId,
-        }),
+        source: "plugin",
+        pluginId: binding.pluginId,
+      }),
         unknown =
-          ["StorageUnavailable", "OwnershipLost", "RecoveryRequired"].includes(
+          ["StorageUnavailable", "OwnershipLost", RECOVERY_REQUIRED].includes(
             info.code,
           ) || info.source === "storage";
       await save({
@@ -218,7 +220,7 @@ export class EffectService {
         operationId,
       });
       if (unknown)
-        fail("RecoveryRequired", "Effect outcome requires reconciliation");
+        fail(RECOVERY_REQUIRED, "Effect outcome requires reconciliation");
       throw error;
     }
   }

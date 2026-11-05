@@ -2,6 +2,8 @@ import { fail, requireId } from "../errors.js";
 import { immutable, type JsonValue } from "../json.js";
 import type { PluginStateSnapshot } from "./schema.js";
 import type { StorageBackend } from "./storage-ports.js";
+
+const UNSUPPORTED_BOUNDARY = "UnsupportedBoundary";
 export interface PluginStateDefinition<T extends JsonValue = JsonValue> {
   pluginId: string;
   namespace: string;
@@ -9,12 +11,12 @@ export interface PluginStateDefinition<T extends JsonValue = JsonValue> {
   initial: T;
   migrate?: (value: JsonValue, fromVersion: number) => T;
   fork?:
-    | "copy"
-    | "reset"
-    | ((
-        value: T,
-        context: { sourceThreadId: string; targetThreadId: string },
-      ) => T);
+  | "copy"
+  | "reset"
+  | ((
+    value: T,
+    context: { sourceThreadId: string; targetThreadId: string },
+  ) => T);
 }
 export function definePluginState<T extends JsonValue>(
   definition: PluginStateDefinition<T>,
@@ -55,7 +57,7 @@ export class PluginStateAccess {
   }): PluginStateAccess {
     if (owner.type === "agent" || owner.type === "session")
       fail(
-        "UnsupportedBoundary",
+        UNSUPPORTED_BOUNDARY,
         "Use explicit owned-state CAS for non-thread owners",
       );
     return new PluginStateAccess(
@@ -70,7 +72,7 @@ export class PluginStateAccess {
   owned(owner: { type: "agent" | "session"; id: string }) {
     requireId(owner.id);
     const port = this.ownedPort;
-    if (!port) fail("UnsupportedBoundary", "Owned state port unavailable");
+    if (!port) fail(UNSUPPORTED_BOUNDARY, "Owned state port unavailable");
     const key = <T extends JsonValue>(definition: PluginStateDefinition<T>) => {
       if (
         !this.definitions.some(
@@ -190,7 +192,7 @@ export class PluginStateAccess {
   async commit(): Promise<string> {
     if (!this.publish)
       fail(
-        "UnsupportedBoundary",
+        UNSUPPORTED_BOUNDARY,
         "State commits require an execution boundary",
       );
     return this.publish();

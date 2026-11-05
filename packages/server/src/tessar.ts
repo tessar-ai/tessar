@@ -1,16 +1,17 @@
 import { Hono } from "hono";
+import { TessarServerError } from "./errors.js";
 import { createAdaptorServer } from "@hono/node-server";
 import type { Server } from "node:http";
 import { fields, invalid, registerMiddleware, registerRoute } from "./registration.js";
 import { RuntimeRegistry } from "./runtime/runtime-registry.js";
 import { ObserverPlugin } from "./runtime/observer-plugin.js";
-import { httpError, HTTP_STATUS, HTTP_ERROR_CODE, HTTP_ERROR_MESSAGE } from "./http.js";
+import { httpError, HTTP_ERROR_CODE, HTTP_ERROR_MESSAGE } from "./protocol/http.js";
 import { SessionRegistry } from "./runtime/session-registry.js";
 import { registerSessions } from "./routes/sessions.js";
 import { registerThreads } from "./routes/threads.js";
 import { registerRecords } from "./routes/records.js";
 import { ThreadStateHub } from "./runtime/thread-state-hub.js";
-import { SseTransport } from "./sse.js";
+import { SseTransport } from "./protocol/sse.js";
 import { registerAgents } from "./routes/agents.js";
 import { registerState } from "./routes/state.js";
 import type { TessarOptions } from "./types.js";
@@ -36,13 +37,13 @@ export class Tessar {
       if (list !== undefined && !Array.isArray(list)) invalid("Expected registration array");
     const app = new Hono();
     app.onError(httpError);
-    app.notFound(c => c.json({ error: { source: "tessar", name: "TessarError", code: HTTP_ERROR_CODE.NOT_FOUND, message: HTTP_ERROR_MESSAGE.NOT_FOUND, retryable: false } }, HTTP_STATUS.NOT_FOUND));
+    app.notFound(c => httpError(new TessarServerError(HTTP_ERROR_CODE.NOT_FOUND, HTTP_ERROR_MESSAGE.NOT_FOUND), c));
     for (const middleware of config.middlewares ?? []) {
       fields(middleware, ["path", "handler"]);
       const entry = registerMiddleware(middleware.path, middleware.handler);
       app.use(entry.path, entry.handler);
     }
-    registerAgents(app, () => this.runtimes, this.transport);
+    registerAgents(app, () => this.runtimes, this.transport, this.hub);
     registerSessions(app, () => this.runtimes, () => this.sessions);
     registerThreads(app, () => this.sessions);
     registerRecords(app, () => this.runtimes);
@@ -66,7 +67,7 @@ export class Tessar {
         for (const controller of runtimes.controllers.values()) {
           await controller.initialize();
           if (this.closing) return;
-          await controller.plugins.attach(new ObserverPlugin(store => runtimes.records.set(controller.id, store), event => hub.observe(event)));
+          await controller.plugins.attach(new ObserverPlugin(store => runtimes.records.set(controller.id, store), hub));
         }
         if (this.closing) return;
         const listener = createAdaptorServer({ fetch: app.fetch });
@@ -88,7 +89,7 @@ export class Tessar {
     })();
   }
 
-  close(): Promise<void> {
+  shutdown(): Promise<void> {
     this.closing = true;
     return this.disposal ??= (async () => {
       await this.bootstrap;

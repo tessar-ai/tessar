@@ -10,6 +10,10 @@ import { openDatabase, type Database } from "./database.js";
 import { transaction } from "./transaction.js";
 import { contentsInput, vectorsInput, invalid, keys, nonempty, object, predicate, filterTokens, top, textTerms } from "./vector-validation.js";
 
+const INVALID_CONFIGURATION = "InvalidConfiguration";
+const VECTOR_INDEX = "tessar_vector";
+const BM25_INDEX = "tessar_bm25";
+
 export interface MongoDBVectorStoreOptions {
   database: Db;
   embedding: EmbeddingModel;
@@ -76,7 +80,7 @@ export class MongoDBVectorStore implements VectorStore {
       if (options.embedding.ref.connectionId !== undefined) nonempty(options.embedding.ref.connectionId, "embedding connectionId");
       this.#model = immutable(identity(options.embedding.ref));
     } catch (error) {
-      if (TessarError.isInstance(error)) throw new TessarRagError("InvalidConfiguration", error.message, { cause: error });
+      if (TessarError.isInstance(error)) throw new TessarRagError(INVALID_CONFIGURATION, error.message, { cause: error });
       throw error;
     }
     this.#embedding = options.embedding;
@@ -159,7 +163,7 @@ export class MongoDBVectorStore implements VectorStore {
     await this.#init();
     const { dimensions } = await this.#saved();
     if (dimensions === null || !await this.#data.findOne({})) return [];
-    await this.#searchIndex("tessar_vector", "vectorSearch", {
+    await this.#searchIndex(VECTOR_INDEX, "vectorSearch", {
       fields: [
         { type: "vector", path: "vector", numDimensions: dimensions, similarity: "cosine" },
         { type: "filter", path: "filterTokens" },
@@ -172,7 +176,7 @@ export class MongoDBVectorStore implements VectorStore {
     const results = await this.#scored([
       {
         $vectorSearch: {
-          index: "tessar_vector", path: "vector", queryVector: vector, exact: true, limit: topK,
+          index: VECTOR_INDEX, path: "vector", queryVector: vector, exact: true, limit: topK,
           ...(tokens.length ? { filter: { $and: tokens.map(value => ({ filterTokens: { $eq: value } })) } } : {})
         }
       },
@@ -185,7 +189,7 @@ export class MongoDBVectorStore implements VectorStore {
   async searchBM25(query: string, options: TextSearchOptions = {}): Promise<TextSearchResult[]> {
     this.#assertOpen(); const { terms, topK, tokens } = textOptions(query, options);
     await this.#init();
-    await this.#searchIndex("tessar_bm25", "search", {
+    await this.#searchIndex(BM25_INDEX, "search", {
       mappings: {
         dynamic: false, fields: {
           text: { type: "string", similarity: { type: "bm25" } }, filterTokens: { type: "token", normalizer: "none" },
@@ -196,7 +200,7 @@ export class MongoDBVectorStore implements VectorStore {
     return this.#scored([
       {
         $search: {
-          index: "tessar_bm25", compound: {
+          index: BM25_INDEX, compound: {
             should: terms.map(term => ({ text: { path: "text", query: term } })), minimumShouldMatch: 1,
             ...(tokens.length ? { filter: tokens.map(value => ({ equals: { path: "filterTokens", value } })) } : {}),
           }
@@ -225,12 +229,12 @@ export class MongoDBVectorStore implements VectorStore {
   #assertOpen(): void { if (this.#closed) invalid("Vector store is closed", "InvalidState"); }
   #assertModel(): void {
     if (canonicalJson(identity(this.#embedding.ref)) !== canonicalJson(this.#model))
-      invalid("Embedding model identity changed after opening the collection", "InvalidConfiguration");
+      invalid("Embedding model identity changed after opening the collection", INVALID_CONFIGURATION);
   }
 
   async #saved(session?: ClientSession): Promise<Metadata> {
     const metadata = await this.#metadata.findOne({ _id: this.#collection }, { session });
-    if (!metadata || metadata.model !== canonicalJson(this.#model)) invalid("Existing collection has a different embedding model", "InvalidConfiguration");
+    if (!metadata || metadata.model !== canonicalJson(this.#model)) invalid("Existing collection has a different embedding model", INVALID_CONFIGURATION);
     return metadata;
   }
 
@@ -271,7 +275,7 @@ export class MongoDBVectorStore implements VectorStore {
     }
     const actualType = existing?.type ?? (Array.isArray(existing?.latestDefinition?.fields) ? "vectorSearch" : "search");
     if (existing && (actualType !== type || !existing.latestDefinition || canonicalJson(existing.latestDefinition) !== canonicalJson(definition)))
-      invalid("Existing MongoDB Search index has an incompatible definition", "InvalidConfiguration");
+      invalid("Existing MongoDB Search index has an incompatible definition", INVALID_CONFIGURATION);
     if (!existing || existing.queryable !== true || existing.status !== "READY" || existing.statusDetail?.some(detail =>
       detail.status !== "READY" || detail.queryable !== true || !detail.mainIndex || detail.mainIndex.status !== "READY" || detail.mainIndex.queryable !== true
       || (existing.latestDefinitionVersion?.version !== undefined && detail.mainIndex.definitionVersion?.version !== existing.latestDefinitionVersion.version)))

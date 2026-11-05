@@ -10,6 +10,8 @@ import {
 } from "@tessar/rag";
 import { contentsInput, vectorsInput, invalid, keys, nonempty, object, predicate } from "./vector-validation.js";
 
+const INVALID_CONFIGURATION = "InvalidConfiguration";
+
 export interface PostgresqlVectorStoreOptions {
   pool: Pool;
   embedding: EmbeddingModel;
@@ -54,7 +56,7 @@ export class PostgresqlVectorStore implements VectorStore {
       if (options.embedding.ref.connectionId !== undefined) nonempty(options.embedding.ref.connectionId, "embedding connectionId");
       this.#model = immutable(identity(options.embedding.ref));
     } catch (error) {
-      if (TessarError.isInstance(error)) throw new TessarRagError("InvalidConfiguration", error.message, { cause: error });
+      if (TessarError.isInstance(error)) throw new TessarRagError(INVALID_CONFIGURATION, error.message, { cause: error });
       throw error;
     }
     this.#embedding = options.embedding;
@@ -172,13 +174,13 @@ export class PostgresqlVectorStore implements VectorStore {
     await this.#init();
     if (!this.#bm25Initializing) this.#bm25Initializing = this.#transaction(async client => {
       const extension = await client.query("SELECT 1 FROM pg_extension WHERE extname='pg_search'");
-      if (!extension.rows.length) invalid("searchBM25 requires the pg_search extension", "InvalidConfiguration");
+      if (!extension.rows.length) invalid("searchBM25 requires the pg_search extension", INVALID_CONFIGURATION);
       const operator = await client.query(`SELECT n.nspname AS schema FROM pg_operator o
         JOIN pg_namespace n ON n.oid=o.oprnamespace
         JOIN pg_depend d ON d.classid='pg_operator'::regclass AND d.objid=o.oid AND d.deptype='e'
         JOIN pg_extension e ON e.oid=d.refobjid
         WHERE e.extname='pg_search' AND o.oprname='|||' LIMIT 1`);
-      if (!operator.rows.length) invalid("pg_search must provide its text match disjunction operator", "InvalidConfiguration");
+      if (!operator.rows.length) invalid("pg_search must provide its text match disjunction operator", INVALID_CONFIGURATION);
       this.#bm25OperatorSchema = quote(operator.rows[0].schema);
       await client.query(`CREATE INDEX IF NOT EXISTS ${quote(this.#name + "_bm25")} ON ${this.#table}
         USING bm25 (sequence,search_text) WITH (key_field='sequence')`);
@@ -224,7 +226,7 @@ export class PostgresqlVectorStore implements VectorStore {
 
   #assertModel(): void {
     if (canonicalJson(identity(this.#embedding.ref)) !== canonicalJson(this.#model))
-      invalid("Embedding model identity changed after opening the collection", "InvalidConfiguration");
+      invalid("Embedding model identity changed after opening the collection", INVALID_CONFIGURATION);
   }
 
   async #dimensions(client: PoolClient): Promise<number | null> {
@@ -237,13 +239,13 @@ export class PostgresqlVectorStore implements VectorStore {
     if (!this.#initializing) {
       this.#initializing = this.#transaction(async client => {
         const extension = await client.query("SELECT n.nspname AS schema FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='vector'");
-        if (!extension.rows.length) invalid("PostgreSQL vector store requires the vector extension", "InvalidConfiguration");
+        if (!extension.rows.length) invalid("PostgreSQL vector store requires the vector extension", INVALID_CONFIGURATION);
         this.#vectorSchema = quote(extension.rows[0].schema);
         await client.query(`CREATE SCHEMA IF NOT EXISTS ${quote(this.#db.schema)}`);
         await client.query(`CREATE TABLE IF NOT EXISTS ${this.#collections} (name text PRIMARY KEY,model jsonb NOT NULL,dimensions integer CHECK(dimensions>0))`);
         await client.query(`INSERT INTO ${this.#collections}(name,model) VALUES($1,$2::jsonb) ON CONFLICT(name) DO NOTHING`, [this.#collection, canonicalJson(this.#model)]);
         const saved = await client.query(`SELECT model,dimensions FROM ${this.#collections} WHERE name=$1`, [this.#collection]);
-        if (canonicalJson(saved.rows[0]?.model) !== canonicalJson(this.#model)) invalid("Existing collection has a different embedding model", "InvalidConfiguration");
+        if (canonicalJson(saved.rows[0]?.model) !== canonicalJson(this.#model)) invalid("Existing collection has a different embedding model", INVALID_CONFIGURATION);
         await client.query(`CREATE TABLE IF NOT EXISTS ${this.#table} (
           sequence bigserial PRIMARY KEY,id text NOT NULL UNIQUE,created_at text NOT NULL,
           content jsonb NOT NULL,vector jsonb NOT NULL,embedding ${this.#vectorSchema}.vector NOT NULL,

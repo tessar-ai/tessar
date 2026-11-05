@@ -4,9 +4,9 @@ import { ScriptedProvider } from "@tessar/core/testing";
 import { start } from "./helpers.js";
 import type { Tessar } from "../src/index.js";
 import { EventEnvelope, stateChanged, type RuntimeState } from "@tessar/core";
-import { LatestStateWriter } from "../src/sse.js";
+import { LatestStateWriter } from "../src/protocal/sse.js";
 let server: Tessar;
-afterEach(async () => { await server?.close(); });
+afterEach(async () => { await server?.shutdown(); });
 
 test("slow writes retain only the newest pending snapshot", async () => {
   let release!: () => void;
