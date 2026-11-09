@@ -1,27 +1,25 @@
 import { EventEnvelope, stateChanged, errorInfo, type Stream } from "@tessar/core";
 import type { Context, Hono } from "hono";
-import { agentDescriptor, controllerDescriptor } from "../descriptors.js";
-import { body, required, bad, safeError, validateFields, ROUTE_PARAM, HTTP_ERROR_MESSAGE, HTTP_STATUS } from "../protocol.js";
+import { agentDescriptor } from "../descriptors.js";
+import { body, required, bad, safeError, validateFields, ROUTE_PARAM, HTTP_ERROR_MESSAGE, HTTP_STATUS, wireModel } from "../protocol.js";
 import type { RuntimeRegistry } from "../../runtime/runtime-registry.js";
 import type { SseTransport, StateEvent } from "../sse.js";
-import { C, wireModel } from "./sessions.js";
 import type { ThreadStateHub } from "../../runtime/thread-state-hub.js";
 
-const A = "/api/agents/:agentId";
+const AGENTS_PATH = "/api/agents";
+const AGENT_PATH = AGENTS_PATH + "/:agentId";
 export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, transport: SseTransport, hub: ThreadStateHub) {
-  const controller = (c: Context) => required([...runtimes().controllers.values()].find(value => value.agent.id === c.req.param(ROUTE_PARAM.AGENT_ID)));
+  const getAgent = (c: Context) => required(runtimes().agents.get(c.req.param(ROUTE_PARAM.AGENT_ID)!));
   const active = new Map<string, Stream>();
   const streamKey = (agentId: string, streamId: string) => JSON.stringify([agentId, streamId]);
-  app.get("/api/agents", c => c.json([...runtimes().controllers.values()].map(agentDescriptor)));
-  app.get(A, c => c.json(agentDescriptor(controller(c))));
-  app.get(A + "/tools", c => c.json(controller(c).agent.listTool().map(tool => ({
+  app.get(AGENTS_PATH, c => c.json([...runtimes().agents.values()].map(agent => agentDescriptor(agent, runtimes().agentControllers.get(agent.id)))));
+  app.get(AGENT_PATH, c => c.json(agentDescriptor(getAgent(c), runtimes().agentControllers.get(getAgent(c).id))));
+  app.get(AGENT_PATH + "/tools", c => c.json(getAgent(c).listTool().map(tool => ({
     name: tool.name, description: tool.description, inputSchema: tool.jsonSchema,
   }))));
-  app.get("/api/controllers", c => c.json([...runtimes().controllers.values()].map(controllerDescriptor)));
-  app.get(C, c => c.json(controllerDescriptor(required(runtimes().controllers.get(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!)))));
-  app.post(A + "/generate", async c => {
+  app.post(AGENT_PATH + "/generate", async c => {
     const { input, options } = await executionBody(c);
-    const result = await controller(c).agent.generate(input, options);
+    const result = await getAgent(c).generate(input, options);
     return c.json({ ...result, error: safeError(result.error) });
   });
   const deliver = (c: Context, stream: Stream, agentId: string): Response => transport.response(c, (push, end) => {
@@ -42,26 +40,26 @@ export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, trans
     })();
     return () => { viewer = undefined; };
   });
-  app.post(A + "/stream", async c => {
+  app.post(AGENT_PATH + "/stream", async c => {
     const { input, options } = await executionBody(c);
-    const agent = controller(c).agent;
+    const agent = getAgent(c);
     return deliver(c, agent.stream(input, options), agent.id);
   });
-  app.post(A + "/resume", async c => {
+  app.post(AGENT_PATH + "/resume", async c => {
     const value = await body(c, ["threadId", "interruptId", "value", "scope"]);
     if (!value.threadId || !value.interruptId || !("value" in value)) bad(HTTP_ERROR_MESSAGE.CONTINUATION_REQUIRED);
-    const agent = controller(c).agent;
+    const agent = getAgent(c);
     return deliver(c, agent.resume(value as Parameters<typeof agent.resume>[0]), agent.id);
   });
-  app.post(A + "/signals", async c => {
+  app.post(AGENT_PATH + "/signals", async c => {
     const value = await body(c, ["streamId", "threadId", "content", "persist", "tagName", "attributes", "metadata"]);
-    const agent = controller(c).agent;
+    const agent = getAgent(c);
     await agent.sendSignal(value as Parameters<typeof agent.sendSignal>[0]); return c.body(null, HTTP_STATUS.NO_CONTENT);
   });
-  app.post(A + "/streams/:streamId/abort", async c => {
+  app.post(AGENT_PATH + "/streams/:streamId/abort", async c => {
     const { reason } = await body(c, ["reason"]);
     if (reason !== undefined && typeof reason !== "string") bad(HTTP_ERROR_MESSAGE.REASON_MUST_BE_STRING);
-    required(active.get(streamKey(controller(c).agent.id, c.req.param(ROUTE_PARAM.STREAM_ID)!))).abort(reason);
+    required(active.get(streamKey(getAgent(c).id, c.req.param(ROUTE_PARAM.STREAM_ID)!))).abort(reason);
     return c.body(null, HTTP_STATUS.NO_CONTENT);
   });
 }

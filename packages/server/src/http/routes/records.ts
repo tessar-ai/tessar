@@ -1,11 +1,11 @@
 import type { Context, Hono } from "hono";
 import { body, query, required, ROUTE_PARAM, HTTP_STATUS, SCOPED_PAGE_QUERY_FIELDS } from "../protocol.js";
 import type { RuntimeRegistry } from "../../runtime/runtime-registry.js";
-import { C } from "./sessions.js";
+import { CONTROLLER_PATH } from "./controllers.js";
 
 export function registerRecords(app: Hono, runtimes: () => RuntimeRegistry) {
   const store = (c: Context) => required(runtimes().records.get(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!));
-  const path = C + "/records/:namespace";
+  const path = CONTROLLER_PATH + "/records/:namespace";
   app.post(path, async c => {
     const value = await body(c, ["id", "scope", "data"]);
     return c.json(await store(c).append({ ...value, namespace: c.req.param(ROUTE_PARAM.NAMESPACE)!, data: value.data }), HTTP_STATUS.CREATED);

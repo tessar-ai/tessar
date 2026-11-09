@@ -5,14 +5,15 @@ RAG. Vector storage, vector search and BM25 are exported only from
 `@tessar/libsql/vector`. To use that entry, explicitly install its optional peer:
 
 ```sh
-npm install @tessar/libsql @tessar/rag libsql@0.5.29
+npm install @tessar/core @tessar/libsql @tessar/rag libsql@0.5.29
 ```
 
 `@tessar/rag` supplies the vector contracts and TessarRagError. It is an optional
 peer dependency, not an automatically installed dependency; importing `/vector`
 without it fails. State-only users install `@tessar/libsql` and `libsql@0.5.29` and import
 from its root. The driver is an optional peer installed explicitly by consumers
-and a development dependency for tests. Core remains a runtime dependency.
+and a development dependency for tests. Core is required at runtime through a
+compatible peer dependency, shared with the application.
 
 ## Independent vector storage
 

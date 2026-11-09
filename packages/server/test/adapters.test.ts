@@ -16,7 +16,7 @@ test("Hono integration exposes prefixed APIs and OpenAPI alongside application r
   const tessar = new Tessar({ agents: [agent] });
   cleanup.push(() => tessar.shutdown());
   expect(tessar.getAgent(agent.id)).toBe(agent);
-  expect(tessar.getController(agent.id).agent).toBe(agent);
+  expect(() => tessar.getController(agent.id)).toThrow(expect.objectContaining({ code: "ControllerNotFound" }));
   expect(() => tessar.getAgent("missing")).toThrow();
   const app = new Hono(); app.get("/business", c => c.text("business"));
   const server = new TessarServer({ app, tessar, prefix: "/tessar" });

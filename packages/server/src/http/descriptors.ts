@@ -1,10 +1,9 @@
-import type { Controller, Session, Thread } from "@tessar/core";
+import type { Agent, Controller, Session, Thread } from "@tessar/core";
 
-export function agentDescriptor(controller: Controller) {
-  const agent = controller.agent;
+export function agentDescriptor(agent: Agent, controllerId?: string) {
   const model = agent.getModel();
   return {
-    id: agent.id, controllerId: controller.id,
+    id: agent.id, ...(controllerId === undefined ? {} : { controllerId }),
     model: "ref" in model ? model.ref : model,
     instructions: agent.getInstruction(), limits: agent.limits()
   };

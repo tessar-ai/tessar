@@ -23,7 +23,7 @@ export class Tessar {
   }
   getAgent(id: string): Agent {
     const runtime = runtimeFor(this);
-    const agent = [...runtime.registry.controllers.values()].find(controller => controller.agent.id === id)?.agent;
+    const agent = runtime.registry.agents.get(id);
     if (!agent) throw new TessarServerError(SERVER_ERROR_CODE.AGENT_NOT_FOUND, "Agent not found: " + id);
     return agent;
   }

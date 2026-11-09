@@ -25,14 +25,22 @@ ESM `.js` imports through Node's type transformation. There is no watch/reload,
 path-alias resolution, JSX compilation or playground in this release.
 
 `new Tessar()` registers and begins initializing runtimes; it does not open a port.
-Register Agents, Controllers, or both. An Agent alone gets an internal Controller
-using its ID, so Controller/plugin/storage configuration is optional. Do not
-register the same Agent separately and through a Controller.
+Register arrays of Agents, Controllers, or both. Independent Agents stay independent;
+Tessar never creates Controllers or Sessions for them. Controllers retain their
+existing one-Agent core relationship and configured plugins/storage. Do not register
+the same Agent separately and through a Controller. Plugin-registered subagents are
+not automatically exposed as server resources.
 
 `tessar.getAgent(id)` and `tessar.getController(id)` return the registered instances,
 including Controller-owned Agents. Missing IDs throw `TessarServerError` with
 `AgentNotFound` or `ControllerNotFound`. For SDK use before adapter initialization,
-await the Controller's existing `initialize()` method before executing operations.
+await the Controller's existing `initialize()` method before executing operations
+on a Controller-owned Agent. Independent Agents use their normal core lifecycle.
+Agent descriptors omit `controllerId` when no Controller is registered for them.
+`/api/controllers` lists only explicitly registered Controllers; Session, Thread
+and records APIs require one. Direct independent Agent calls do not gain Session
+queues, persisted conversation history or model selection from an implicit host.
+`tessar.shutdown()` disposes explicit Controllers and shuts down independent Agents.
 
 Optional `server` configuration on Tessar contains `hostname`, `port`, `prefix`,
 `openapiPath`, `routes` and `middlewares`. Port defaults to `4117`; `port: 0`
@@ -161,7 +169,8 @@ Memory storage is lost on restart. Durable storage restores persisted data;
 unfinished work requires explicit resume/recover. HTTP accepts JSON model IDs/refs,
 not executable adapters, callbacks or AbortSignal. Constructors, plugins/hooks,
 Controller lifecycle and Thread handle disposal remain local configuration.
-No RAG, browser UI, client SDK, authentication service or CLI watch mode is added.
+No RAG, browser UI, authentication service or CLI watch mode is added by this package.
+Remote consumers can use the separate [@tessar/client](../client/README.md) HTTP/SSE SDK.
 
 See the [server guide](../../examples/guide/server.md) for a complete usage flow.
 

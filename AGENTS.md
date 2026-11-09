@@ -33,6 +33,7 @@ Use strict TypeScript, explicit type imports and `.js` extensions in relative im
 - Native transaction lifecycle belongs in each backend's `transaction.ts` and is reused by state and vector storage. Keep state-specific error mapping separate from native transaction errors.
 - Use platform differences to justify different fields, operations or asynchronous I/O, not unrelated differences in organization. Do not force SQL and document databases into a shared abstraction.
 - When an existing pattern must change, check and update equivalent callers, tests and documentation together. Record any necessary backend exception and its reason.
+- Preserve explicit runtime ownership: registering `agents` on Tessar must not create Controllers or Sessions. A Controller owns one Agent; delegation/subagents remain developer/plugin behavior. Server and client layers expose the registered runtime APIs without inventing orchestration.
 
 ### Constants
 

@@ -3,6 +3,7 @@ import { TessarServerError } from "../errors.js";
 import { registerMiddleware, registerRoute } from "./registration.js";
 import { fields, invalid } from "../runtime/validation.js";
 import { httpError, HTTP_ERROR_CODE, HTTP_ERROR_MESSAGE } from "./protocol.js";
+import { registerControllers } from "./routes/controllers.js";
 import { registerSessions } from "./routes/sessions.js";
 import { registerThreads } from "./routes/threads.js";
 import { registerRecords } from "./routes/records.js";
@@ -27,6 +28,7 @@ export class ServerApplication {
       app.use(entry.path, entry.handler);
     }
     registerAgents(app, () => runtime.registry, this.transport, runtime.hub);
+    registerControllers(app, () => runtime.registry);
     registerSessions(app, () => runtime.registry, () => runtime.sessions);
     registerThreads(app, () => runtime.sessions);
     registerRecords(app, () => runtime.registry);

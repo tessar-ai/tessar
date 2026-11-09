@@ -3,7 +3,7 @@
 [All guides](README.md) · [Package API](../../packages/rag/README.md) ·
 [Shared RAG specification](../../docs/superpowers/specs/2026-10-29-rag-design.md)
 
-Install `@tessar/rag` in a Node.js >=24.22.1 application. `DocumentReader` loads
+Install `@tessar/core` and `@tessar/rag` in a Node.js >=24.22.1 application. `DocumentReader` loads
 sources and `DocumentSplitter` chunks extracted content without an Agent,
 Controller or Session. Compose these operations with the storage, embedding,
 retrieval and agent-context workflow your application needs.
@@ -283,7 +283,7 @@ finish. No live remote deployment verification is claimed.
 Install the native driver and optional RAG peer explicitly:
 
 ```sh
-npm install @tessar/postgresql @tessar/rag pg
+npm install @tessar/core @tessar/postgresql @tessar/rag pg
 npm install --save-dev @types/pg
 ```
 

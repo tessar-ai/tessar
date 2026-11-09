@@ -19,5 +19,7 @@
     "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "dependencies": { "@tessar/core": "workspace:*", "openai": "7.34.0" }
+  "dependencies": { "openai": "7.34.0" },
+  "peerDependencies": { "@tessar/core": "workspace:^" },
+  "devDependencies": { "@tessar/core": "workspace:*" }
 }

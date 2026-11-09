@@ -81,7 +81,7 @@ independently of Agent, Controller, Session and checkpoint storage. Install the
 optional RAG peer explicitly; the root storage entry does not require it:
 
 ```sh
-npm install @tessar/mongodb @tessar/rag mongodb
+npm install @tessar/core @tessar/mongodb @tessar/rag mongodb
 ```
 
 ```ts

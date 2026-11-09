@@ -130,7 +130,7 @@ it("packs and installs the standalone CLI and scaffolds from a different working
     const manifest = JSON.parse(await readFile(join(installed, "package.json"), "utf8"));
     expect(manifest.name).toBe("tessar");
     const coreManifest = JSON.parse(await readFile(resolve("packages/core/package.json"), "utf8"));
-    expect(manifest.dependencies).toEqual({ "@tessar/core": coreManifest.version, hono: "4.13.16", "@hono/node-server": "2.1.6" });
+    expect(manifest.dependencies).toEqual({ "@tessar/core": "^" + coreManifest.version, hono: "4.13.16", "@hono/node-server": "2.1.6" });
     expect(typeof manifest.bin.tessar).toBe("string");
     const bin = join(installed, manifest.bin.tessar);
     expect(existsSync(bin)).toBe(true);

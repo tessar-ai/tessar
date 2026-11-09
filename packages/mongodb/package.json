@@ -13,9 +13,8 @@
     ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
     "./vector": { "types": "./dist/vector.d.ts", "import": "./dist/vector.js" }
   },
-  "dependencies": { "@tessar/core": "workspace:*" },
-  "peerDependencies": { "mongodb": "^6.21.0", "@tessar/rag": "workspace:^" },
+  "peerDependencies": { "@tessar/core": "workspace:^", "mongodb": "^6.21.0", "@tessar/rag": "workspace:^" },
   "peerDependenciesMeta": { "mongodb": { "optional": true }, "@tessar/rag": { "optional": true } },
-  "devDependencies": { "mongodb": "^6.21.0", "@tessar/rag": "workspace:*" },
+  "devDependencies": { "@tessar/core": "workspace:*", "mongodb": "^6.21.0", "@tessar/rag": "workspace:*" },
   "scripts": { "build": "tsc -p tsconfig.json", "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs", "typecheck": "tsc --noEmit -p tsconfig.json" }
 }

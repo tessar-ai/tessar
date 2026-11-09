@@ -40,10 +40,8 @@
       "import": "./dist/vector.js"
     }
   },
-  "dependencies": {
-    "@tessar/core": "workspace:*"
-  },
   "peerDependencies": {
+    "@tessar/core": "workspace:^",
     "@tessar/rag": "workspace:^",
     "libsql": "0.5.29"
   },
@@ -56,6 +54,7 @@
     }
   },
   "devDependencies": {
+    "@tessar/core": "workspace:*",
     "@tessar/rag": "workspace:*",
     "libsql": "0.5.29"
   },

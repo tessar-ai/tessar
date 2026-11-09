@@ -4,7 +4,7 @@ PostgreSQL storage for Tessar checkpoints, execution records, sessions, and
 plugin-owned state. Uses the native `pg` driver and database transactions.
 
 ```sh
-npm install @tessar/postgresql pg
+npm install @tessar/core @tessar/postgresql pg
 npm install --save-dev @types/pg
 ```
 
@@ -81,7 +81,7 @@ of checkpoint storage, Agent, Controller and Session. Install the optional RAG
 peer explicitly; the package root remains usable without RAG:
 
 ```sh
-npm install @tessar/postgresql @tessar/rag pg
+npm install @tessar/core @tessar/postgresql @tessar/rag pg
 npm install --save-dev @types/pg
 ```
 

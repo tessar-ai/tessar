@@ -40,9 +40,12 @@
     "src/models/catalog.LICENSE"
   ],
   "devDependencies": {
+    "vitest": "5.0.4",
     "zod": "^4.6.7"
   },
   "peerDependencies": {
-    "zod": "^4.6.7"
-  }
+    "zod": "^4.6.7",
+    "vitest": "^5.0.4"
+  },
+  "peerDependenciesMeta": { "vitest": { "optional": true } }
 }

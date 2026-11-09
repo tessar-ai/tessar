@@ -39,7 +39,6 @@
     }
   },
   "dependencies": {
-    "@tessar/core": "workspace:*",
     "csv-parse": "^7.0.3",
     "mammoth": "^1.13.0",
     "markdown-it": "^15.0.3",
@@ -47,6 +46,8 @@
     "pdfjs-dist": "^6.4.299",
     "read-excel-file": "^9.3.13"
   },
+  "peerDependencies": { "@tessar/core": "workspace:^" },
+  "devDependencies": { "@tessar/core": "workspace:*" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs",

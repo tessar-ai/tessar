@@ -2,7 +2,7 @@
 
 [All guides](README.md) · [Full package API](../../packages/typesafe/README.md)
 
-Install `@tessar/typesafe` and set `TYPESAFE_API_KEY`. The class is a standalone
+Install `@tessar/core` and `@tessar/typesafe` and set `TYPESAFE_API_KEY`. The class is a standalone
 client, not an Agent model adapter. A single instance can generate answers for
 many purposes by changing the state and questions on each call.
 

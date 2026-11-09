@@ -6,14 +6,21 @@ A working terminal example does not establish browser application support.
 
 ## TD-002 — Self-hosted server and application/browser client SDK
 
-**Status:** standalone server increment delivered (2026-11-04); debt remains open.
-**Scope:** application integration; browser/client SDK remains deferred.
+**Status:** self-hosted server and Express/Hono application integration delivered
+(2026-11-05); client HTTP/SSE SDK delivered (2026-11-06). Debt remains open for
+the real browser end-to-end flow.
+**Scope:** client HTTP/SSE SDK; no change to core Controller/Agent ownership.
 
 ### Gap
 
 The optional `@tessar/server` package adds standalone HTTP APIs and accumulated
-SSE state around the existing runtime. It does not yet provide a browser/client
-SDK or complete server-to-browser application flow. This debt remains open.
+SSE state around the existing runtime. `@tessar/client` now wraps its runtime APIs,
+with typed resource handles, native fetch and accumulated state SSE. Real HTTP
+tests cover multiple turns, reconnecting with existing IDs, history/model/records,
+independent Session selections, shared Thread viewers, abort and suspension/resume.
+The packed client installs alone without core, server or zod, and its browser bundle is
+tested without Node globals. Actual browser UI/CORS/reload flow has not yet been
+verified, so this debt remains open.
 
 ### Direction
 
@@ -37,7 +44,10 @@ are insufficient evidence for closing this debt.
 
 The standalone server API and HTTP mapping are documented in the
 [server guide](../examples/guide/server.md) and [package README](../packages/server/README.md).
-Existing-server integration and the browser/client SDK still need separate design.
+Existing-server integration and the [client SDK](../examples/guide/client.md)
+are implemented. Browser UI end-to-end verification is still outstanding.
+Independent Agents are exposed without implicit
+Controllers; Session/Thread operations use explicitly registered Controllers.
 
 ## TD-004 ? Collection query capabilities and Thread execution lists
 

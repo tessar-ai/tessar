@@ -10,7 +10,7 @@ Session or loop is required. Uses native `fetch`; no TypeSafe SDK dependency.
 Node.js >=24.22.1:
 
 ```sh
-npm install @tessar/typesafe
+npm install @tessar/core @tessar/typesafe
 ```
 
 ## Generate

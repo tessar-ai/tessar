@@ -28,20 +28,28 @@ it("installs packed libSQL without its optional driver or RAG peers", async () =
     expect(existsSync(join(host, "node_modules/@tessar/rag"))).toBe(false);
     expect(existsSync(join(host, "node_modules/libsql"))).toBe(false);
     const installed = JSON.parse(await readFile(join(host, "node_modules/@tessar/libsql/package.json"), "utf8"));
-    expect(installed.dependencies["@tessar/rag"]).toBeUndefined();
+    expect(installed.dependencies?.["@tessar/core"]).toBeUndefined();
+    expect(installed.peerDependencies["@tessar/core"]).toMatch(/^\^\d/);
+    expect(existsSync(join(host, "node_modules/vitest"))).toBe(false);
+    const coreManifest = JSON.parse(await readFile(join(host, "node_modules/@tessar/core/package.json"), "utf8"));
+    expect(coreManifest.peerDependencies.vitest).toMatch(/^\^5\./);
+    expect(coreManifest.peerDependenciesMeta.vitest.optional).toBe(true);
+    expect(installed.dependencies?.["@tessar/rag"]).toBeUndefined();
     expect(installed.peerDependencies["@tessar/rag"]).toMatch(/^\^\d/);
     expect(installed.peerDependenciesMeta["@tessar/rag"].optional).toBe(true);
-    expect(installed.dependencies.libsql).toBeUndefined();
+    expect(installed.dependencies?.libsql).toBeUndefined();
     expect(installed.peerDependenciesMeta.libsql.optional).toBe(true);
     // Supply the chosen native driver locally so the consumer test stays offline.
     await command("npm", ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund",
       realpathSync(resolve("packages/libsql/node_modules/libsql"))], host, cache);
     await writeFile(join(host, "main.mjs"), `
       import assert from 'node:assert/strict';
+      import {TessarError} from '@tessar/core';
       import * as storage from '@tessar/libsql';
       import Database from 'libsql';
       const database = new Database(':memory:');
       assert.deepEqual(Object.keys(storage).sort(), ['LibsqlStoragePlugin','createLibsqlBackend']);
+      await assert.rejects(storage.createLibsqlBackend({database:null}), error => TessarError.isInstance(error));
       const backend = await storage.createLibsqlBackend({database});
       try {
         const record = await backend.records.append({namespace:'consumer',data:{ok:true}});
