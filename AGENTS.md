@@ -46,6 +46,17 @@ Use strict TypeScript, explicit type imports and `.js` extensions in relative im
 - Do not extract every string or number. Single-use prose, ordinary object keys, type literals and obvious structural values such as zero or one can stay inline unless they encode a configurable default, behavioral limit or protocol meaning above.
 - Before finishing a change, check new and touched literals against these rules without waiting for a separate audit or reminder. Update affected examples and documentation when a default or protocol value changes; tests should still independently assert the expected behavior.
 
+### Constants
+
+- Use named constants for configuration defaults and behavioral limits, even when used once: hostname, port, timeout, retry count, batch size, concurrency and buffer/page limits. Defaults must have one clear place to change.
+- Extract repeated values that represent the same meaning. Equal literals with different meanings do not need a shared constant.
+- Use constants for typo-prone runtime identifiers and protocol values: error codes, event names, execution phases, provider/protocol IDs, HTTP status codes, route parameter names, MIME types, storage/index names and fixed configuration filenames. Reuse an existing constant before introducing another.
+- Keep constants local to the file when only that file needs them. Share within the package only when multiple files need the same value; do not create a large constants module by default.
+- Do not share constants across packages or add a cross-package dependency just to reuse them. Each package owns its values.
+- Use descriptive UPPER_SNAKE_CASE names, with `as const` objects for related values when useful. Keep `index.ts` limited to intentional public API exports; internal constants are not public API by default.
+- Do not extract every string or number. Single-use prose, ordinary object keys, type literals and obvious structural values such as zero or one can stay inline unless they encode a configurable default, behavioral limit or protocol meaning above.
+- Before finishing a change, check new and touched literals against these rules without waiting for a separate audit or reminder. Update affected examples and documentation when a default or protocol value changes; tests should still independently assert the expected behavior.
+
 ## Testing Guidelines
 
 Name Vitest tests `*.test.ts` and place them beside other tests in the relevant test directory. Add focused regression coverage for behavioral fixes. No numeric coverage threshold is configured. Database tests skip when their URLs are absent; skipped tests do not verify a backend.
