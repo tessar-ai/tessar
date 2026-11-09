@@ -13,6 +13,11 @@ Source defaults to `tessar` and is distinct from inheritance. See the
 npm install @tessar/core @tessar/openai zod
 ```
 
+Zod is a required peer for the Tool API. Vitest is an optional peer needed only
+when using `@tessar/core/testing/storage-conformance`; install `vitest@^5.0.4`
+as a development dependency for that entry. Ordinary Core consumers do not
+install the test runner automatically.
+
 - `Agent` owns its model, instructions, tools, limits and the agent loop.
 - `Controller({ id, agent, plugins })` owns plugin setup, resources and sessions.
 - An executable model lets Agent run directly, without public init/dispose.

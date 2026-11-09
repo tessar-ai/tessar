@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "vitest";
-import { Agent } from "@tessar/core";
+import { Agent, Controller } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { start } from "./helpers.js";
 import type { Tessar } from "../src/index.js";
@@ -25,7 +25,7 @@ test("disconnect does not cancel or duplicate an Agent execution", async () => {
   const gate = new Promise<void>(resolve => { release = resolve; });
   const model = new ScriptedProvider([{ text: "finished after disconnect", gate }]);
   const agent = new Agent({ id: crypto.randomUUID(), model });
-  const host = await start({ agents: [agent] }); server = host.server;
+  const host = await start({ controllers: [new Controller({ id: agent.id, agent })] }); server = host.server;
   const response = await fetch(host.url + `/api/agents/${agent.id}/stream`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: "question" }),
   });
@@ -76,7 +76,7 @@ test("provider failure details are safe in state GET, execution records and SSE"
   const failure = Object.assign(new Error("sentinel secret credential"), { code: "NotFoundError", status: 404 });
   const model = new ScriptedProvider([{ error: failure }, { error: failure }]);
   const agent = new Agent({ id: crypto.randomUUID(), model });
-  const host = await start({ agents: [agent] }); server = host.server;
+  const host = await start({ controllers: [new Controller({ id: agent.id, agent })] }); server = host.server;
   const streamed = await fetch(host.url + `/api/agents/${agent.id}/stream`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: "fail" }),
   });

@@ -23,7 +23,7 @@ The current physical layouts are the initial schema v1 for each backend.
 ## libSQL: restore a Session after restart
 
 ```sh
-npm install @tessar/libsql libsql@0.5.29
+npm install @tessar/core @tessar/libsql libsql@0.5.29
 ```
 
 The root entry provides state/checkpoint storage without requiring RAG.
@@ -116,7 +116,7 @@ Replace the libSQL import, database creation, plugin and native cleanup in the
 preceding example with one of these alternatives; do not register several
 storage backends together.
 
-PostgreSQL (`npm install @tessar/postgresql pg@^8.16.3`; TypeScript users also
+PostgreSQL (`npm install @tessar/core @tessar/postgresql pg@^8.16.3`; TypeScript users also
 install `@types/pg` as a development dependency):
 
 ```ts
@@ -129,7 +129,7 @@ const storage = new PostgresqlStoragePlugin({ pool, schema: "agent_state" });
 // After disposing the Controller, await pool.end().
 ```
 
-MongoDB (`npm install @tessar/mongodb mongodb@^6.21.0`):
+MongoDB (`npm install @tessar/core @tessar/mongodb mongodb@^6.21.0`):
 
 ```ts
 import { MongoClient } from "mongodb";
@@ -147,7 +147,8 @@ const storage = new MongoDBStoragePlugin({
 
 MongoDB needs a replica set or sharded deployment supporting transactions.
 Native drivers are optional peer dependencies installed explicitly by consumers,
-and development dependencies for adapter tests; core remains a runtime dependency.
+and development dependencies for adapter tests; core is a required compatible peer
+shared with the application runtime.
 The application configures, owns and closes its database/client/pool, including
 after initialization failure. Controller disposal cleans up the storage plugin;
 backend `close()` is a no-op for these borrowed connections. Per-operation

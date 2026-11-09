@@ -142,3 +142,11 @@ export function safeError(info: ErrorInfo | null, exposeMessage = false): ErrorI
 export function safeState(state: RuntimeState): RuntimeState {
   return { ...state, error: safeError(state.error), tools: state.tools.map(tool => ({ ...tool, error: safeError(tool.error) })) };
 }
+
+export function wireModel(model: unknown, allowId = false) {
+  if (model === undefined || (allowId && typeof model === "string" && model.trim())) return;
+  if (!model || typeof model !== "object" || Array.isArray(model) ||
+    Object.keys(model).some(key => !["providerId", "modelId", "connectionId"].includes(key)) ||
+    !("providerId" in model) || !("modelId" in model) ||
+    Object.values(model).some(value => typeof value !== "string")) bad("Expected a model ID or JSON ModelRef");
+}

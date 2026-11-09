@@ -14,8 +14,25 @@ Install `@tessar/server` alongside core and your provider, then run
 `.env`, initializes Hono routes and opens `127.0.0.1:4117`. It does not watch or
 restart files yet. `new Tessar()` itself never listens.
 
-Register `controllers: [support]` instead when you need explicit Controller
-configuration. Agent-only projects do not need extra plugin or storage setup.
+Agent-only registration does not create a Controller or Session. Each direct Agent
+call follows its core lifecycle. For Session/Thread conversations and Controller
+plugins/storage, explicitly register a Controller containing that Agent:
+
+```ts
+import { Controller } from "@tessar/core";
+import { Tessar } from "@tessar/server";
+import { assistant } from "./agents/assistant.js";
+
+const support = new Controller({ id: "support", agent: assistant, plugins: [] });
+export default new Tessar({ controllers: [support] });
+```
+
+Both arrays may be supplied for different Agents. `getAgent(assistant.id)` returns
+the original instance even when it belongs to a registered Controller; use
+`getController("support")` for its Session API. Do not list the same Agent twice.
+Plugin/subagent delegation remains developer-defined and is not automatically
+exposed by the server.
+
 Optional `server: { hostname, port, prefix, openapiPath, routes, middlewares }`
 configures standalone hosting. Defaults are `127.0.0.1`, `4117`, empty prefix and
 `/openapi.json`. Swagger/playground UI is deferred.
@@ -87,3 +104,5 @@ keep their handlers in separate modules. The [package README](../../packages/ser
 documents registration, route inventory, lifecycle and errors. Application auth,
 authorization and UI remain developer choices. A packaged CLI can start this host
 locally and call HTTP/SSE, or use the SDK directly without a server.
+For typed remote access from a frontend or Node application, see the
+[@tessar/client guide](client.md).

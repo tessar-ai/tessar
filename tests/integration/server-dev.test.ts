@@ -50,6 +50,7 @@ export default new Tessar({ agents: [new Agent({ id: process.env.TESSAR_DEV_AGEN
     await expect.poll(() => host.output().stdout.match(/http:\/\/[^\s]+/)?.[0], { timeout: 10000 }).toBeTruthy();
     const url = host.output().stdout.match(/http:\/\/[^\s]+/)![0];
     expect((await (await fetch(url + "/t/api/agents")).json())[0].id).toBe("cli-assistant");
+    expect(await (await fetch(url + "/t/api/controllers")).json()).toEqual([]);
     const result = await fetch(url + "/t/api/agents/cli-assistant/generate", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: "hi" }),
     });

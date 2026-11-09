@@ -11,7 +11,7 @@ on that backend's machine.
 Requires Node.js >=24.22.1:
 
 ```sh
-npm install @tessar/rag
+npm install @tessar/core @tessar/rag
 ```
 
 ## Read content

@@ -1,7 +1,7 @@
 import { startServer as bootstrap } from "../../cli/src/development/server.js";
 import { TessarServer } from "../src/framework/hono.js";
 import { vi } from "vitest";
-import { Agent } from "@tessar/core";
+import { Agent, Controller } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { Tessar } from "../src/index.js";
 import type { TessarOptions } from "../src/index.js";
@@ -14,7 +14,9 @@ export async function start(options: TessarOptions = {}) {
     if (match) resolve(match[0]);
   });
   const tessar = new Tessar({
-    agents: [new Agent({ id: crypto.randomUUID(), model: new ScriptedProvider([{ text: "Hello" }]) })],
+    ...(options.agents === undefined && options.controllers === undefined ? {
+      controllers: [new Controller({ id: crypto.randomUUID(), agent: new Agent({ id: crypto.randomUUID(), model: new ScriptedProvider([{ text: "Hello" }]) }) })],
+    } : {}),
     ...options, server: { port: 0, ...options.server }
   });
   const server = await startServer(tessar);

@@ -6,6 +6,7 @@
       "node"
     ],
     "paths": {
+      "@tessar/client": ["./packages/client/src/index.ts"],
       "@tessar/server": ["./packages/server/src/index.ts"],
       "@tessar/rag": ["./packages/rag/src/index.ts"],
       "@tessar/typesafe": ["./packages/typesafe/src/index.ts"],

@@ -11,7 +11,8 @@
   "repository": { "type": "git", "url": "git+https://github.com/tessar-ai/tessar.git", "directory": "packages/typesafe" },
   "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "dependencies": { "@tessar/core": "workspace:*" },
+  "peerDependencies": { "@tessar/core": "workspace:^" },
+  "devDependencies": { "@tessar/core": "workspace:*" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs",

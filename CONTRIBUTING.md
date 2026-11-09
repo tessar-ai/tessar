@@ -106,8 +106,24 @@ Stable tags use npm `latest`; prereleases such as `plugins@0.2.0-beta.1` use `ne
 The unscoped CLI package `tessar` remains in `packages/cli` and uses tags such as
 `tessar@0.1.0`, producing `tessar-0.1.0.tgz`.
 
+Extensions that use the application's Core runtime declare `@tessar/core` as a
+required `peerDependency: "workspace:^"`, with `devDependency: "workspace:*"` for
+workspace builds/tests. This includes OpenAI, storage backends, OpenTelemetry,
+RAG, TypeSafe and server. The plugins package keeps its optional Core peer.
+Use one compatible application Core version; do not bypass incompatible peer
+requirements with force/override settings. Peer declarations do not make these
+packages independent of Core or guarantee one copy for an incompatible graph.
+
+The globally installed CLI keeps Core as a normal `workspace:^` dependency,
+alongside Hono and its Node adapter. The browser client has no runtime/peer
+dependencies; its runtime and declaration files must not import backend packages.
+Database drivers, backend vector RAG peers and Express integration peers stay
+optional and are installed by the developer when selected. Core requires Zod;
+Vitest is an optional peer only for `@tessar/core/testing/storage-conformance`.
+Do not move test frameworks into regular runtime dependencies.
+
 Versions of other packages do not need to match. For example, OpenTelemetry `0.1.0`
-can depend on Core `0.1.4`. pnpm rewrites `workspace:*` to the dependency's own
+can use Core `0.1.5` through a compatible peer range. pnpm rewrites `workspace:*` to the dependency's own
 version when packing; `workspace:^` becomes a compatible range. The workflow
 checks the actual archive and rejects unresolved or incorrectly rewritten
 dependencies. It also checks npm for an already published target version and
@@ -116,7 +132,7 @@ compatible published internal dependencies before attempting publication.
 Publish changed dependencies first and wait for their release to succeed before
 tagging dependents. For the current release, publish `core@0.1.5` first, then
 `plugins@0.1.5`, `openai@0.1.4`, `libsql@0.1.4`, `postgresql@0.1.4` and
-`mongodb@0.1.4`. Packed workspace dependencies use the new Core version.
+`mongodb@0.1.4`. Packed extension Core peers use the compatible `^0.1.5` range.
 When releasing multiple versions of the same package, finish the earlier
 release first so the `latest` npm tag cannot race backwards.
 
