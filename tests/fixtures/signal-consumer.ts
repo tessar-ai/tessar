@@ -11,7 +11,7 @@ const started = new Promise<void>((done) => { start = done; });
 const gate = new Promise<void>((done) => { release = done; });
 const model: ModelAdapter = {
   ref: { providerId: "fixture", modelId: "local" },
-  validate() {},
+  validate() { },
   async *stream(request): AsyncIterable<ModelChunk> {
     calls.push(request);
     if (calls.length === 1) { start(); await gate; }

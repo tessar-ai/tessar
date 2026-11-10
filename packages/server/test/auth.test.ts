@@ -6,10 +6,12 @@ import type { AuthProvider } from "../src/index.js";
 import { start } from "./helpers.js";
 
 type User = { id: string; role: string };
-const provider: AuthProvider<User> = { async authenticate(request) {
-  const id = request.headers.get("x-user");
-  return id ? { id, role: id === "admin" ? "admin" : "reader" } : null;
-} };
+const provider: AuthProvider<User> = {
+  async authenticate(request) {
+    const id = request.headers.get("x-user");
+    return id ? { id, role: id === "admin" ? "admin" : "reader" } : null;
+  }
+};
 let host: Awaited<ReturnType<typeof start>> | undefined;
 afterEach(async () => { await host?.server.shutdown(); host = undefined; });
 
@@ -25,10 +27,16 @@ test("auth is optional and custom routes/middleware remain developer-owned", asy
 test("authorization sees the inferred identity and request before runtime/SSE work", async () => {
   const model = new ScriptedProvider([{ text: "answer" }]);
   const agent = new Agent({ id: crypto.randomUUID(), model });
-  host = await start({ agents: [agent], server: { auth: { provider, authorize: ({ user, request }) => {
-    expectTypeOf(user).toEqualTypeOf<User>();
-    return user.role === "admin" || request.method === "GET";
-  } } } });
+  host = await start({
+    agents: [agent], server: {
+      auth: {
+        provider, authorize: ({ user, request }) => {
+          expectTypeOf(user).toEqualTypeOf<User>();
+          return user.role === "admin" || request.method === "GET";
+        }
+      }
+    }
+  });
   const path = `/api/agents/${agent.id}/stream`;
   const response = await fetch(host.url + path, { method: "POST", headers: { "x-user": "alice", "content-type": "application/json" }, body: JSON.stringify({ input: "deny" }) });
   expect(response.status).toBe(403);
@@ -40,10 +48,14 @@ test("authorization sees the inferred identity and request before runtime/SSE wo
 
 test("middleware runs before auth; failed providers and invalid policy results fail closed", async () => {
   const authenticate = vi.fn().mockRejectedValue(new Error("identity unavailable"));
-  host = await start({ server: { auth: { provider: { authenticate } }, middlewares: [registerMiddleware("*", async (c, next) => {
-    if (c.req.header("x-block")) return c.text("blocked", 403);
-    await next();
-  })] } });
+  host = await start({
+    server: {
+      auth: { provider: { authenticate } }, middlewares: [registerMiddleware("*", async (c, next) => {
+        if (c.req.header("x-block")) return c.text("blocked", 403);
+        await next();
+      })]
+    }
+  });
   expect((await fetch(host.url + "/api/agents", { headers: { "x-block": "yes" } })).status).toBe(403);
   expect(authenticate).not.toHaveBeenCalled();
   expect((await fetch(host.url + "/api/agents")).status).toBe(500);
@@ -85,10 +97,18 @@ test("invalid identity, authorization and scope callback values never allow acce
 test("provider request-body inspection does not consume the runtime input", async () => {
   const model = new ScriptedProvider([{ text: "answer" }]);
   const agent = new Agent({ id: crypto.randomUUID(), model });
-  host = await start({ agents: [agent], server: { auth: { provider: { authenticate: async request => {
-    expect(await request.json()).toEqual({ input: "hello" });
-    return { id: "alice" };
-  } } } } });
+  host = await start({
+    agents: [agent], server: {
+      auth: {
+        provider: {
+          authenticate: async request => {
+            expect(await request.json()).toEqual({ input: "hello" });
+            return { id: "alice" };
+          }
+        }
+      }
+    }
+  });
   expect((await host.request(`/api/agents/${agent.id}/generate`, "POST", { input: "hello" })).status).toBe(200);
   expect(model.calls).toHaveLength(1);
 });

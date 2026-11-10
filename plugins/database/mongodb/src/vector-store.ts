@@ -13,6 +13,10 @@ import { contentsInput, vectorsInput, invalid, keys, nonempty, object, predicate
 const INVALID_CONFIGURATION = "InvalidConfiguration";
 const VECTOR_INDEX = "tessar_vector";
 const BM25_INDEX = "tessar_bm25";
+const BM25_TEXT_MAPPING = {
+  type: "string", similarity: { type: "bm25" },
+  indexOptions: "offsets", store: true, norms: "include",
+} as const;
 
 export interface MongoDBVectorStoreOptions {
   database: Db;
@@ -192,7 +196,7 @@ export class MongoDBVectorStore implements VectorStore {
     await this.#searchIndex(BM25_INDEX, "search", {
       mappings: {
         dynamic: false, fields: {
-          text: { type: "string", similarity: { type: "bm25" } }, filterTokens: { type: "token", normalizer: "none" },
+          text: BM25_TEXT_MAPPING, filterTokens: { type: "token", normalizer: "none" },
         }
       }
     });

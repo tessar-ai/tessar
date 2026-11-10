@@ -31,8 +31,10 @@ export class ThreadStateHub {
         view.handleId = event.handleId;
         view.awaitingHandle = false;
       } else {
-        view = { streamId: event.streamId, handleId: event.handleId,
-          awaitingHandle: event.type === stream.resumed && !event.handleId, active: true };
+        view = {
+          streamId: event.streamId, handleId: event.handleId,
+          awaitingHandle: event.type === stream.resumed && !event.handleId, active: true
+        };
         this.threads.set(key, view);
         for (const slot of this.sessions.values()) if (slot.controllerId === event.controllerId && slot.session.thread.getId() === event.threadId)
           slot.localError = undefined;
@@ -86,8 +88,10 @@ export class ThreadStateHub {
     const id = session.thread.getId();
     const view = id && this.threads.get(this.key(controllerId, id));
     if (view && view.deleted) throw new TessarServerError(THREAD_UNAVAILABLE.code, THREAD_UNAVAILABLE.message);
-    return view && view.state ? { ...view.state, queuedInputs: own.queuedInputs,
-      error: this.sessions.get(session)?.localError ?? view.state.error } : own;
+    return view && view.state ? {
+      ...view.state, queuedInputs: own.queuedInputs,
+      error: this.sessions.get(session)?.localError ?? view.state.error
+    } : own;
   }
   private publish(slot: SessionView): void {
     let state: RuntimeState;
@@ -99,7 +103,7 @@ export class ThreadStateHub {
     });
     for (const listener of slot.listeners.keys()) listener(event);
   }
-  subscribe(controllerId: string, session: Session, callback: (event: StateEvent) => void, close: () => void = () => {}): () => void {
+  subscribe(controllerId: string, session: Session, callback: (event: StateEvent) => void, close: () => void = () => { }): () => void {
     this.attach(controllerId, session);
     const slot = this.sessions.get(session)!;
     slot.listeners.set(callback, close);

@@ -9,7 +9,7 @@ for (const name of ["memory", "sqlite"])
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createLibsqlBackend({ database: createTestDatabase(":memory:")});
+        : await createLibsqlBackend({ database: createTestDatabase(":memory:") });
     try {
       const threads = new ThreadService(backend);
       const parent = await threads.create({ scope: { user: "a" } });
@@ -58,7 +58,7 @@ for (const name of ["memory", "sqlite"])
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createLibsqlBackend({ database: createTestDatabase(":memory:")});
+        : await createLibsqlBackend({ database: createTestDatabase(":memory:") });
     try {
       const threads = new ThreadService(backend),
         source = await threads.create();

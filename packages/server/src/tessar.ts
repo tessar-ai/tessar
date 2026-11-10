@@ -18,7 +18,8 @@ export class Tessar<User = unknown> {
       config.port !== undefined && (!Number.isInteger(config.port) || config.port < 0 || config.port > 65535)) invalid("Invalid listening address");
     for (const list of [config.routes, config.middlewares])
       if (list !== undefined && !Array.isArray(list)) invalid("Expected registration array");
-    this.server = Object.freeze({ ...config, auth,
+    this.server = Object.freeze({
+      ...config, auth,
       routes: config.routes && Object.freeze([...config.routes]), middlewares: config.middlewares && Object.freeze([...config.middlewares]),
     });
     createRuntime(this, options);

@@ -54,21 +54,21 @@ it("persists accepted suspended signals across SQLite restart without replay or 
       resumed
         ? [{ text: "done" }, { text: "next" }]
         : [
-            {
-              response: {
-                message: MessageCodec.encode(
-                  new AssistantMessage([
-                    {
-                      type: "tool-call",
-                      name: "ask",
-                      toolCallId: "call",
-                      arguments: {},
-                    },
-                  ]),
-                ),
-              },
+          {
+            response: {
+              message: MessageCodec.encode(
+                new AssistantMessage([
+                  {
+                    type: "tool-call",
+                    name: "ask",
+                    toolCallId: "call",
+                    arguments: {},
+                  },
+                ]),
+              ),
             },
-          ],
+          },
+        ],
     );
     const agent = new Agent({
       id: "signal-persistence",
@@ -78,7 +78,7 @@ it("persists accepted suspended signals across SQLite restart without replay or 
     const controller = new Controller({
       id: "signal-persistence",
       agent,
-      plugins: [new LibsqlStoragePlugin({ database: createTestDatabase(filename)})],
+      plugins: [new LibsqlStoragePlugin({ database: createTestDatabase(filename) })],
     });
     await controller.initialize();
     return { controller, agent, provider };

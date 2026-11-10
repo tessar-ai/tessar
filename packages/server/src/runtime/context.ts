@@ -19,7 +19,7 @@ export class RuntimeContext {
     this.registry = new RuntimeRegistry(options);
     this.sessions = new SessionRegistry(this.registry, (id, session) => this.hub.attach(id, session), session => this.hub.remove(session));
     this.initialization = this.initialize();
-    void this.initialization.catch(() => {});
+    void this.initialization.catch(() => { });
   }
   private async initialize(): Promise<void> {
     try {
@@ -29,7 +29,7 @@ export class RuntimeContext {
         await controller.plugins.attach(new ObserverPlugin(store => this.registry.records.set(controller.id, store), this.hub));
       }
     } catch (error) {
-      await this.registry.dispose().catch(() => {});
+      await this.registry.dispose().catch(() => { });
       throw error;
     }
   }
@@ -41,7 +41,7 @@ export class RuntimeContext {
   shutdown(): Promise<void> {
     this.closing = true;
     return this.disposal ??= (async () => {
-      await this.initialization.catch(() => {});
+      await this.initialization.catch(() => { });
       this.hub.close();
       await this.registry.dispose();
     })();
