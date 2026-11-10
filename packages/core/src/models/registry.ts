@@ -11,6 +11,8 @@ import type { CatalogSnapshot } from "./catalog.js";
 import { normalizeCatalog } from "./normalize-catalog.js";
 import { canonicalJson } from "../state/commit.js";
 import { matchingAdapter } from "./stream.js";
+
+const DISPOSED = "Disposed";
 export class ModelRegistry {
   private readonly providers = new Map<string, ModelProviderRegistration>();
   private readonly handles = new Map<string, Model>();
@@ -21,7 +23,7 @@ export class ModelRegistry {
     this.resolver = new ProfileResolver(options);
   }
   registerProvider(provider: ModelProviderRegistration): () => void {
-    if (this.shutdown.signal.aborted) fail("Disposed", "Model registry closed");
+    if (this.shutdown.signal.aborted) fail(DISPOSED, "Model registry closed");
     if (this.providers.has(provider.id))
       fail("RegistrationConflict", "Provider already registered");
     if (
@@ -55,7 +57,7 @@ export class ModelRegistry {
       if (this.shutdown.signal.aborted) return;
       const provider = this.providers.get(model.ref.providerId);
       if (!provider || !this.resolver.needsRefresh(model.ref, provider)) return;
-      void model.refreshProfile().catch(() => {});
+      void model.refreshProfile().catch(() => { });
     });
   }
   get(ref: ModelRef): Model {
@@ -71,7 +73,7 @@ export class ModelRegistry {
     if (
       existing &&
       canonicalJson(existing.connection ?? null) !==
-        canonicalJson(adapter.connection ?? null)
+      canonicalJson(adapter.connection ?? null)
     )
       fail(
         "ModelContextIncompatible",
@@ -81,7 +83,7 @@ export class ModelRegistry {
   }
   /** Resolve executable code only for execution/selection, never catalog reads. */
   resolve(ref: ModelRef) {
-    if (this.shutdown.signal.aborted) fail("Disposed", "Model registry closed");
+    if (this.shutdown.signal.aborted) fail(DISPOSED, "Model registry closed");
     const retained = this.connections.get(
       JSON.stringify([ref.providerId, ref.connectionId]),
     );
@@ -101,7 +103,7 @@ export class ModelRegistry {
     return matchingAdapter(adapter, ref);
   }
   private obtain(ref: ModelRef, schedule: boolean): Model {
-    if (this.shutdown.signal.aborted) fail("Disposed", "Model registry closed");
+    if (this.shutdown.signal.aborted) fail(DISPOSED, "Model registry closed");
     const provider = this.providers.get(ref.providerId);
     if (!provider) fail("MissingProvider", "Provider is not registered");
     const key = JSON.stringify([
@@ -162,9 +164,9 @@ export class ModelRegistry {
       const raw = await response.text();
       if (raw.length > 16 * 1024 * 1024) return;
       const hash = await crypto.subtle.digest(
-          "SHA-256",
-          new TextEncoder().encode(raw),
-        ),
+        "SHA-256",
+        new TextEncoder().encode(raw),
+      ),
         revision =
           "sha256:" +
           Array.from(new Uint8Array(hash))
@@ -177,7 +179,7 @@ export class ModelRegistry {
       });
       this.resolver.clear();
       for (const model of this.handles.values())
-        void model.refreshProfile().catch(() => {});
+        void model.refreshProfile().catch(() => { });
     } catch {
       /* metadata failure never prevents runtime readiness */
     }

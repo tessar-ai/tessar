@@ -34,6 +34,9 @@ const session = await controller.createSession({
 `await session.thread.create({ id: threadId })`. Existing IDs fail; use
 `session.thread.switch(id)` to select an existing Thread. Without `threadId`,
 create or select a Thread before calling `followUp()`.
+Await thread/model control operations before submitting a follow-up. Input submitted
+while a control operation is pending is rejected with `SessionBusy`, so it cannot
+be admitted against a thread selection that is changing.
 
 ## Render snapshots
 
@@ -85,11 +88,11 @@ Save as `conversation.ts` after the [setup](README.md).
 
 ```ts
 import { Agent, Controller, text as textEvents, stream } from "@tessar/core";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 
 const agent = new Agent({
   id: "assistant",
-  model: new OpenAIProvider({
+  model: new OpenAIChat({
     apiKey: process.env.OPENAI_API_KEY!,
     model: process.env.OPENAI_MODEL!,
   }),

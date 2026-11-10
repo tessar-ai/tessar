@@ -36,6 +36,9 @@ Examples perform real model requests and can incur provider charges.
 
 | You want to… | Read |
 | --- | --- |
+| Create a project or generate SDK files | [CLI scaffolding](cli.md) |
+| Host runtimes over HTTP and SSE | [Standalone server](server.md) |
+| Authenticate self-hosted runtime APIs | [Server authentication](auth.md) |
 | Run an agent without application lifecycle code | [Agent](agent.md) |
 | Display output as it arrives | [Streaming](stream.md) |
 | Give the agent application functions | [Tools and messages](tools.md) |
@@ -44,6 +47,7 @@ Examples perform real model requests and can incur provider charges.
 | Trace model calls, tools and execution lifecycle | [OpenTelemetry](opentelemetry.md) |
 | Keep history across application restarts | [Storage](storage.md) |
 | Classify, route or check policy using TypeSafe | [TypeSafe](typesafe.md) |
+| Read sources and chunk content independently for RAG | [Document reader and splitter](rag.md) |
 | Identify errors safely and define custom failures | [Errors](errors.md) |
 
 `Agent` is enough for direct execution. A `Controller` adds plugin and shared

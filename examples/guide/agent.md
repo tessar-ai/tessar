@@ -12,9 +12,9 @@ Save as `agent.ts` after completing the [setup](README.md).
 
 ```ts
 import { Agent, buildInstruction } from "@tessar/core";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 
-const model = new OpenAIProvider({
+const model = new OpenAIChat({
   apiKey: process.env.OPENAI_API_KEY!,
   model: process.env.OPENAI_MODEL!,
 });
@@ -87,6 +87,9 @@ for await (const event of events) {
 
 `await sendSignal()` acknowledges reception into memory, like `followUp()`; it
 does not wait for checkpoint writes, plugin callbacks or the model's answer.
+An optional `scope` limits the target: `sendSignal({ streamId, content, scope:
+{ userId: "alice" } })`. Core rejects a target outside that scope before accepting
+the input. Omitting scope preserves unrestricted SDK access.
 With `persist: true`, Tessar writes pending input to the configured storage before
 applying it to model context. Input received before that write can be lost on a
 process crash. Later write/startup failures are reported through execution events
@@ -196,7 +199,7 @@ To change endpoint, credentials or protocol, pass another model instance:
 ```ts
 if (process.env.COMPATIBLE_API_KEY && process.env.COMPATIBLE_MODEL &&
     process.env.COMPATIBLE_BASE_URL) {
-  const compatible = new OpenAIProvider({
+  const compatible = new OpenAIChat({
     api: "chat-completions",
     apiKey: process.env.COMPATIBLE_API_KEY,
     baseURL: process.env.COMPATIBLE_BASE_URL,

@@ -57,6 +57,11 @@ import {
   deleteThread,
   purgeThread,
 } from "./state/thread-operations.js";
+
+const ERROR_CODE = {
+  THREAD_NOT_SELECTED: "ThreadNotSelected",
+  SESSION_BUSY: "SessionBusy",
+} as const;
 export interface SessionOptions {
   id?: string;
   scope?: Scope;
@@ -117,9 +122,9 @@ export class Session {
     const interruptId = snapshot.execution?.pendingInterruptId;
     const tools = stream
       ? await this.controller.backend.executions.listRecords(
-          "tool_executions",
-          this.selection.id,
-        )
+        "tool_executions",
+        this.selection.id,
+      )
       : [];
     this.view.update({
       ...empty,
@@ -172,7 +177,7 @@ export class Session {
     this.check();
     await this.assertCurrent();
     if (!this.selectsSignalThread(threadId))
-      fail("ThreadNotSelected", "Signal Thread is no longer selected");
+      fail(ERROR_CODE.THREAD_NOT_SELECTED, "Signal Thread is no longer selected");
     if (await deliver()) return;
     const admission = (this.signalAdmission ?? Promise.resolve()).then(
       async () => {
@@ -180,7 +185,7 @@ export class Session {
         await this.foreground?.done;
         await this.control(async () => {
           if (!this.selectsSignalThread(threadId))
-            fail("ThreadNotSelected", "Signal Thread is no longer selected");
+            fail(ERROR_CODE.THREAD_NOT_SELECTED, "Signal Thread is no longer selected");
           const thread = await this.target(threadId);
           this.checkSelectionChange();
           await this.attach(
@@ -208,7 +213,7 @@ export class Session {
   private async control<T>(action: () => Promise<T>): Promise<T> {
     this.check();
     if (this.controlPending)
-      fail("SessionBusy", "Session control operation is pending");
+      fail(ERROR_CODE.SESSION_BUSY, "Session control operation is pending");
     this.controlPending = true;
     try {
       await this.assertCurrent();
@@ -306,7 +311,7 @@ export class Session {
       );
     },
     switch: (modelId: string, options?: JsonObject): Promise<void> =>
-      this.switchModel(modelId, options),
+      this.control(() => this.changeModel(modelId, options)),
     setEffort: (level: string): Promise<void> =>
       this.control(async () => {
         requireId(level, "effort level");
@@ -336,15 +341,15 @@ export class Session {
   }
   private checkSelectionChange(): void {
     this.check();
-    if (this.busy) fail("SessionBusy", "Session has active work");
+    if (this.busy) fail(ERROR_CODE.SESSION_BUSY, "Session has active work");
   }
   private checkThreadSelectionChange(): void {
     this.checkSelectionChange();
-    if (this.queue.length) fail("SessionBusy", "Session has queued input");
+    if (this.queue.length) fail(ERROR_CODE.SESSION_BUSY, "Session has queued input");
   }
   private selected(id?: string): string {
     const value = id ?? this.selection?.id;
-    if (!value) fail("ThreadNotSelected", "Select or create a Thread first");
+    if (!value) fail(ERROR_CODE.THREAD_NOT_SELECTED, "Select or create a Thread first");
     return value;
   }
   private async target(id?: string): Promise<Thread> {
@@ -353,9 +358,6 @@ export class Session {
     });
     if (!thread) fail("ThreadNotFound", "Thread does not match Session scope");
     return thread;
-  }
-  private switchModel(modelId: string, options?: JsonObject): Promise<void> {
-    return this.control(() => this.changeModel(modelId, options));
   }
   private async changeModel(
     modelId: string,
@@ -371,9 +373,9 @@ export class Session {
         : modelId.slice(0, slash) === previous.providerId
           ? { ...previous, modelId: modelId.slice(slash + 1) }
           : {
-              providerId: modelId.slice(0, slash),
-              modelId: modelId.slice(slash + 1),
-            };
+            providerId: modelId.slice(0, slash),
+            modelId: modelId.slice(slash + 1),
+          };
     const selected = this.controller.sessionModel(ref),
       next = selected.model;
     const effective =
@@ -430,8 +432,8 @@ export class Session {
       typeof nameOrObserver === "function"
         ? nameOrObserver
         : (event) => {
-            if (event.type === nameOrObserver) return observer!(event);
-          };
+          if (event.type === nameOrObserver) return observer!(event);
+        };
     this.observers.add(handler);
     return () => {
       this.observers.delete(handler);
@@ -472,7 +474,7 @@ export class Session {
     this.emit(new EventEnvelope(name, payload, context));
     return this.controller.hooks
       .dispatch(name, payload, context)
-      .then(() => {})
+      .then(() => { })
       .catch((error) => this.controller.report(errorInfo(error)));
   }
   readonly thread = {
@@ -644,9 +646,13 @@ export class Session {
       input: string | MessageData | readonly MessageData[],
     ): Promise<QueuedInputReceipt> => {
       this.check();
+      if (this.controlPending)
+        fail(ERROR_CODE.SESSION_BUSY, "Session control operation is pending");
       if (!this.selection)
-        fail("ThreadNotSelected", "Select or create a Thread first");
+        fail(ERROR_CODE.THREAD_NOT_SELECTED, "Select or create a Thread first");
       await this.assertCurrent();
+      if (this.controlPending)
+        fail(ERROR_CODE.SESSION_BUSY, "Session control operation is pending");
       const receipt = immutable({
         id: randomIds.next("input"),
         threadId: this.selection.id,
@@ -697,7 +703,7 @@ export class Session {
         modelOptions: entry.modelOptions,
       },
       true,
-    ).catch(() => {});
+    ).catch(() => { });
   }
   private attach(
     thread: Thread,
@@ -777,13 +783,13 @@ export class Session {
     options: ThreadStreamOptions,
   ): Promise<ExecutionReceipt> {
     this.check();
-    if (this.busy) fail("SessionBusy", "Session has active work");
+    if (this.busy) fail(ERROR_CODE.SESSION_BUSY, "Session has active work");
     await this.assertCurrent();
     const thread = await this.target();
-    if (this.busy) fail("SessionBusy", "Session has active work");
+    if (this.busy) fail(ERROR_CODE.SESSION_BUSY, "Session has active work");
     await this.foreground?.done;
     this.check();
-    if (this.busy) fail("SessionBusy", "Session has active work");
+    if (this.busy) fail(ERROR_CODE.SESSION_BUSY, "Session has active work");
     const ref = options.model ?? (await thread.snapshot()).execution?.modelRef;
     const adapter = ref ? this.controller.sessionModel(ref).adapter : undefined;
     return this.attach(thread, { ...options, adapter }, false);
@@ -837,7 +843,7 @@ export class Session {
     if (this.disposed) return;
     if (this.disposal) return this.disposal;
     if (this.controlPending)
-      fail("SessionBusy", "Session control operation is pending");
+      fail(ERROR_CODE.SESSION_BUSY, "Session control operation is pending");
     this.checkSelectionChange();
     return this.close();
   }

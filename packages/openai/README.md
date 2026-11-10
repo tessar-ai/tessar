@@ -1,6 +1,6 @@
 # @tessar/openai
 
-OpenAI Responses and Chat Completions provider with model metadata integration.
+OpenAI Responses, Chat Completions and embedding models for Tessar.
 Requires Node 24.22.1 or newer and uses the official OpenAI SDK.
 
 ```sh
@@ -9,9 +9,9 @@ npm install @tessar/core @tessar/openai
 
 ```ts
 import { Agent } from "@tessar/core";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 
-const model = new OpenAIProvider({
+const model = new OpenAIChat({
   apiKey: process.env.OPENAI_API_KEY!,
   model: process.env.OPENAI_MODEL!,
 });
@@ -30,7 +30,7 @@ for await (const event of stream) console.log(event);
 ```
 
 Agent runs without Controller or public init/dispose. A string `model` override
-selects another model ID using the same client; another OpenAIProvider instance
+selects another model ID using the same client; another OpenAIChat instance
 can carry a different endpoint, API key and headers. Request overrides are
 execution-local and replace nested objects rather than deep-merging them.
 
@@ -39,7 +39,7 @@ The constructor accepts official SDK client settings (`baseURL`,
 `api` defaults to `"responses"`; select `"chat-completions"` for that endpoint:
 
 ```ts
-const chat = new OpenAIProvider({
+const chat = new OpenAIChat({
   api: "chat-completions",
   apiKey: process.env.PROVIDER_API_KEY!,
   baseURL: process.env.PROVIDER_BASE_URL!,
@@ -96,10 +96,11 @@ Cache hits still depend on the endpoint/model and the actual prompt prefix.
 requests. `await model.refreshProfile()` explicitly refreshes provider metadata;
 metadata may be incomplete and carries provenance.
 
-`OpenAIProvider` and `OpenAIPlugin` are the public runtime exports. The low-level
-adapters are internal implementations. `OpenAIAPI`, `OpenAIProviderOptions`,
+`OpenAIChat`, `OpenAIEmbedding` and `OpenAIPlugin` are the public runtime exports. The low-level
+adapters are internal implementations. `OpenAIAPI`, `OpenAIChatOptions`,
 `OpenAIModelOptions`, `OpenAIChatModelOptions`, `OpenAIPluginOptions` and `OpenAIOptions` remain public
-types for application configuration. For example, `OpenAIAPI` describes
+types for application configuration. `OpenAIEmbeddingOptions` describes the
+embedding constructor. For example, `OpenAIAPI` describes
 `"responses" | "chat-completions"`; importing it does not load a runtime value.
 
 `OpenAIPlugin` registers a provider with a Controller. Passing an executable model
@@ -107,7 +108,7 @@ to Controller already registers its provider; do not additionally register the
 same provider ID with a plugin.
 
 The plugin accepts the same protocol, connection and native request options as
-`OpenAIProvider`, except `model`: the registered factory selects that per request.
+`OpenAIChat`, except `model`: the registered factory selects that per request.
 For example, `new OpenAIPlugin({ api: "chat-completions", providerId: "gateway",
 connectionId: "gateway-main", baseURL: "https://gateway.example/v1", temperature: 0.2 })`.
 Omitted native request options are not supplied by Tessar.
@@ -122,12 +123,142 @@ or credentials. Changing the endpoint or protocol under that ID is rejected.
 This is an early 0.x release. See the
 [repository](https://github.com/tessar-ai/tessar) for complete contracts.
 
+## Embeddings
+
+```ts
+import { OpenAIEmbedding } from "@tessar/openai";
+
+const model = new OpenAIEmbedding({
+  apiKey: process.env.OPENAI_API_KEY,
+  model: "text-embedding-3-small",
+  // Optional; values illustrate configuration rather than Tessar defaults.
+  dimensions: 1024,
+  timeout: 30_000,
+  maxRetries: 3,
+});
+
+const vectors = await model.embedDocuments([
+  "Employees receive twelve days of annual leave.",
+  "Leave requests require manager approval.",
+]);
+const queryVector = await model.embedQuery("How many days of leave do employees get?");
+```
+
+The instance runs directly and matches the `EmbeddingModel` interface exported
+by `@tessar/rag`. This package does not depend on RAG or its document parsers.
+
+`model.ref` is readonly and frozen: `{ providerId: "openai", modelId: modelName }`.
+It exposes no API key or transport headers. A vector store can receive this
+instance as `embedding`, persist its identity and perform document/query embedding
+without repeating the model configuration or dimensions:
+
+```ts
+import Database from "libsql";
+import { LibsqlVectorStore } from "@tessar/libsql/vector";
+
+const database = new Database("./vectors.db");
+try {
+  const store = new LibsqlVectorStore({ database, embedding: model });
+  try {
+    await store.insert(chunks);
+    const results = await store.search("What does the handbook say?", { topK: 5 });
+  } finally {
+    await store.close();
+  }
+} finally {
+  database.close();
+}
+```
+
+Install `@tessar/libsql`, `libsql@0.5.29` and its optional peer `@tessar/rag`
+to use that entry. The application owns and closes the native database.
+Dimensions are inferred by the store from actual vectors. The ref identifies the
+configured model, not its weights or every provider-side configuration change;
+using the same model name at a different compatible endpoint does not itself
+change this adapter's ref. No automatic re-embedding is performed.
+
+| Constructor option | Behavior |
+| --- | --- |
+| `model` | Required model ID; choose an embedding model supported by the endpoint |
+| SDK client settings | `apiKey`, `baseURL`, `defaultHeaders`, `organization`, `project`, `fetch`, `timeout`, `maxRetries`, etc. retain their official SDK behavior |
+| `dimensions` | Optional requested vector length; support depends on the model |
+| `user` | Optional native request user identifier |
+| `encoding_format` | Optional `float` or `base64`; both return numeric arrays from Tessar |
+
+`embedDocuments(input: readonly (string | { text: string })[])` returns `Promise<number[][]>` in input
+order, using response indices. `embedQuery(input: string)` returns
+`Promise<number[]>`. Pass raw strings, Content[] or Chunk[] directly; objects
+contribute only their text. Metadata, source, page numbers and position are not
+sent to the model. Text/newlines are preserved and extracted text is snapshotted
+when the call starts. Each input item remains one embedding unit, with no
+automatic loading, chunking or concatenation. An empty document array returns
+`[]` without sending a request.
+Without `batchSize`, each nonempty method call makes one SDK embeddings call.
+To split document arrays into requests and run them in parallel:
+
+```ts
+const embedding = new OpenAIEmbedding({
+  apiKey: process.env.OPENAI_API_KEY,
+  model: "text-embedding-3-small",
+  batchSize: 100,
+  concurrency: 3,
+});
+const vectors = await embedding.embedDocuments(chunks);
+```
+
+`batchSize` and `concurrency` must be positive safe integers. Concurrency defaults
+to 1 and applies per embedDocuments call. With 101 inputs and batchSize 100,
+requests contain 100 and 1 inputs. Every text remains unchanged; the result
+contains one vector per input in its original order, even when requests finish
+out of order. These settings are not sent to the provider; embedQuery is unchanged.
+
+On failure, no new batches start. Already running requests settle before the
+method throws the original failure; they may still incur charges. No partial
+result is returned, and inconsistent vector dimensions across batches are rejected.
+Provider errors and SDK retries keep their existing behavior. Tessar does not
+count tokens, truncate text, infer limits or split rejected batches again.
+The provider enforces its model and request-size limits.
+
+Tessar forwards supplied options and leaves SDK defaults to the SDK. In the
+currently installed SDK, omitting encoding_format uses base64 on the wire and
+the SDK decodes it automatically. Explicit base64 responses are decoded by the
+adapter; application results remain `number[]`/`number[][]`.
+
+Both methods call `/embeddings`. For compatible endpoints requiring different
+document/query parameters, supply their native JSON body fields:
+
+```ts
+const embedding = new OpenAIEmbedding({
+  apiKey: process.env.EMBEDDING_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+  model: "your-embedding-model",
+  documentOptions: { input_type: "search_document" },
+  queryOptions: { input_type: "search_query" },
+});
+```
+
+These optional objects override shared request fields for their respective
+method. For endpoints using `task`, use that field instead, for example
+`documentOptions: { task: "retrieval.passage" }` and
+`queryOptions: { task: "retrieval.query" }`. Values depend on the endpoint/model.
+Tessar snapshots the options, sends them unchanged, and never infers task names
+or adds prefixes. Omitting them preserves the SDK/server defaults. Model, input,
+connection settings and the two method option objects cannot be overridden
+inside these objects. Endpoints using other wire protocols need their own
+implementation of the embedding contract.
+
+OpenAI SDK errors propagate unchanged, including native status/requestID fields
+and timeout errors. Retry behavior is owned by the SDK. Invalid runtime input
+uses TessarError; malformed vectors or response indices rejected by the adapter
+use TessarError with source `provider`. No state is persisted and no Agent,
+Controller, Session, initialization or extra plugin registration is required.
+
 ## Restoring native conversation state
 
 For durable conversations, assign a stable, nonsecret connection identity:
 
 ```ts
-const model = new OpenAIProvider({
+const model = new OpenAIChat({
   connectionId: "primary-openai",
   model: "your-model",
   apiKey: process.env.OPENAI_API_KEY,
@@ -143,3 +274,30 @@ Legacy native state has only its old connection ID. An application may explicitl
 reuse that saved ID after verifying the original endpoint/protocol itself; Tessar
 cannot infer or attest that binding during SQLite migration. Neither the
 connection ID nor its descriptor is forwarded as a native request parameter.
+
+## Rerank candidates
+
+```ts
+import { OpenAIReranker } from "@tessar/openai";
+
+const reranker = new OpenAIReranker({
+  endpoint: "https://openrouter.ai/api/v1/rerank",
+  apiKey: process.env.OPENROUTER_API_KEY!,
+  model: "cohere/rerank-4-pro",
+});
+const ranked = await reranker.rerank("question", candidates, { topK: 5 });
+```
+
+Candidates can be strings, Content/Chunk objects or search results containing
+`content.text`. Only text is sent. Results are `{ document: originalCandidate,
+score: providerRerankScore }[]`, sorted descending; original retrieval scores
+remain inside the candidate. `topK` defaults to 5, capped at candidate count;
+optional `score_threshold` uses the provider's native scale. Empty input skips
+HTTP. Constructor requires a complete endpoint, API key and model; optional
+`fetch` supplies the transport. The endpoint must accept
+`{ model, query, documents: string[], top_n }` and return
+`{ results: [{ index, relevance_score }] }`, as native Cohere and OpenRouter do.
+No protocol inference, retries, hybrid fusion or context injection is performed.
+Validation uses TessarError, as in the embedding adapter.
+Native transport errors propagate; HTTP errors use `RerankFailed` with
+status details; malformed results use `InvalidData`/source `provider`.

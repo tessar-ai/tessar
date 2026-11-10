@@ -4,6 +4,9 @@ import { CommitCoordinator } from "../state/commit.js";
 import { ThreadService } from "../state/threads.js";
 import type { RecordEntry } from "../state/schema.js";
 import { compareOrdinal } from "../state/queries.js";
+import { Thread } from "../thread.js";
+import { aggregateUsage, normalizeUsage } from "../trace/usage.js";
+import { AgentHarness } from "./harness.js";
 export function initialBatch(threadId = "t1"): CommitBatch {
   return {
     commitId: "commit-" + threadId,
@@ -34,6 +37,101 @@ export function storageConformance(
   factory: () => Promise<StorageBackend>,
 ): void {
   describe(name, () => {
+    it("lists execution records across a Thread with status-bound paging and isolation", async () => {
+      const backend = await factory();
+      const harness = await AgentHarness.create({ backend });
+      try {
+        for (const threadId of ["listed", "other"]) {
+          const records: RecordEntry[] = [];
+          const batch = { ...initialBatch(threadId), records };
+          for (let index = 0; index < 3; index++) {
+            const streamId = `${threadId}-stream-${index}`;
+            const turnId = `${threadId}-turn-${index}`;
+            const status = index === 0 ? "failed" : "completed";
+            const timing = {
+              startedAt: `2026-10-15T00:00:0${index}.000Z`,
+              endedAt: null, durationMs: null, error: null,
+            };
+            batch.records.push(
+              { kind: "streams", id: streamId, threadId, data: {
+                ...timing, id: streamId, threadId, scope: { userId: "u" },
+                triggerMessageId: null, status, stopReason: null,
+                outputMessageIds: [], directUsage: aggregateUsage([]),
+              } },
+              { kind: "turns", id: turnId, threadId, data: {
+                ...timing, id: turnId, streamId, scope: { userId: "u" },
+                index, contextRevision: 1, assistantMessageId: null,
+                status, stopReason: null, usage: aggregateUsage([]),
+              } },
+              { kind: "model_attempts", id: `${threadId}-attempt-${index}`, threadId, data: {
+                ...timing, id: `${threadId}-attempt-${index}`, streamId, turnId,
+                scope: { userId: "u" }, callId: `${threadId}-call-${index}`,
+                attemptIndex: 0, purpose: "primary", parentToolExecutionId: null,
+                providerId: "scripted", modelId: "test", providerRequestId: null,
+                responseMessageId: null, contextRevision: 1, firstOutputAt: null,
+                timeToFirstOutputMs: null, status, finishReason: null, usage: normalizeUsage({}),
+              } },
+              { kind: "tool_executions", id: `${threadId}-tool-${index}`, threadId, data: {
+                ...timing, id: `${threadId}-tool-${index}`, streamId, turnId,
+                scope: { userId: "u" }, toolCallId: `${threadId}-tool-call-${index}`,
+                parentToolExecutionId: null, toolName: "test", arguments: {},
+                policyDecision: { decision: "allowed" }, status: index === 0 ? "failed" : "succeeded",
+                resultMessageId: null, result: null, idempotencyKey: null,
+              } },
+            );
+          }
+          const lease = await backend.ownership.acquire({ threadId, ownerToken: "owner", ttlMs: 60000 });
+          await new CommitCoordinator(backend).commit(batch, lease);
+          await backend.ownership.release(lease);
+        }
+        const info = (await backend.threads.get("listed"))!;
+        const thread = Thread.create(harness.controller, info);
+        const other = Thread.create(harness.controller, (await backend.threads.get("other"))!);
+        const wrongScope = Thread.create(harness.controller, { ...info, scope: { userId: "hidden" } });
+        const methods = ["listStreams", "listTurns", "listModelAttempts", "listToolExecutions"] as const;
+        for (const method of methods) {
+          const all = await thread[method]();
+          expect(all.items).toHaveLength(3);
+          expect(all.nextCursor).toBeNull();
+          expect(all.items.every((record) => record.id.startsWith("listed-"))).toBe(true);
+          expect(new Set(all.items.map((record) => "streamId" in record ? record.streamId : record.id)).size).toBe(3);
+          if (method === "listModelAttempts" || method === "listToolExecutions")
+            expect(new Set(all.items.map((record) => "turnId" in record ? record.turnId : null)).size).toBe(3);
+          const status = method === "listToolExecutions" ? "succeeded" : "completed";
+          const first = await thread[method]({ status, limit: 1 });
+          expect(first.items).toEqual([all.items[1]]);
+          expect(first.nextCursor).not.toBeNull();
+          const second = await thread[method]({ status, limit: 1, cursor: first.nextCursor! });
+          expect(second.items).toEqual([all.items[2]]);
+          expect(second.nextCursor).toBeNull();
+          await expect(thread[method]({ status: "failed", cursor: first.nextCursor! })).rejects.toMatchObject({ code: "InvalidCursor" });
+          const nextMethod = methods[(methods.indexOf(method) + 1) % methods.length]!;
+          await expect(thread[nextMethod]({ status, cursor: first.nextCursor! })).rejects.toMatchObject({ code: "InvalidCursor" });
+          await expect(other[method]({ status, cursor: first.nextCursor! })).rejects.toMatchObject({ code: "InvalidCursor" });
+          expect((await other[method]()).items.every((record) => record.id.startsWith("other-"))).toBe(true);
+          await expect(wrongScope[method]()).rejects.toMatchObject({ code: "ThreadNotFound" });
+        }
+      } finally {
+        await harness.dispose();
+        await backend.close();
+      }
+    });
+    it("snapshots staged batches before asynchronous fingerprinting", async () => {
+      const backend = await factory();
+      try {
+        const batch = initialBatch();
+        const original = structuredClone(batch);
+        const lease = await backend.ownership.acquire({ threadId: "t1", ownerToken: "owner", ttlMs: 60000 });
+        const staging = backend.commits.stage(batch);
+        batch.checkpoint.revision = 99;
+        batch.checkpoint.state.metadata = { changed: true };
+        await staging;
+        const receipt = await backend.commits.publish({ commitId: original.commitId, threadId: "t1", expectedRevision: 0, lease });
+        expect(receipt.revision).toBe(1);
+        expect(await backend.checkpoints.get(original.checkpoint.id)).toEqual(original.checkpoint);
+        await expect(backend.commits.stage(original)).resolves.toBeUndefined();
+      } finally { await backend.close(); }
+    });
     it("stores independent immutable JSON records without runtime objects", async () => {
       const backend = await factory();
       try {

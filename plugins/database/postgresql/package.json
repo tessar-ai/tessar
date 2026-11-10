@@ -1,0 +1,20 @@
+{
+  "name": "@tessar/postgresql",
+  "version": "0.1.4",
+  "license": "Apache-2.0",
+  "description": "PostgreSQL persistence for Tessar state, checkpoints and indexed vector storage.",
+  "keywords": ["tessar","ai-agent","postgresql","postgres","storage","persistence","checkpoints","typescript"],
+  "type": "module",
+  "files": ["dist"],
+  "engines": { "node": ">=24.22.1" },
+  "repository": { "type": "git", "url": "git+https://github.com/tessar-ai/tessar.git", "directory": "plugins/database/postgresql" },
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./vector": { "types": "./dist/vector.d.ts", "import": "./dist/vector.js" }
+  },
+  "peerDependencies": { "@tessar/core": "workspace:^", "pg": "^8.16.3", "@types/pg": "^8.15.5", "@tessar/rag": "workspace:^" },
+  "peerDependenciesMeta": { "pg": { "optional": true }, "@types/pg": { "optional": true }, "@tessar/rag": { "optional": true } },
+  "devDependencies": { "@tessar/core": "workspace:*", "pg": "^8.16.3", "@types/pg": "^8.15.5", "@tessar/rag": "workspace:*" },
+  "scripts": { "build": "tsc -p tsconfig.json", "prepack": "tsc -p tsconfig.json && node ../../../scripts/copy-license.mjs", "typecheck": "tsc --noEmit -p tsconfig.json" }
+}

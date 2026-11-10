@@ -1,11 +1,13 @@
+import { createTestDatabase } from "../../../plugins/database/libsql/test/database-fixture.js";
+import { removeSqliteTestDirectory as rm } from "../../../tests/helpers/sqlite-cleanup.js";
 import { expect, it, onTestFinished } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ReadableSpan, SpanExporter } from "@opentelemetry/sdk-trace-base";
 import { AgentHarness } from "@tessar/core/testing";
 import { AssistantMessage, MessageCodec, TessarError, ToolMessage, createTool } from "@tessar/core";
-import { createSqliteBackend } from "@tessar/sqlite";
+import { createLibsqlBackend } from "@tessar/libsql";
 import { z } from "zod";
 import { setTimeout as delay } from "node:timers/promises";
 import {
@@ -134,13 +136,15 @@ it("uses record lifetimes for Agent, model and tool spans despite delayed public
 it("parents post-Turn auxiliary work to the Agent without reopening an ended Turn", async () => {
   const start = captured.spans.length;
   const model = { providerId: "scripted", modelId: "test" };
-  const h = await AgentHarness.create({ modelScripts: [{ text: "answer" }, { text: "auxiliary" }], plugins: [createTracing(), {
-    id: "after-turn", setup(tessar) {
-      tessar.hook("turn.decision", async (_event, context) => {
-        for await (const _ of context.models.stream({ model, instructions: { sections: [] }, messages: [], tools: [] })) {}
-      });
-    },
-  }] });
+  const h = await AgentHarness.create({
+    modelScripts: [{ text: "answer" }, { text: "auxiliary" }], plugins: [createTracing(), {
+      id: "after-turn", setup(tessar) {
+        tessar.hook("turn.decision", async (_event, context) => {
+          for await (const _ of context.models.stream({ model, instructions: { sections: [] }, messages: [], tools: [] })) { }
+        });
+      },
+    }]
+  });
   try { await h.agent.generate("hello"); }
   finally { await h.dispose(); }
   const spans = captured.spans[start]!;
@@ -166,9 +170,13 @@ it.each([false, true])("ends a parallel tool span at execution completion, inclu
   });
   const harness = await AgentHarness.create({
     tools: { fast, slow },
-    modelScripts: [{ response: { message: MessageCodec.encode(new AssistantMessage(
-      ["fast", "slow"].map((name) => ({ type: "tool-call" as const, name, toolCallId: name, arguments: {} })),
-    )) } }, { text: "done" }],
+    modelScripts: [{
+      response: {
+        message: MessageCodec.encode(new AssistantMessage(
+          ["fast", "slow"].map((name) => ({ type: "tool-call" as const, name, toolCallId: name, arguments: {} })),
+        ))
+      }
+    }, { text: "done" }],
     plugins: [createTracing()],
   });
   let records: Awaited<ReturnType<typeof harness.records>>;
@@ -219,11 +227,11 @@ it("exports stream/turn/model/tool hierarchy including auxiliary calls and exclu
     schema: z.object({}),
     execute: async (_input, context) => {
       for await (const _ of context.models.stream({
-          model,
-          instructions: { sections: [] },
-          messages: [],
-          tools: [],
-        })) {
+        model,
+        instructions: { sections: [] },
+        messages: [],
+        tools: [],
+      })) {
       }
       return "tool result";
     },
@@ -415,7 +423,7 @@ it("records each retry as a separate generation and omits unknown token counts",
   ).toBe(2);
   expect(
     generations.find((span) => span.status.code === 2)?.attributes[
-      "langfuse.observation.status_message"
+    "langfuse.observation.status_message"
     ],
   ).toBe("busy");
   const success = generations.find((span) => span.status.code !== 2)!;
@@ -449,7 +457,7 @@ it("gives restart/resume a fresh Agent trace grouped with the suspended segment"
     execute: (_input, context) => context.suspend({ question: "Continue?" }),
   });
   const first = await AgentHarness.create({
-    backend: await createSqliteBackend({ filename }),
+    backend: await createLibsqlBackend({ database: createTestDatabase(filename)}),
     tools: { ask },
     modelScripts: [response("ask")],
     plugins: [createTracing()],
@@ -475,7 +483,7 @@ it("gives restart/resume a fresh Agent trace grouped with the suspended segment"
     await first.dispose();
   }
   const second = await AgentHarness.create({
-    backend: await createSqliteBackend({ filename }),
+    backend: await createLibsqlBackend({ database: createTestDatabase(filename)}),
     tools: { ask },
     modelScripts: [{ text: "resumed" }],
     plugins: [createTracing()],
@@ -569,7 +577,7 @@ it("captures saved tool publication before stream.resumed after SQLite recovery 
     recursive: true, force: true, maxRetries: 5, retryDelay: 100,
   }));
   const filename = join(directory, "state.db");
-  const backend = await createSqliteBackend({ filename });
+  const backend = await createLibsqlBackend({ database: createTestDatabase(filename)});
   const originalStage = backend.commits.stage;
   let failed = false, executed = 0;
   backend.commits.stage = async (batch) => {
@@ -605,7 +613,7 @@ it("captures saved tool publication before stream.resumed after SQLite recovery 
     expect(saved.messages.some((message) => message.role === "tool")).toBe(false);
   } finally { await first.dispose(); }
   const second = await AgentHarness.create({
-    backend: await createSqliteBackend({ filename }), tools: { work },
+    backend: await createLibsqlBackend({ database: createTestDatabase(filename)}), tools: { work },
     modelScripts: [{ text: "recovered" }], plugins: [createTracing()],
   });
   try {
@@ -689,9 +697,9 @@ it("uses the effective request and committed messages after application transfor
           tessar.hook("message.prepare", (event) =>
             event.payload.role === "assistant"
               ? {
-                  ...event.payload,
-                  content: [{ type: "text", text: "committed answer" }],
-                }
+                ...event.payload,
+                content: [{ type: "text", text: "committed answer" }],
+              }
               : event.payload,
           );
         },
@@ -733,7 +741,7 @@ it("gives each Session follow-up an Agent trace with shared grouping, continuous
     });
     sessionId = session.id;
     for (const input of ["first question", "second question"]) {
-      let stop = () => {};
+      let stop = () => { };
       const completed = new Promise<void>((resolve, reject) => {
         stop = session.subscribe((event) => {
           if (event.type === "stream.end") resolve();
@@ -827,7 +835,7 @@ it("keeps Thread traces isolated and continues their numbers after switching bac
     for (const [index, session] of [first, first, second, first].entries()) {
       if (index === 1) await session.thread.create({ id: "thread-b" });
       if (index === 3) await session.thread.switch("thread-a");
-      let stop = () => {};
+      let stop = () => { };
       const completed = new Promise<void>((resolve, reject) => {
         stop = session.subscribe((event) => {
           if (event.type === "stream.end") resolve();
@@ -905,7 +913,7 @@ it("restores Thread grouping and Turn counters with a fresh Agent trace after re
   let sessionId: string;
   for (const index of [0, 1]) {
     const harness = await AgentHarness.create({
-      backend: await createSqliteBackend({ filename }),
+      backend: await createLibsqlBackend({ database: createTestDatabase(filename)}),
       modelScripts: [{ text: `answer ${index}` }],
       plugins: [createTracing()],
     });
@@ -913,9 +921,9 @@ it("restores Thread grouping and Turn counters with a fresh Agent trace after re
       const session =
         index === 0
           ? await harness.controller.createSession({
-              threadId: "persisted-conversation",
-              model: harness.provider.ref,
-            })
+            threadId: "persisted-conversation",
+            model: harness.provider.ref,
+          })
           : (await harness.controller.getSession(sessionId!))!;
       sessionId = session.id;
       const completed = new Promise<void>((resolve, reject) =>

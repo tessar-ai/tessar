@@ -1,5 +1,14 @@
 import { expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
+it("reads, splits and embeds standalone content and cancels HTTP loading through built exports", () => {
+  const result = spawnSync(process.execPath, ["tests/fixtures/rag-consumer.ts"], {
+    encoding: "utf8",
+    timeout: 15000,
+  });
+  expect(result.error).toBeUndefined();
+  expect(result.status, result.stderr).toBe(0);
+  expect(result.stdout).toBe("");
+});
 it("calls TypeSafe through built public exports and persists standalone decisions in SQLite", () => {
   const result = spawnSync(process.execPath, ["tests/fixtures/typesafe-consumer.ts"], { encoding: "utf8" });
   expect(result.error).toBeUndefined();

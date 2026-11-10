@@ -17,9 +17,13 @@ import {
   OpenAIAdapter,
   createClient,
   clientKeys,
+  OPENAI_API,
   type OpenAIOptions,
 } from "./adapter.js";
 import { OpenAIChatAdapter } from "./chat-adapter.js";
+
+const UNSUPPORTED_OPTION = "UnsupportedOption";
+const OPENAI_ENDPOINT = "https://api.openai.com/v1";
 
 export type OpenAIModelOptions = Omit<
   ResponseCreateParamsStreaming,
@@ -47,13 +51,13 @@ export type OpenAIChatModelOptions = Omit<
 type OptionsFor<A extends OpenAIAPI> = A extends "chat-completions"
   ? OpenAIChatModelOptions
   : OpenAIModelOptions;
-export type OpenAIProviderOptions<A extends OpenAIAPI = OpenAIAPI> =
+export type OpenAIChatOptions<A extends OpenAIAPI = OpenAIAPI> =
   OpenAIOptions & {
     model: string;
     connectionId?: string;
   } & (A extends "chat-completions"
-      ? { api: "chat-completions" } & OpenAIChatModelOptions
-      : { api?: "responses" } & OpenAIModelOptions);
+    ? { api: "chat-completions" } & OpenAIChatModelOptions
+    : { api?: "responses" } & OpenAIModelOptions);
 
 interface Connection {
   client: OpenAI;
@@ -61,7 +65,7 @@ interface Connection {
   resolver: ProfileResolver;
 }
 
-export class OpenAIProvider<
+export class OpenAIChat<
   A extends OpenAIAPI = "responses",
 > extends OpenAIAdapter {
   readonly options: Readonly<OptionsFor<A>>;
@@ -71,14 +75,14 @@ export class OpenAIProvider<
   private readonly sharedConnection: Connection;
   private readonly registration: ModelProviderRegistration;
 
-  constructor(configuration: OpenAIProviderOptions<A> & { api?: A });
+  constructor(configuration: OpenAIChatOptions<A> & { api?: A });
   /** @internal */
   constructor(
-    configuration: OpenAIProviderOptions<A> & { api?: A },
+    configuration: OpenAIChatOptions<A> & { api?: A },
     connection: Connection,
   );
   constructor(
-    configuration: OpenAIProviderOptions<A> & { api?: A },
+    configuration: OpenAIChatOptions<A> & { api?: A },
     connection?: Connection,
   ) {
     const {
@@ -86,10 +90,10 @@ export class OpenAIProvider<
       providerId = "openai",
       metadataPartition,
       connectionId,
-      api = "responses",
+      api = OPENAI_API.RESPONSES,
       ...fields
     } = configuration;
-    if (api !== "responses" && api !== "chat-completions")
+    if (api !== OPENAI_API.RESPONSES && api !== OPENAI_API.CHAT_COMPLETIONS)
       fail("InvalidConfiguration", "Choose responses or chat-completions");
     requireId(model, "model id");
     requireId(providerId, "provider id");
@@ -114,7 +118,7 @@ export class OpenAIProvider<
       "function_call",
     ])
       if (key in body)
-        fail("UnsupportedOption", key + " is owned by the Agent runtime");
+        fail(UNSUPPORTED_OPTION, key + " is owned by the Agent runtime");
     if (
       body.background === true ||
       body.conversation != null ||
@@ -122,11 +126,11 @@ export class OpenAIProvider<
       body.context_management != null
     )
       fail(
-        "UnsupportedOption",
+        UNSUPPORTED_OPTION,
         "Background, provider-managed conversations and compaction are not supported by the Agent loop",
       );
-    if (api === "chat-completions" && body.n != null && body.n !== 1)
-      fail("UnsupportedOption", "An Agent consumes one Chat completion choice");
+    if (api === OPENAI_API.CHAT_COMPLETIONS && body.n != null && body.n !== 1)
+      fail(UNSUPPORTED_OPTION, "An Agent consumes one Chat completion choice");
     const requestOptions = snapshotModelOptions(body);
     const selected = connection ?? {
       client: createClient(clientOptions),
@@ -154,7 +158,7 @@ export class OpenAIProvider<
     );
     this.options = requestOptions as Readonly<OptionsFor<A>>;
     this.api = api as A;
-    if (api === "chat-completions")
+    if (api === OPENAI_API.CHAT_COMPLETIONS)
       this.chat = new OpenAIChatAdapter(
         clientOptions,
         this.ref,
@@ -165,11 +169,11 @@ export class OpenAIProvider<
     this.sharedConnection = selected;
     const officialEndpoint =
       !clientOptions.baseURL ||
-      clientOptions.baseURL.replace(/\/$/, "") === "https://api.openai.com/v1";
+      clientOptions.baseURL.replace(/\/$/, "") === OPENAI_ENDPOINT;
     this.registration = {
       id: providerId,
       create: (modelId) => this.withModel(modelId),
-      endpoint: clientOptions.baseURL ?? "https://api.openai.com/v1",
+      endpoint: clientOptions.baseURL ?? OPENAI_ENDPOINT,
       metadataPartition: metadataPartition ?? selected.identity,
       catalogModelRef: (ref) =>
         officialEndpoint
@@ -179,14 +183,14 @@ export class OpenAIProvider<
     };
   }
 
-  withModel(modelId: string): OpenAIProvider<A> {
-    return new OpenAIProvider<A>(
+  withModel(modelId: string): OpenAIChat<A> {
+    return new OpenAIChat<A>(
       {
         ...this.clientOptions,
         ...this.options,
         api: this.api,
         model: modelId,
-      } as OpenAIProviderOptions<A> & { api?: A },
+      } as OpenAIChatOptions<A> & { api?: A },
       this.sharedConnection,
     );
   }
@@ -205,16 +209,16 @@ export class OpenAIProvider<
       null
     >[];
     if (!(levels as readonly string[]).includes(level))
-      fail("UnsupportedOption", "Unsupported OpenAI effort level: " + level);
-    if (this.api === "chat-completions")
+      fail(UNSUPPORTED_OPTION, "Unsupported OpenAI effort level: " + level);
+    if (this.api === OPENAI_API.CHAT_COMPLETIONS)
       return { ...options, reasoning_effort: level };
     const reasoning = options.reasoning;
     return {
       ...options,
       reasoning: {
         ...(reasoning &&
-        typeof reasoning === "object" &&
-        !Array.isArray(reasoning)
+          typeof reasoning === "object" &&
+          !Array.isArray(reasoning)
           ? reasoning
           : {}),
         effort: level,

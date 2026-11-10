@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import OpenAI from "openai";
 import { Agent, errorInfo, normalizeInstruction } from "@tessar/core";
-import { OpenAIProvider } from "../src/index.js";
+import { OpenAIChat } from "../src/index.js";
 import { OpenAIAdapter } from "../src/adapter.js";
 import { OpenAIChatAdapter } from "../src/chat-adapter.js";
 
@@ -11,7 +11,7 @@ for (const api of ["responses", "chat-completions"] as const) {
       api === "responses"
         ? `event: response.completed\ndata: ${JSON.stringify({ type: "response.completed", response: { id: "response", output: [0, 1].map((index) => ({ id: "item" + index, type: "function_call", call_id: "same", name: "test", arguments: "{}" })) } })}\n\n`
         : `data: ${JSON.stringify({ id: "chat", choices: [{ index: 0, delta: { tool_calls: [0, 1].map((index) => ({ index, id: "same", type: "function", function: { name: "test", arguments: "{}" } })) }, finish_reason: "tool_calls" }] })}\n\ndata: [DONE]\n\n`;
-    const model = new OpenAIProvider({
+    const model = new OpenAIChat({
       api,
       apiKey: "fixture",
       model: "fixture",
@@ -45,7 +45,7 @@ for (const api of ["responses", "chat-completions"] as const) {
         api === "responses"
           ? `event: response.completed\ndata: ${JSON.stringify({ type: "response.completed", response: { id: "response", output: [{ id: "item", type: "function_call", call_id: id, name, arguments: "{}" }] } })}\n\n`
           : `data: ${JSON.stringify({ id: "chat", choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id, type: "function", function: { name, arguments: "{}" } }] }, finish_reason: "tool_calls" }] })}\n\ndata: [DONE]\n\n`;
-      const model = new OpenAIProvider({
+      const model = new OpenAIChat({
         api,
         apiKey: "fixture",
         model: "fixture",
@@ -78,7 +78,7 @@ for (const api of ["responses", "chat-completions"] as const) {
         api === "responses"
           ? `event: response.completed\ndata: ${JSON.stringify({ type: "response.completed", sequence_number: 1, response: { id: "r", status: "completed", output: [{ type: "function_call", call_id: "call", name: "test", arguments: args }] } })}\n\n`
           : `data: ${JSON.stringify({ id: "c", choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: "call", type: "function", function: { name: "test", arguments: args } }] }, finish_reason: "tool_calls" }] })}\n\ndata: [DONE]\n\n`;
-      const model = new OpenAIProvider({
+      const model = new OpenAIChat({
         api,
         apiKey: "fixture",
         model: "fixture",

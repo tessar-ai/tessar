@@ -1,0 +1,18 @@
+{
+  "name": "@tessar/example-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@tessar/core": "workspace:*",
+    "@tessar/server": "workspace:*",
+    "@tessar/libsql": "workspace:*",
+    "libsql": "0.5.29",
+    "zod": "^4.6.7",
+    "hono": "4.13.16",
+    "@hono/node-server": "2.1.6"
+  }
+}

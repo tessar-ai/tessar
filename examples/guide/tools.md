@@ -13,7 +13,7 @@ Save as `tools.ts` after the [setup](README.md).
 ```ts
 import { Agent, ToolMessage } from "@tessar/core";
 import { createTool } from "@tessar/core/tool";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 import { z } from "zod";
 
 const add = createTool({
@@ -38,7 +38,7 @@ const explain = createTool({
 
 const agent = new Agent({
   id: "calculator",
-  model: new OpenAIProvider({
+  model: new OpenAIChat({
     apiKey: process.env.OPENAI_API_KEY!,
     model: process.env.OPENAI_MODEL!,
   }),

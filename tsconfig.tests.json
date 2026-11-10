@@ -6,6 +6,14 @@
       "node"
     ],
     "paths": {
+      "@tessar/auth-api-key": ["./integrations/auth/api-key/src/index.ts"],
+      "@tessar/auth-jwt": ["./integrations/auth/jwt/src/index.ts"],
+      "@tessar/auth-google": ["./integrations/auth/google/src/index.ts"],
+      "@tessar/auth-clerk": ["./integrations/auth/clerk/src/index.ts"],
+      "@tessar/auth-better-auth": ["./integrations/auth/better-auth/src/index.ts"],
+      "@tessar/client": ["./packages/client/src/index.ts"],
+      "@tessar/server": ["./packages/server/src/index.ts"],
+      "@tessar/rag": ["./packages/rag/src/index.ts"],
       "@tessar/typesafe": ["./packages/typesafe/src/index.ts"],
       "@tessar/plugins/logger": [
         "./packages/plugins/src/build-in/logger.ts"
@@ -23,9 +31,10 @@
       "@tessar/core/testing": [
         "./packages/core/src/testing/index.ts"
       ],
-      "@tessar/sqlite": [
-        "./packages/sqlite/src/index.ts"
+      "@tessar/libsql": [
+        "./plugins/database/libsql/src/index.ts"
       ],
+      "@tessar/libsql/vector": ["./plugins/database/libsql/src/vector.ts"],
       "@tessar/openai": [
         "./packages/openai/src/index.ts"
       ],
@@ -33,16 +42,22 @@
         "./packages/core/src/testing/storage-conformance.ts"
       ],
       "@tessar/postgresql": [
-        "./packages/postgresql/src/index.ts"
+        "./plugins/database/postgresql/src/index.ts"
       ],
+      "@tessar/postgresql/vector": ["./plugins/database/postgresql/src/vector.ts"],
       "@tessar/mongodb": [
-        "./packages/mongodb/src/index.ts"
-      ]
+        "./plugins/database/mongodb/src/index.ts"
+      ],
+      "@tessar/mongodb/vector": ["./plugins/database/mongodb/src/vector.ts"]
     }
   },
   "include": [
     "packages/*/src/**/*.ts",
     "packages/*/test/**/*.ts",
+    "integrations/auth/*/src/**/*.ts",
+    "integrations/auth/*/test/**/*.ts",
+    "plugins/database/*/src/**/*.ts",
+    "plugins/database/*/test/**/*.ts",
     "tests/**/*.ts",
     "examples/**/*.ts",
     "vitest.config.ts"

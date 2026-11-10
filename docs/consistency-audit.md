@@ -59,7 +59,7 @@ Nguồn: [call.ts](../packages/core/src/engine/call.ts:22),
 [session.ts](../packages/core/src/session.ts:592),
 [registry.ts](../packages/core/src/models/registry.ts:55).
 
-Agent mặc định dùng connection A. Tạo một OpenAIProvider khác cùng `providerId`
+Agent mặc định dùng connection A. Tạo một OpenAIChat khác cùng `providerId`
 nhưng connection B:
 
 ```ts
@@ -208,7 +208,7 @@ Nguồn: [plugin.ts](../packages/openai/src/plugin.ts:7),
 [provider.ts](../packages/openai/src/provider.ts:80),
 [API review](api-review.md:702).
 
-`OpenAIProvider` chọn Responses/Chat Completions và nhận native request options.
+`OpenAIChat` chọn Responses/Chat Completions và nhận native request options.
 `OpenAIPlugin` chỉ nhận OpenAIOptions và tạo OpenAIAdapter trực tiếp, tức đường
 Responses; không dùng cùng provider constructor. Vì vậy chuyển từ cấu hình
 trong app sang provider được cài qua plugin không chỉ là đổi nơi đăng ký.
@@ -267,7 +267,7 @@ và các consumer cũ khác đi là nguyên nhân khiến kiểu lệch này tá
 | C06 | Controller dispose đóng Session handles/queues, phát closed trước plugin cleanup; public close vẫn có thể bị barrier từ chối | `core/test/controller.test.ts` |
 | C07 | Event được đóng timestamp một lần tại publication boundary; Logger dùng timestamp đó | `core/test/events/string-events.test.ts` |
 | C08 | Agent tool object keys là alias xuyên suốt description, dispatch và history; Tool gốc không mutate | `core/test/tools/agent-tools.test.ts` |
-| C09 | OpenAIPlugin dùng OpenAIProvider, hỗ trợ cả hai protocol và native options, chia sẻ lazy client/connection | `openai/test/provider.test.ts` |
+| C09 | OpenAIPlugin dùng OpenAIChat, hỗ trợ cả hai protocol và native options, chia sẻ lazy client/connection | `openai/test/provider.test.ts` |
 
 Các đường Agent và Session dùng cùng generic option ownership guard; validation
 riêng của provider ở adapter. Agent dùng ModelRef cũng nhận JSON modelOptions

@@ -14,21 +14,21 @@ const dependencyKinds = [
 ];
 
 function workspace(root) {
-  return readdirSync(join(root, "packages"), { withFileTypes: true })
+  return ["packages", "integrations/auth", "plugins/database"].flatMap(parent => !existsSync(join(root, parent)) ? [] : readdirSync(join(root, parent), { withFileTypes: true })
     .filter(
       (entry) =>
         entry.isDirectory() &&
-        existsSync(join(root, "packages", entry.name, "package.json")),
+        existsSync(join(root, parent, entry.name, "package.json")),
     )
     .map((entry) => ({
-      directory: `packages/${entry.name}`,
+      directory: `${parent}/${entry.name}`,
       manifest: JSON.parse(
         readFileSync(
-          join(root, "packages", entry.name, "package.json"),
+          join(root, parent, entry.name, "package.json"),
           "utf8",
         ),
       ),
-    }));
+    })));
 }
 
 export function checkRelease({
@@ -41,7 +41,7 @@ export function checkRelease({
     "Expected a release tag such as opentelemetry@0.1.0 or core@0.2.0-beta.1",
   );
   const [, shortName, version] = match;
-  const name = `@tessar/${shortName}`;
+  const name = shortName === "tessar" ? "tessar" : `@tessar/${shortName}`;
   const matches = workspace(root).filter(
     (entry) => entry.manifest.name === name,
   );
@@ -53,7 +53,7 @@ export function checkRelease({
   const { directory, manifest } = matches[0];
   assert.match(
     directory,
-    /^packages\/[a-z0-9][a-z0-9._-]*$/,
+    /^(?:packages|integrations\/auth|plugins\/database)\/[a-z0-9][a-z0-9._-]*$/,
     "Unsupported package directory",
   );
   assert.equal(manifest.version, version, `${name} version must match ${ref}`);
@@ -74,7 +74,7 @@ export function checkRelease({
     directory,
     version,
     tag,
-    archive: `dist/release/tessar-${shortName}-${version}.tgz`,
+    archive: `dist/release/${name.replace("@", "").replace("/", "-")}-${version}.tgz`,
   };
 }
 

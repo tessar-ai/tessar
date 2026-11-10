@@ -7,6 +7,13 @@ Tessar in an application, start with the [developer guides](examples/guide/READM
 
 Requires Node.js >=24.22.1 and pnpm 11.5.3.
 
+Database plugins live in `plugins/database/<backend>` and keep the package names
+`@tessar/libsql`, `@tessar/postgresql` and `@tessar/mongodb`.
+Authentication integrations live in `integrations/auth/<provider>` and publish as
+`@tessar/auth-<provider>`. Workspace discovery, builds, tests and releases include
+these packages alongside `packages/*`; integrations depend on the public server
+contract rather than adding provider dependencies to the server.
+
 ```sh
 pnpm install --frozen-lockfile
 pnpm typecheck
@@ -30,6 +37,17 @@ pnpm test:storage --maxWorkers 4
 
 These tests use generated schemas/databases and skip when their URLs are absent.
 MongoDB needs a replica set or sharded deployment supporting transactions.
+
+## Storage adapter structure
+
+Keep equivalent responsibilities in the same place across libSQL, PostgreSQL and
+MongoDB. `database.ts` declares an explicit `Database` interface and `openDatabase()`
+for the borrowed connection; `schema.ts` initializes state storage when the backend
+factory calls it. `transaction.ts` owns native commit, rollback and connection/session
+cleanup, shared by state and vector storage. State-specific error mapping remains
+separate so vector operations preserve native errors. Vector-only use must not
+initialize state tables or collections. Native fields and synchronous/asynchronous
+operations may differ; libSQL also enables foreign keys for connection integrity.
 
 ## Public API changes
 
@@ -92,9 +110,27 @@ The release workflow discovers the selected package under
 packs/publishes only that package. Adding a package does not require editing a
 publish list. Legacy `v*` tags no longer trigger publication.
 Stable tags use npm `latest`; prereleases such as `plugins@0.2.0-beta.1` use `next`.
+The unscoped CLI package `tessar` remains in `packages/cli` and uses tags such as
+`tessar@0.1.0`, producing `tessar-0.1.0.tgz`.
+
+Extensions that use the application's Core runtime declare `@tessar/core` as a
+required `peerDependency: "workspace:^"`, with `devDependency: "workspace:*"` for
+workspace builds/tests. This includes OpenAI, storage backends, OpenTelemetry,
+RAG, TypeSafe and server. The plugins package keeps its optional Core peer.
+Use one compatible application Core version; do not bypass incompatible peer
+requirements with force/override settings. Peer declarations do not make these
+packages independent of Core or guarantee one copy for an incompatible graph.
+
+The globally installed CLI keeps Core as a normal `workspace:^` dependency,
+alongside Hono and its Node adapter. The browser client has no runtime/peer
+dependencies; its runtime and declaration files must not import backend packages.
+Database drivers, backend vector RAG peers and Express integration peers stay
+optional and are installed by the developer when selected. Core requires Zod;
+Vitest is an optional peer only for `@tessar/core/testing/storage-conformance`.
+Do not move test frameworks into regular runtime dependencies.
 
 Versions of other packages do not need to match. For example, OpenTelemetry `0.1.0`
-can depend on Core `0.1.4`. pnpm rewrites `workspace:*` to the dependency's own
+can use Core `0.1.5` through a compatible peer range. pnpm rewrites `workspace:*` to the dependency's own
 version when packing; `workspace:^` becomes a compatible range. The workflow
 checks the actual archive and rejects unresolved or incorrectly rewritten
 dependencies. It also checks npm for an already published target version and
@@ -102,8 +138,8 @@ compatible published internal dependencies before attempting publication.
 
 Publish changed dependencies first and wait for their release to succeed before
 tagging dependents. For the current release, publish `core@0.1.5` first, then
-`plugins@0.1.5`, `openai@0.1.4`, `sqlite@0.1.4`, `postgresql@0.1.4` and
-`mongodb@0.1.4`. Packed workspace dependencies use the new Core version.
+`plugins@0.1.5`, `openai@0.1.4`, `libsql@0.1.4`, `postgresql@0.1.4` and
+`mongodb@0.1.4`. Packed extension Core peers use the compatible `^0.1.5` range.
 When releasing multiple versions of the same package, finish the earlier
 release first so the `latest` npm tag cannot race backwards.
 

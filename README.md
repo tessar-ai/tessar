@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs\assets\logo.png" alt="Tessar" width="160" />
+<img src="docs\assets\tessar.png" alt="Tessar" width="300" />
 
 <h1>Tessar</h1>
 
@@ -34,19 +34,19 @@ npm install @tessar/core @tessar/openai zod
 Create `.env` with your credentials and a model available to your account:
 
 ```dotenv
-OPENAI_API_KEY=your-api-key
-OPENAI_MODEL=your-model-id
+OPENAI_API_KEY = <your-api-key>
+OPENAI_MODEL = <your-model-id>
 ```
 
 Save this as `agent.ts` in a project with `"type": "module"` in `package.json`:
 
 ```ts
 import { Agent } from "@tessar/core";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 
 const agent = new Agent({
   id: "assistant",
-  model: new OpenAIProvider({
+  model: new OpenAIChat({
     apiKey: process.env.OPENAI_API_KEY!,
     model: process.env.OPENAI_MODEL!,
   }),
@@ -77,6 +77,9 @@ for await (const event of agent.stream("Explain agent tools briefly.")) {
     process.stdout.write(event.payload.delta);
   }
   if (event.type === stream.error) throw Error(event.payload.error.message);
+  if (event.type === stream.end && event.payload.error) {
+    throw Error(event.payload.error.message);
+  }
 }
 ```
 
@@ -136,6 +139,7 @@ public SDK and credentials you supply.
 | [Plugins](examples/guide/plugins.md)                 | Custom plugins, hooks, logging and loading plugins after packaging |
 | [OpenTelemetry](examples/guide/opentelemetry.md)    | Trace model calls, tools, retries and resumed executions           |
 | [Storage](examples/guide/storage.md)                 | SQLite, PostgreSQL, MongoDB and restoring conversations            |
+| [Server](examples/guide/server.md)                   | Standalone HTTP APIs, independent Sessions and shared Thread SSE    |
 
 ## Packages
 
@@ -144,13 +148,16 @@ Install the packages your application uses:
 | Package                                               | Provides                                                                       |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [`@tessar/core`](packages/core/README.md)             | Agent execution, sessions, messages, tools, hooks, state and in-memory storage |
-| [`@tessar/openai`](packages/openai/README.md)         | OpenAI Responses and Chat Completions adapters, including compatible endpoints |
+| [`tessar`](packages/cli/README.md)                   | Project and file scaffolding with `tessar new` and `tessar generate` |
+| [`@tessar/openai`](packages/openai/README.md)         | OpenAI Responses, Chat Completions and embedding adapters                       |
 | [`@tessar/typesafe`](packages/typesafe/README.md)     | Typed TypeSafe calls for classification, routing and application decisions, with optional persistence |
 | [`@tessar/plugins`](packages/plugins/README.md)       | Plugin discovery/loading, npm plugin management and the `/logger` plugin       |
+| [`@tessar/rag`](packages/rag/README.md)               | Independent document reading and structure-aware chunking                      |
 | [`@tessar/opentelemetry`](packages/opentelemetry/README.md)     | OTLP tracing with Langfuse and Laminar adapters                 |
-| [`@tessar/sqlite`](packages/sqlite/README.md)         | SQLite persistence using Node's built-in SQLite API                            |
-| [`@tessar/postgresql`](packages/postgresql/README.md) | PostgreSQL persistence                                                         |
-| [`@tessar/mongodb`](packages/mongodb/README.md)       | MongoDB persistence                                                            |
+| [`@tessar/libsql`](plugins/database/libsql/README.md)         | State/checkpoint storage using a borrowed libSQL database; optional `/vector` entry for vector/BM25 search                 |
+| [`@tessar/server`](packages/server/README.md)         | Runtime registration, standalone HTTP/SSE and Express/Hono adapters |
+| [`@tessar/postgresql`](plugins/database/postgresql/README.md) | PostgreSQL persistence                                                         |
+| [`@tessar/mongodb`](plugins/database/mongodb/README.md)       | MongoDB persistence                                                            |
 
 Tessar is an early **0.x** SDK; APIs can change between releases. To work on Tessar
 itself, see [Contributing](CONTRIBUTING.md).

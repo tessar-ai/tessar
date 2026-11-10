@@ -15,6 +15,9 @@ import {
   functionIdentity,
 } from "./response-error.js";
 
+const UNSUPPORTED_CONTEXT = "UnsupportedContext";
+const CODEC_ID = "openai.chat-completions";
+
 export interface ChatAssistant {
   role: "assistant";
   content: string | null;
@@ -29,7 +32,7 @@ export interface ChatAssistant {
 }
 interface ChatContinuity extends ModelRef {
   connection?: ModelConnectionDescriptor;
-  codec: "openai.chat-completions";
+  codec: typeof CODEC_ID;
   version: 1;
   message: ChatAssistant;
 }
@@ -39,7 +42,7 @@ function toolOutput(message: MessageData): string {
       if (part.type === "text") return part.text;
       if (part.type === "data") return JSON.stringify(part.data);
       return fail(
-        "UnsupportedContext",
+        UNSUPPORTED_CONTEXT,
         "Chat tool output requires text or JSON data",
       );
     })
@@ -63,7 +66,7 @@ export function encodeChatMessages(
       const state = message.providerState as unknown as ChatContinuity;
       if (
         !state ||
-        state.codec !== "openai.chat-completions" ||
+        state.codec !== CODEC_ID ||
         state.version !== 1 ||
         state.providerId !== request.model.providerId ||
         state.modelId !== request.model.modelId ||
@@ -74,7 +77,7 @@ export function encodeChatMessages(
             state.connection.protocol !== connection?.protocol))
       )
         fail(
-          "UnsupportedContext",
+          UNSUPPORTED_CONTEXT,
           "Opaque Chat context requires its original model, connection and protocol",
         );
       messages.push(state.message);
@@ -82,7 +85,7 @@ export function encodeChatMessages(
     }
     if (message.content.some((part) => part.type === "reasoning"))
       fail(
-        "UnsupportedContext",
+        UNSUPPORTED_CONTEXT,
         "Reasoning history requires native provider continuity",
       );
     if (message.role === "tool") {
@@ -109,7 +112,7 @@ export function encodeChatMessages(
               arguments: JSON.stringify(part.arguments),
             },
           });
-        else fail("UnsupportedContext", "Unsupported Chat assistant content");
+        else fail(UNSUPPORTED_CONTEXT, "Unsupported Chat assistant content");
       }
       messages.push({
         role: "assistant",
@@ -120,7 +123,7 @@ export function encodeChatMessages(
     }
     if (message.role === "system") {
       if (message.content.some((part) => part.type !== "text"))
-        fail("UnsupportedContext", "System content requires text");
+        fail(UNSUPPORTED_CONTEXT, "System content requires text");
       messages.push({
         role: "system",
         content: message.content
@@ -150,7 +153,7 @@ export function encodeChatMessages(
         };
       if (part.type === "file")
         return { type: "file" as const, file: { file_data: part.data } };
-      return fail("UnsupportedContext", "Unsupported Chat user content");
+      return fail(UNSUPPORTED_CONTEXT, "Unsupported Chat user content");
     });
     messages.push({ role: "user", content });
   }
@@ -185,7 +188,7 @@ export function decodeChatMessage(
   return new AssistantMessage(parts, {
     id,
     providerState: {
-      codec: "openai.chat-completions",
+      codec: CODEC_ID,
       version: 1,
       ...ref,
       message,

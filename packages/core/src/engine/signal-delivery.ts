@@ -9,12 +9,17 @@ import type {
 } from "./frame.js";
 import type { ExecutionRuntime } from "./runtime.js";
 import { CommitCoordinator } from "../state/commit.js";
+import type { Scope } from "../state/schema.js";
+import { normalizeScope } from "../state/scope.js";
+
+const ALREADY_TERMINAL = "AlreadyTerminal";
 
 interface TransientMessage {
   after: string | null;
   message: MessageData;
 }
 interface Mailbox {
+  scope?: Scope;
   id: string;
   threadId: string;
   runtime: ExecutionRuntime;
@@ -40,7 +45,8 @@ export function reserveSignals(
   runtime: ExecutionRuntime,
 ): void {
   if (request.kind !== "input") return;
-  reserveTarget(agent, request.id!, request.threadId, runtime);
+  const box = reserveTarget(agent, request.id!, request.threadId, runtime);
+  box.scope = normalizeScope(request.scope ?? request.thread?.scope() ?? request.session?.scope());
 }
 
 function reserveTarget(
@@ -52,7 +58,7 @@ function reserveTarget(
   let entries = mailboxes.get(agent);
   if (!entries) mailboxes.set(agent, (entries = new Map()));
   const { promise: ready, resolve, reject } = Promise.withResolvers<void>();
-  void ready.catch(() => {});
+  void ready.catch(() => { });
   const box: Mailbox = {
     id,
     threadId,
@@ -101,6 +107,7 @@ export function bindSignals(
   const box = entries.get(frame.stream.id)!;
   if (box.frame !== frame) box.failure = undefined;
   box.frame = frame;
+  box.scope = frame.cp.state.scope;
   frame.signals = box;
   if (frame.admitted) box.resolve();
 }
@@ -119,10 +126,10 @@ export function releaseSignals(
   box.accepting = false;
   box.reject(
     error ??
-      new TessarError(
-        "InvalidTransition",
-        "Execution ended before accepting signal input",
-      ),
+    new TessarError(
+      "InvalidTransition",
+      "Execution ended before accepting signal input",
+    ),
   );
   mailboxes.get(agent)!.delete(id);
 }
@@ -135,8 +142,8 @@ export function findSignalTarget(
   return target.streamId !== undefined
     ? entries?.get(target.streamId)
     : [...(entries?.values() ?? [])].find(
-        (entry) => entry.threadId === target.threadId,
-      );
+      (entry) => entry.threadId === target.threadId,
+    );
 }
 
 export function deliverSignal(
@@ -146,24 +153,24 @@ export function deliverSignal(
   persist: boolean,
 ): void {
   if (!box.accepting)
-    fail("AlreadyTerminal", "Execution is no longer accepting signals");
+    fail(ALREADY_TERMINAL, "Execution is no longer accepting signals");
   box.order.push(message.id);
   const detaching = box.detaching;
   const operation = (async () => {
     await box.ready;
     await detaching;
     if (!box.accepting)
-      fail("AlreadyTerminal", "Execution is no longer accepting signals");
+      fail(ALREADY_TERMINAL, "Execution is no longer accepting signals");
     if (box.frame) {
       await acceptSignal(context, box.frame, message, persist);
     } else {
       const next = box.offline.then(async () => {
         if (!box.accepting)
-          fail("AlreadyTerminal", "Execution is no longer accepting signals");
+          fail(ALREADY_TERMINAL, "Execution is no longer accepting signals");
         if (box.frame) await acceptSignal(context, box.frame, message, persist);
         else await acceptSuspended(context, box, message, persist);
       });
-      box.offline = next.catch(() => {});
+      box.offline = next.catch(() => { });
       await next;
     }
   })().catch((error) => {
@@ -180,7 +187,7 @@ export function deliverSignal(
   box.operations.add(operation);
   void operation
     .finally(() => box.operations.delete(operation))
-    .catch(() => {});
+    .catch(() => { });
 }
 
 /** Drain accepted writes before releasing the frame's ownership lease. */
@@ -223,7 +230,7 @@ export async function acceptSignal(
     return;
   }
   await context.commit(frame, "ExecutionTransition", () => {
-    if (!frame.cp.execution) fail("AlreadyTerminal", "Execution already ended");
+    if (!frame.cp.execution) fail(ALREADY_TERMINAL, "Execution already ended");
     frame.cp.execution.pendingSignals = [
       ...(frame.cp.execution.pendingSignals ?? []),
       message,
@@ -246,7 +253,7 @@ async function acceptSuspended(
   try {
     const head = await backend.threads.get(box.threadId);
     if (!head || head.activeStreamId !== box.id)
-      fail("AlreadyTerminal", "Execution is no longer current");
+      fail(ALREADY_TERMINAL, "Execution is no longer current");
     const cp = (await backend.checkpoints.get(head.currentCheckpointId))!;
     if (!cp.execution?.pendingInterruptId)
       fail("RecoveryRequired", "Recover execution before delivering signal");
@@ -299,8 +306,8 @@ export function attachSignals(
   if (!box || box.frame) return attach();
   const pending = box.offline.then(attach);
   box.offline = pending.then(
-    () => {},
-    () => {},
+    () => { },
+    () => { },
   );
   return pending;
 }

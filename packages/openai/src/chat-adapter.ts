@@ -10,7 +10,7 @@ import {
 import type { CompletionUsage } from "openai/resources/completions";
 import type { ChatCompletionCreateParamsStreaming } from "openai/resources/chat/completions/completions";
 import { OpenAIError } from "openai";
-import { OpenAIAdapter, validateRequest } from "./adapter.js";
+import { OpenAIAdapter, validateRequest, OPENAI_API } from "./adapter.js";
 import { Parts } from "./parts.js";
 import { functionArguments } from "./response-error.js";
 import { responseError } from "./response-error.js";
@@ -42,7 +42,7 @@ function usage(value?: CompletionUsage | null) {
 /** Native Chat Completions transport; the Agent consumes the shared ModelChunk contract. */
 export class OpenAIChatAdapter extends OpenAIAdapter {
   override validate(request: ModelRequest): void {
-    validateRequest(request, this.ref, "chat-completions");
+    validateRequest(request, this.ref, OPENAI_API.CHAT_COMPLETIONS);
     encodeChatMessages(request, this.connection);
   }
 
@@ -72,7 +72,7 @@ export class OpenAIChatAdapter extends OpenAIAdapter {
             : {}),
           stream: true,
         },
-        "chat-completions",
+        OPENAI_API.CHAT_COMPLETIONS,
         context,
       );
       const stream = await this.client.chat.completions.create(

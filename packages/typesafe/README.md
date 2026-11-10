@@ -10,7 +10,7 @@ Session or loop is required. Uses native `fetch`; no TypeSafe SDK dependency.
 Node.js >=24.22.1:
 
 ```sh
-npm install @tessar/typesafe
+npm install @tessar/core @tessar/typesafe
 ```
 
 ## Generate
@@ -108,24 +108,33 @@ the provider's explicit `TypeSafe-Danger-Zone-Long-Context` header.
 
 ## Persist and inspect calls
 
+Install `@tessar/libsql` and `libsql@0.5.29`. The application owns and closes the
+native database; backend cleanup leaves it open.
+
 ```ts
 import { TypeSafe } from "@tessar/typesafe";
-import { createSqliteBackend } from "@tessar/sqlite";
+import Database from "libsql";
+import { createLibsqlBackend } from "@tessar/libsql";
 
-const backend = await createSqliteBackend({ filename: "./state.db" });
-const typesafe = new TypeSafe({ model: "jev-latest", records: backend.records });
+const database = new Database("./state.db");
 try {
-  const scope = { userId: "user-1" };
-  const id = crypto.randomUUID(); // optional: omit it to let Tessar generate one
-  await typesafe.generate({
-    state: { userMessage: "I was charged twice." },
-    questions: { billing: { type: "noul", instructions: "Is this about billing?" } },
-  }, { id, scope, metadata: { channel: "support", policyVersion: "v2" } });
+  const backend = await createLibsqlBackend({ database });
+  const typesafe = new TypeSafe({ model: "jev-latest", records: backend.records });
+  try {
+    const scope = { userId: "user-1" };
+    const id = crypto.randomUUID(); // optional: omit it to let Tessar generate one
+    await typesafe.generate({
+      state: { userMessage: "I was charged twice." },
+      questions: { billing: { type: "noul", instructions: "Is this about billing?" } },
+    }, { id, scope, metadata: { channel: "support", policyVersion: "v2" } });
 
-  console.log(await backend.records.get("typesafe.calls", id, { scope }));
-  console.log(await backend.records.list({ namespace: "typesafe.calls", scope, limit: 20 }));
+    console.log(await backend.records.get("typesafe.calls", id, { scope }));
+    console.log(await backend.records.list({ namespace: "typesafe.calls", scope, limit: 20 }));
+  } finally {
+    await backend.close();
+  }
 } finally {
-  await backend.close();
+  database.close();
 }
 ```
 

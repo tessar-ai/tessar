@@ -8,6 +8,9 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { Plugin } from "@tessar/core";
 
+const PACKAGE_MANIFEST = "package.json";
+const PLUGIN_CONFIGURATION = "plugins.json";
+
 export interface PluginManagerOptions {
   directory: string;
   /** A host module URL from which public SDK imports resolve. */
@@ -70,10 +73,10 @@ export class PluginManager {
     return data as T;
   }
   private manifest(): Promise<Manifest> {
-    return this.readJson(join(this.npmDirectory, "package.json"));
+    return this.readJson(join(this.npmDirectory, PACKAGE_MANIFEST));
   }
   private async configuration(): Promise<PluginConfig> {
-    const filename = join(this.directory, "plugins.json");
+    const filename = join(this.directory, PLUGIN_CONFIGURATION);
     const data = await this.readJson<PluginConfig>(filename);
     if (
       data.packages !== undefined &&
@@ -131,7 +134,7 @@ export class PluginManager {
           );
           const result = nextResolve(source, {
             ...context,
-            parentURL: pathToFileURL(join(this.npmDirectory, "package.json"))
+            parentURL: pathToFileURL(join(this.npmDirectory, PACKAGE_MANIFEST))
               .href,
           });
           this.graph.add(result.url);
@@ -167,13 +170,13 @@ export class PluginManager {
             // Custom files can also use dependencies in the managed npm environment.
             const url = context.conditions.includes("require")
               ? pathToFileURL(
-                  createRequire(
-                    join(this.npmDirectory, "package.json"),
-                  ).resolve(specifier),
-                ).href
+                createRequire(
+                  join(this.npmDirectory, PACKAGE_MANIFEST),
+                ).resolve(specifier),
+              ).href
               : import.meta.resolve(
-                  this.prefix + encodeURIComponent(specifier),
-                );
+                this.prefix + encodeURIComponent(specifier),
+              );
             this.graph.add(url);
             return {
               url,
@@ -220,9 +223,9 @@ export class PluginManager {
       } catch (error) {
         throw new Error(
           "Cannot load plugin " +
-            source +
-            ": " +
-            (error instanceof Error ? error.message : String(error)),
+          source +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
           { cause: error },
         );
       }
@@ -234,12 +237,12 @@ export class PluginManager {
       this.check();
       return operation();
     });
-    this.mutation = next.catch(() => {});
+    this.mutation = next.catch(() => { });
     return next;
   }
   private async saveConfiguration(config: PluginConfig): Promise<void> {
     await writeFile(
-      join(this.directory, "plugins.json"),
+      join(this.directory, PLUGIN_CONFIGURATION),
       JSON.stringify(config, null, 2) + "\n",
     );
   }
@@ -289,10 +292,10 @@ export class PluginManager {
       let sourceName = local
         ? (await stat(target)).isDirectory()
           ? (
-              JSON.parse(
-                await readFile(join(target, "package.json"), "utf8"),
-              ) as { name?: string }
-            ).name
+            JSON.parse(
+              await readFile(join(target, PACKAGE_MANIFEST), "utf8"),
+            ) as { name?: string }
+          ).name
           : undefined
         : packageName.exec(source)?.[1];
       const name = options.name ?? sourceName;
@@ -301,9 +304,9 @@ export class PluginManager {
       validName(name);
       const config = await this.configuration();
       await mkdir(this.npmDirectory, { recursive: true });
-      if (!existsSync(join(this.npmDirectory, "package.json")))
+      if (!existsSync(join(this.npmDirectory, PACKAGE_MANIFEST)))
         await writeFile(
-          join(this.npmDirectory, "package.json"),
+          join(this.npmDirectory, PACKAGE_MANIFEST),
           JSON.stringify({ private: true, type: "module" }, null, 2) + "\n",
         );
       if (!sourceName) {
@@ -321,9 +324,9 @@ export class PluginManager {
       if (sourceName !== name)
         throw Error(
           "Requested name " +
-            name +
-            " differs from source package " +
-            sourceName,
+          name +
+          " differs from source package " +
+          sourceName,
         );
       await this.npm(["install", "--save-exact", "--install-links", target]);
       const manifest = await this.manifest();
@@ -343,8 +346,8 @@ export class PluginManager {
       const names = name
         ? [name]
         : (config.packages ?? []).filter(
-            (value) => manifest.dependencies?.[value],
-          );
+          (value) => manifest.dependencies?.[value],
+        );
       for (const value of names) {
         validName(value);
         if (
@@ -353,7 +356,20 @@ export class PluginManager {
         )
           throw Error("Not an installed plugin: " + value);
       }
-      if (names.length) await this.npm(["update", ...names]);
+      const registry = names.filter((value) =>
+        /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(
+          manifest.dependencies![value]!,
+        ),
+      );
+      if (registry.length)
+        await this.npm([
+          "install",
+          "--save-exact",
+          "--install-links",
+          ...registry.map((value) => value + "@latest"),
+        ]);
+      const sources = names.filter((value) => !registry.includes(value));
+      if (sources.length) await this.npm(["update", ...sources]);
     });
   }
   remove(name: string): Promise<void> {

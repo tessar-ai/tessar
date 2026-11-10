@@ -13,6 +13,11 @@ Source defaults to `tessar` and is distinct from inheritance. See the
 npm install @tessar/core @tessar/openai zod
 ```
 
+Zod is a required peer for the Tool API. Vitest is an optional peer needed only
+when using `@tessar/core/testing/storage-conformance`; install `vitest@^5.0.4`
+as a development dependency for that entry. Ordinary Core consumers do not
+install the test runner automatically.
+
 - `Agent` owns its model, instructions, tools, limits and the agent loop.
 - `Controller({ id, agent, plugins })` owns plugin setup, resources and sessions.
 - An executable model lets Agent run directly, without public init/dispose.
@@ -35,7 +40,7 @@ conditional approval, UI integration and persistence boundaries.
 ```ts
 import { Agent, Controller, HumanMessage, ToolMessage } from "@tessar/core";
 import { createTool } from "@tessar/core/tool";
-import { OpenAIProvider } from "@tessar/openai";
+import { OpenAIChat } from "@tessar/openai";
 import { z } from "zod";
 
 const addTool = createTool({
@@ -47,7 +52,7 @@ const addTool = createTool({
 
 const agent = new Agent({
   id: "assistant",
-  model: new OpenAIProvider({
+  model: new OpenAIChat({
     apiKey: process.env.OPENAI_API_KEY!,
     model: process.env.OPENAI_MODEL!,
   }),
@@ -130,8 +135,10 @@ behavior. Core adds no cache markers or history breakpoint API.
 
 Built-in and custom plugins use classes instantiated with `new`, implementing
 the same `Plugin` instance contract. Provider adapters are separate packages,
-such as `@tessar/openai`; persistence backends such as `@tessar/sqlite` attach
-through Controller plugins.
+such as `@tessar/openai`; persistence backends such as `@tessar/libsql` attach
+through Controller plugins. Applications supply and own the native database
+connections for durable adapters; dispose the Controller before closing those
+connections.
 
 All hooks share `tessar.hook` and one typed EventMap. Import event groups directly:
 
@@ -174,6 +181,19 @@ same `agentId` and compatible providers/plugins on restart. Controller's ID is
 not a persistence key. Session creation notifications are available to Controller
 plugins; subscribe on the returned handle for subsequent events. Restoration
 does not emit another `session.created` notification.
+
+Thread execution inspection lists records across the entire Thread:
+
+```ts
+const turns = await thread.listTurns();
+const attempts = await thread.listModelAttempts();
+const failedTools = await thread.listToolExecutions({ status: "failed", limit: 20 });
+```
+
+These methods and `thread.listStreams()` accept optional `ExecutionListOptions`
+(`status`, `limit`, `cursor`) and return `{ items, nextCursor }`. Required Stream/Turn
+ID arguments have been removed; records retain those IDs for inspecting relationships.
+See the [storage guide](../../examples/guide/storage.md) for filtering and paging.
 
 `session.thread.delete()` is a soft delete. `session.thread.purge({ threadId })` permanently
 removes only a deleted, inactive, unowned thread with no retained fork referencing

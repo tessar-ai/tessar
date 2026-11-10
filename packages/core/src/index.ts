@@ -109,7 +109,7 @@ export {
   type Stream,
 } from "./agent.js";
 export * from "./controller.js";
-export { Thread } from "./thread.js";
+export { Thread, type ExecutionListOptions } from "./thread.js";
 export { ProfileResolver } from "./models/resolver.js";
 export { snapshotModelOptions } from "./models/options.js";
 export * from "./session.js";

@@ -15,7 +15,7 @@ import {
   type JsonObject,
 } from "@tessar/core";
 import { z } from "zod";
-import { OpenAIProvider } from "../src/index.js";
+import { OpenAIChat } from "../src/index.js";
 
 function sse(chunks: unknown[]) {
   return new Response(
@@ -44,7 +44,7 @@ function completed(text = "ok", id = "chat_1") {
 
 it("uses Chat Completions with native options, ordered system content and no injected cache or usage defaults", async () => {
   const calls: { url: string; body: any; headers: Headers }[] = [];
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     api: "chat-completions",
     apiKey: "test",
     baseURL: "https://compatible.test/v1",
@@ -102,7 +102,7 @@ it("uses Chat Completions with native options, ordered system content and no inj
 
 it("keeps protocol and connection for model-ID overrides and allows an execution-local protocol/model replacement", async () => {
   const calls: { url: string; body: any }[] = [];
-  const chat = new OpenAIProvider({
+  const chat = new OpenAIChat({
     api: "chat-completions",
     apiKey: "test",
     model: "first",
@@ -128,7 +128,7 @@ it("keeps protocol and connection for model-ID overrides and allows an execution
   await agent.generate("default");
   expect(calls[1]!.body).toMatchObject({ model: "first", temperature: 0.5 });
   expect(calls[1]!.body).not.toHaveProperty("max_tokens");
-  const responses = new OpenAIProvider({
+  const responses = new OpenAIChat({
     api: "responses",
     apiKey: "other",
     model: "other",
@@ -154,7 +154,7 @@ it("executes fragmented parallel function calls and replays reasoning/tool ident
     schema: z.object({ value: z.number() }),
     execute: ({ value }) => ({ value: value + 1 }),
   });
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     api: "chat-completions",
     apiKey: "test",
     model: "fixture",
@@ -250,7 +250,7 @@ it("executes fragmented parallel function calls and replays reasoning/tool ident
 
 it("reports missing chat usage as unavailable and preserves supplied native cache options", async () => {
   let body: any;
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     api: "chat-completions",
     apiKey: "test",
     model: "fixture",
@@ -268,7 +268,7 @@ it("reports missing chat usage as unavailable and preserves supplied native cach
 
 it("retains Chat SDK errors and retries without restarting partially emitted streams", async () => {
   let calls = 0;
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     api: "chat-completions",
     apiKey: "test",
     model: "fixture",
@@ -286,7 +286,7 @@ it("retains Chat SDK errors and retries without restarting partially emitted str
     (await new Agent({ id: randomUUID(), model }).generate("retry")).status,
   ).toBe("completed");
   expect(calls).toBe(2);
-  const exhausted = new OpenAIProvider({
+  const exhausted = new OpenAIChat({
     api: "chat-completions",
     apiKey: "test",
     model: "fixture",
@@ -301,7 +301,7 @@ it("retains Chat SDK errors and retries without restarting partially emitted str
     new Agent({ id: randomUUID(), model: exhausted }).generate("fail"),
   ).rejects.toBeInstanceOf(OpenAI.RateLimitError);
   let partialCalls = 0;
-  const partial = new OpenAIProvider({
+  const partial = new OpenAIChat({
     api: "chat-completions",
     apiKey: "test",
     model: "fixture",
@@ -319,7 +319,7 @@ it("retains Chat SDK errors and retries without restarting partially emitted str
 
 it("rejects protocol overrides, invalid protocol names, multiple choices and incompatible opaque history", async () => {
   let calls = 0;
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     api: "chat-completions",
     apiKey: "test",
     model: "fixture",
@@ -336,7 +336,7 @@ it("rejects protocol overrides, invalid protocol names, multiple choices and inc
   expect(calls).toBe(0);
   expect(
     () =>
-      new OpenAIProvider({
+      new OpenAIChat({
         api: "auto",
         apiKey: "test",
         model: "fixture",
@@ -344,7 +344,7 @@ it("rejects protocol overrides, invalid protocol names, multiple choices and inc
   ).toThrow();
   expect(
     () =>
-      new OpenAIProvider({
+      new OpenAIChat({
         api: "chat-completions",
         apiKey: "test",
         model: "fixture",
@@ -358,7 +358,7 @@ it("rejects protocol overrides, invalid protocol names, multiple choices and inc
     messages: result.output,
     tools: [],
   };
-  const other = new OpenAIProvider({
+  const other = new OpenAIChat({
     api: "chat-completions",
     apiKey: "other",
     model: "fixture",
@@ -366,14 +366,14 @@ it("rejects protocol overrides, invalid protocol names, multiple choices and inc
   expect(() => other.validate({ ...request, model: other.ref })).toThrowError(
     expect.objectContaining({ code: "UnsupportedContext" }),
   );
-  const responses = new OpenAIProvider({ apiKey: "test", model: "fixture" });
+  const responses = new OpenAIChat({ apiKey: "test", model: "fixture" });
   expect(() =>
     responses.validate({ ...request, model: responses.ref }),
   ).toThrowError(expect.objectContaining({ code: "UnsupportedContext" }));
 });
 
 it("rejects malformed streamed function arguments as provider response errors", async () => {
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     api: "chat-completions",
     apiKey: "test",
     model: "fixture",
@@ -417,7 +417,7 @@ it.each(["missing", "duplicate"])(
         return "done";
       },
     });
-    const model = new OpenAIProvider({
+    const model = new OpenAIChat({
       api: "chat-completions",
       apiKey: "test",
       model: "fixture",
@@ -451,7 +451,7 @@ it.each(["responses", "chat-completions"] as const)(
   "blocks connection options from untyped %s request overrides",
   async (api) => {
     let requests = 0;
-    const model = new OpenAIProvider({
+    const model = new OpenAIChat({
       api,
       apiKey: "test",
       model: "fixture",
@@ -488,7 +488,7 @@ it.each(["responses", "chat-completions"] as const)(
 
 it("encodes user media without sending application metadata or adding image defaults", async () => {
   let body: any;
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     api: "chat-completions",
     apiKey: "test",
     model: "fixture",
@@ -549,7 +549,7 @@ it("encodes user media without sending application metadata or adding image defa
 it("preserves native Chat reasoning and tool history through Session suspension, resume and queued follow-up", async () => {
   const bodies: any[] = [];
   let executions = 0;
-  const model = new OpenAIProvider({
+  const model = new OpenAIChat({
     api: "chat-completions",
     apiKey: "test",
     model: "fixture",

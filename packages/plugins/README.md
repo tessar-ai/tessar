@@ -30,6 +30,12 @@ subdirectory. Installed package names are recorded in `plugins.json` under
 `packages`; custom files are discovered automatically. `load()` never installs
 missing dependencies. A consuming CLI chooses its own command name and directory.
 
+For registry plugins saved with an exact version, an explicit `update(name?)`
+installs the registry's `latest` version and saves its exact version again. This
+can cross major versions. File, Git, URL and other dependency specifications keep
+their selected source and follow native `npm update` behavior. Omit the name to
+update configured plugins; unrelated helper dependencies are not selected as targets.
+
 Controller owns plugin setup and cleanup. Its `plugins.attach(instance)` and
 `plugins.detach(id)` operations also work with directly imported plugins, without
 a PluginManager. The manager does not activate plugins or watch for file changes.

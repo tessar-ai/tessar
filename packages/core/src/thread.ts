@@ -10,12 +10,18 @@ import type {
   Scope,
   StreamLimits,
   ThreadInfo,
+  RecordKind,
 } from "./state/schema.js";
 import type { HistoryOptions } from "./state/queries.js";
 
 import type { DeliveryTarget, Stream } from "./engine/delivery.js";
 import { aggregateUsage } from "./trace/usage.js";
 import type { SessionHookHandle } from "./plugins/context.js";
+
+const INVALID_CONFIGURATION = "InvalidConfiguration";
+export interface ExecutionListOptions extends PageOptions {
+  status?: string;
+}
 /** @internal */
 export type ThreadStreamOptions = {
   adapter?: ModelAdapter;
@@ -24,26 +30,26 @@ export type ThreadStreamOptions = {
   modelOptions?: JsonObject;
   limits?: Partial<StreamLimits>;
 } & (
-  | {
+    | {
       input: MessageData | readonly MessageData[];
       model: Model | ModelRef;
       initialSignal?: { persist: boolean };
       resume?: never;
       recover?: never;
     }
-  | {
+    | {
       input?: never;
       resume: { interruptId: string; value: JsonValue };
       recover?: never;
       model?: Model | ModelRef;
     }
-  | {
+    | {
       input?: never;
       resume?: never;
       recover: { streamId: string };
       model?: Model | ModelRef;
     }
-);
+  );
 export class Thread {
   readonly id: string;
   private readonly threadScope: Scope;
@@ -99,32 +105,26 @@ export class Thread {
   getStream(id: string) {
     return this.query.getRecord("streams", this.id, id, this.filter);
   }
-  listStreams(options: PageOptions = {}) {
-    return this.query.listRecords("streams", this.id, options, this.filter);
+  listStreams(options: ExecutionListOptions = {}) {
+    return this.listExecutions("streams", options);
   }
-  listTurns(streamId: string, options: PageOptions = {}) {
-    return this.query.listRecords(
-      "turns",
-      this.id,
-      { ...options, streamId },
-      this.filter,
-    );
+  listTurns(options: ExecutionListOptions = {}) {
+    return this.listExecutions("turns", options);
   }
-  listModelAttempts(turnId: string, options: PageOptions = {}) {
-    return this.query.listRecords(
-      "model_attempts",
-      this.id,
-      { ...options, turnId },
-      this.filter,
-    );
+  listModelAttempts(options: ExecutionListOptions = {}) {
+    return this.listExecutions("model_attempts", options);
   }
-  listToolExecutions(turnId: string, options: PageOptions = {}) {
-    return this.query.listRecords(
-      "tool_executions",
-      this.id,
-      { ...options, turnId },
-      this.filter,
-    );
+  listToolExecutions(options: ExecutionListOptions = {}) {
+    return this.listExecutions("tool_executions", options);
+  }
+  private listExecutions<K extends RecordKind>(kind: K, options: ExecutionListOptions) {
+    if (!options || typeof options !== "object" || Array.isArray(options) ||
+      Object.keys(options).some((key) => !["status", "limit", "cursor"].includes(key)) ||
+      (options.status !== undefined && typeof options.status !== "string") ||
+      (options.cursor !== undefined && typeof options.cursor !== "string")) {
+      fail(INVALID_CONFIGURATION, "Execution lists accept an optional object with status, limit and cursor");
+    }
+    return this.query.listRecords(kind, this.id, options, this.filter);
   }
   getInterrupt(id: string) {
     return this.query.getRecord("interrupts", this.id, id, this.filter);
@@ -162,7 +162,7 @@ export class Thread {
     };
     if (options.input !== undefined) {
       if (options.resume || options.recover)
-        fail("InvalidConfiguration", "Choose one execution command");
+        fail(INVALID_CONFIGURATION, "Choose one execution command");
       return controller.agent.admit(
         {
           ...common,
@@ -180,7 +180,7 @@ export class Thread {
     }
     if (options.resume) {
       if (options.recover)
-        fail("InvalidConfiguration", "Choose one execution command");
+        fail(INVALID_CONFIGURATION, "Choose one execution command");
       return controller.agent.admit(
         { ...common, kind: "resume", ...options.resume, model },
         target,
@@ -193,7 +193,7 @@ export class Thread {
         target,
         prepare,
       );
-    return fail("InvalidConfiguration", "Choose input, resume or recover");
+    return fail(INVALID_CONFIGURATION, "Choose input, resume or recover");
   }
   /** @internal */ async cancelStream(
     streamId: string,

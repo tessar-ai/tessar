@@ -1,8 +1,8 @@
+import { ExecutionPhase } from "./state/schema.js";
 import {
   turn as turnHooks,
   model as modelHooks,
   context as contextHooks,
-  message as messageHooks,
 } from "./events/type.js";
 import type { ExecutionFrame } from "./engine/frame.js";
 import { TessarError, errorInfo, fail } from "./errors.js";
@@ -32,6 +32,8 @@ import { snapshotModelOptions } from "./models/options.js";
 import { providerRequest } from "./engine/provider-request.js";
 import { observeParts } from "./engine/model-parts.js";
 import type { TrackedServices } from "./engine/tracked-effects.js";
+
+const EXECUTION_TRANSITION = "ExecutionTransition";
 
 export type LoopContext = {
   toolConcurrency: number;
@@ -77,7 +79,7 @@ export async function loop(
     if (frame.sink.controller.signal.aborted)
       throw new TessarError("Cancelled", "Execution cancelled");
     const position = frame.cp.execution!;
-    if (position.phase === "BeforeTurn") {
+    if (position.phase === ExecutionPhase.BeforeTurn) {
       if (position.budgets.turns >= position.budgets.limits.maxTurns) {
         await context.finish(frame, "stopped", "MaxTurns");
         return;
@@ -100,8 +102,8 @@ export async function loop(
       };
       context.put(frame, "turns", turn);
       position.turnId = turn.id;
-      position.phase = "BeforeModel";
-      await context.commit(frame, "ExecutionTransition");
+      position.phase = ExecutionPhase.BeforeModel;
+      await context.commit(frame, EXECUTION_TRANSITION);
       await context.hook(frame, turnHooks.start, {
         turnId: turn.id,
         index: turn.index,
@@ -109,16 +111,16 @@ export async function loop(
       });
       continue;
     }
-    if (position.phase === "BeforeModel") {
+    if (position.phase === ExecutionPhase.BeforeModel) {
       if (!(await callModel(frame, context))) return;
       continue;
     }
-    if (position.phase === "BeforeTool") {
+    if (position.phase === ExecutionPhase.BeforeTool) {
       await callTools(frame, context);
       if (frame.stream.endedAt) return;
       continue;
     }
-    if (position.phase === "TurnBoundary") {
+    if (position.phase === ExecutionPhase.TurnBoundary) {
       const turn = context
         .rows<TurnRecord>(frame, "turns")
         .find((t) => t.id === position.turnId)!;
@@ -129,7 +131,7 @@ export async function loop(
           ? null
           : Math.max(0, performance.now() - frame.turnStartedAt);
       await context.updateUsage(frame);
-      await context.commit(frame, "ExecutionTransition");
+      await context.commit(frame, EXECUTION_TRANSITION);
       await context.hook(frame, turnHooks.end, {
         turnId: turn.id,
         usage: turn.usage,
@@ -155,8 +157,8 @@ export async function loop(
         await context.finish(frame, "completed", null);
         if (frame.stream.endedAt) return;
       }
-      position.phase = "BeforeTurn";
-      await context.commit(frame, "ExecutionTransition");
+      position.phase = ExecutionPhase.BeforeTurn;
+      await context.commit(frame, EXECUTION_TRANSITION);
       continue;
     }
     fail("RecoveryRequired", "Execution is at a pending operation boundary");
@@ -234,8 +236,8 @@ async function callModel(
   }
   context.put(frame, "model_attempts", attempt);
   budgets.modelAttempts++;
-  position.phase = "ModelPending";
-  await context.commit(frame, "ExecutionTransition");
+  position.phase = ExecutionPhase.ModelPending;
+  await context.commit(frame, EXECUTION_TRANSITION);
   await context.hook(frame, modelHooks.start, {
     attemptId: attempt.id,
     startedAt: attempt.startedAt,
@@ -314,7 +316,7 @@ async function callModel(
         });
     for (const record of pending) context.put(frame, "tool_executions", record);
     frame.cp.execution!.pendingToolExecutionIds = pending.map((t) => t.id);
-    frame.cp.execution!.phase = pending.length ? "BeforeTool" : "TurnBoundary";
+    frame.cp.execution!.phase = pending.length ? ExecutionPhase.BeforeTool : ExecutionPhase.TurnBoundary;
     await context.appendMessage(frame, response.message);
     await context.hook(frame, modelHooks.end, {
       attemptId: attempt.id,
@@ -332,7 +334,7 @@ async function callModel(
     attempt.error = errorInfo(error);
     attempt.endedAt = context.clock.now();
     attempt.durationMs = Math.max(0, performance.now() - attemptStartedAt);
-    await context.commit(frame, "ExecutionTransition");
+    await context.commit(frame, EXECUTION_TRANSITION);
     await context.hook(frame, modelHooks.error, {
       attemptId: attempt.id,
       error: attempt.error,
@@ -348,8 +350,8 @@ async function callModel(
       recovery?.decision === "retry" &&
       !frame.sink.controller.signal.aborted
     ) {
-      frame.cp.execution!.phase = "BeforeModel";
-      await context.commit(frame, "ExecutionTransition");
+      frame.cp.execution!.phase = ExecutionPhase.BeforeModel;
+      await context.commit(frame, EXECUTION_TRANSITION);
       return true;
     }
     throw error;

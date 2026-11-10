@@ -1,3 +1,4 @@
+import { ExecutionPhase } from "../state/schema.js";
 import { stream } from "../events/type.js";
 import { fail } from "../errors.js";
 import { canonicalJson } from "../state/commit.js";
@@ -69,7 +70,7 @@ export async function suspendWaitingTool(
     );
   if (!request) fail("InvalidTransition", "Waiting tool request is missing");
   frame.cp.execution!.pendingInterruptId = request.id;
-  frame.cp.execution!.phase = "Suspended";
+  frame.cp.execution!.phase = ExecutionPhase.Suspended;
   frame.stream.status = "suspended";
   await context.commit(frame, "Suspended");
   await context.hook(frame, stream.suspended, {

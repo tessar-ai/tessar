@@ -1,0 +1,1 @@
+const controller = createMainController({ agent });

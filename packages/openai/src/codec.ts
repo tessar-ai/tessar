@@ -17,8 +17,11 @@ import type {
   ResponseInput,
   ResponseOutputItem,
 } from "openai/resources/responses/responses";
+
+const UNSUPPORTED_CONTEXT = "UnsupportedContext";
+const CODEC_ID = "openai.responses";
 interface Continuity {
-  codec: "openai.responses";
+  codec: typeof CODEC_ID;
   version: 1;
   providerId: string;
   modelId: string;
@@ -31,12 +34,12 @@ function continuity(value: unknown): Continuity | null {
     !value ||
     typeof value !== "object" ||
     !("codec" in value) ||
-    value.codec !== "openai.responses"
+    value.codec !== CODEC_ID
   )
     return null;
   const data = value as Continuity;
   if (data.version !== 1 || !Array.isArray(data.items))
-    fail("UnsupportedContext", "Unknown OpenAI continuity version");
+    fail(UNSUPPORTED_CONTEXT, "Unknown OpenAI continuity version");
   return data;
 }
 export function encodeInput(
@@ -56,7 +59,7 @@ export function encodeInput(
             state.connection.protocol !== connection?.protocol))
       )
         fail(
-          "UnsupportedContext",
+          UNSUPPORTED_CONTEXT,
           "Opaque OpenAI context requires its original model",
         );
       input.push(...(state.items as unknown as ResponseInput));
@@ -66,11 +69,11 @@ export function encodeInput(
       message.providerState !== undefined ||
       message.content.some((p) => p.type === "reasoning")
     )
-      fail("UnsupportedContext", "Unsupported provider continuity");
+      fail(UNSUPPORTED_CONTEXT, "Unsupported provider continuity");
     if (message.role === "tool") {
       if (message.content.some((p) => p.type !== "text" && p.type !== "data"))
         fail(
-          "UnsupportedContext",
+          UNSUPPORTED_CONTEXT,
           "OpenAI tool output currently requires text or JSON data parts",
         );
       input.push({
@@ -107,7 +110,7 @@ export function encodeInput(
           break;
         case "tool-call":
           if (message.role !== "assistant")
-            fail("UnsupportedContext", "Tool calls require assistant role");
+            fail(UNSUPPORTED_CONTEXT, "Tool calls require assistant role");
           flush();
           input.push({
             type: "function_call",
@@ -118,7 +121,7 @@ export function encodeInput(
           break;
         case "image":
           if (message.role !== "user")
-            fail("UnsupportedContext", "Image input requires user role");
+            fail(UNSUPPORTED_CONTEXT, "Image input requires user role");
           content.push({
             type: "input_image",
             image_url:
@@ -130,7 +133,7 @@ export function encodeInput(
           break;
         case "file":
           if (message.role !== "user")
-            fail("UnsupportedContext", "File input requires user role");
+            fail(UNSUPPORTED_CONTEXT, "File input requires user role");
           content.push({
             type: "input_file",
             file_data: part.data,
@@ -138,7 +141,7 @@ export function encodeInput(
           });
           break;
         default:
-          fail("UnsupportedContext", "Unsupported OpenAI message part");
+          fail(UNSUPPORTED_CONTEXT, "Unsupported OpenAI message part");
       }
     }
     flush();
@@ -190,7 +193,7 @@ export function decodeOutput(
   return new AssistantMessage(parts, {
     id: responseId,
     providerState: {
-      codec: "openai.responses",
+      codec: CODEC_ID,
       version: 1,
       ...ref,
       ...(connection ? { connection: { ...connection } } : {}),

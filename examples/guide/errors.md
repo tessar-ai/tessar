@@ -9,12 +9,15 @@ which it was called. No casts, error IDs or package-qualified names are required
 ```ts
 import { TessarError } from "@tessar/core";
 import { TypeSafeAPIError, TypeSafeResponseError } from "@tessar/typesafe";
+import { TessarRagError } from "@tessar/rag";
 
 function handle(error: unknown): void {
   if (TypeSafeAPIError.isInstance(error)) {
     console.error(error.status, error.body, error.requestId);
   } else if (TypeSafeResponseError.isInstance(error)) {
     console.error(error.body);
+  } else if (TessarRagError.isInstance(error)) {
+    console.error(error.code, error.source, error.details);
   } else if (TessarError.isInstance(error)) {
     console.error(error.source, error.code, error.message, error.details);
   } else if (error instanceof Error) {

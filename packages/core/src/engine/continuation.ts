@@ -4,6 +4,8 @@ import { fail, errorInfo } from "../errors.js";
 import type { Stream } from "./delivery.js";
 import type { ExecutionRuntime } from "./runtime.js";
 
+const CANCELLED = "Cancelled";
+
 interface AttachmentState {
   done: Promise<void>;
   finish(): void;
@@ -107,7 +109,7 @@ export function retainStandalone(
     },
     bind(stream: Stream, signal?: AbortSignal): Stream {
       const abort = stream.abort.bind(stream);
-      stream.abort = (reason = "Cancelled") => {
+      stream.abort = (reason = CANCELLED) => {
         if (retained.disposal || (state.closed && retained.owner !== state))
           return;
         if (state.closed)
@@ -120,7 +122,7 @@ export function retainStandalone(
         }
       };
       if (signal) {
-        const cancel = () => stream.abort(String(signal.reason ?? "Cancelled"));
+        const cancel = () => stream.abort(String(signal.reason ?? CANCELLED));
         state.unsubscribe = () => signal.removeEventListener("abort", cancel);
         if (signal.aborted) cancel();
         else signal.addEventListener("abort", cancel, { once: true });
@@ -183,7 +185,7 @@ export function resumeAgent(
       async () => {
         await lifecycle?.ready;
         if (entry?.canceling || entry?.disposal)
-          fail("Cancelled", "Waiting execution was canceled");
+          fail(CANCELLED, "Waiting execution was canceled");
         await runtime.queries.requireThread(options.threadId, {
           scope: options.scope,
         });
