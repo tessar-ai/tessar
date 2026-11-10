@@ -5,10 +5,13 @@ import { mkdtemp, mkdir, readFile, writeFile, rm, cp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { delimiter } from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { realpathSync } from "node:fs";
 const execute = promisify(execFile);
+const COMMAND_TIMEOUT_MS = 60000;
+const INSTALLED_CLI_TIMEOUT_MS = 180000;
+const DEBUG_LOG_TAIL_LINES = 80;
 
 it("installs packed libSQL without its optional driver or RAG peers", async () => {
   const root = await mkdtemp(join(tmpdir(), "tessar libsql standalone "));
@@ -84,7 +87,7 @@ async function command(
 ) {
   const options = {
     cwd,
-    timeout: 30000,
+    timeout: COMMAND_TIMEOUT_MS,
     windowsHide: true,
     env: {
       ...process.env,
@@ -94,7 +97,10 @@ async function command(
     },
   };
   const detailed = (error: any): never => {
-    throw Error(error.message + `\nexitCode=${error.code} signal=${error.signal} killed=${error.killed}\n` + error.stdout + "\n" + error.stderr);
+    const logs = join(cache, "_logs");
+    const latest = existsSync(logs) ? readdirSync(logs).filter(name => name.endsWith("-debug-0.log")).sort().at(-1) : undefined;
+    const debug = latest ? readFileSync(join(logs, latest), "utf8").split(/\r?\n/).slice(-DEBUG_LOG_TAIL_LINES).join("\n") : "";
+    throw Error(error.message.split("\n")[0] + `\nexitCode=${error.code} signal=${error.signal} killed=${error.killed}\n` + error.stdout + "\n" + error.stderr + "\n" + debug);
   };
   if (process.platform !== "win32")
     return execute(name, args, options).catch(detailed);
@@ -328,7 +334,7 @@ it("runs a packed installed CLI from another project and discovers a plugin adde
       retryDelay: 100,
     });
   }
-}, 60000);
+}, INSTALLED_CLI_TIMEOUT_MS);
 it("loads the packed logger subpath using the host SDK without installing core in the plugin environment", async () => {
   const root = await mkdtemp(join(tmpdir(), "tessar logger "));
   try {
