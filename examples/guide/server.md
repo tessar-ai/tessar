@@ -10,7 +10,7 @@ export default new Tessar({ agents: [assistant] });
 ```
 
 Install `@tessar/server` alongside core and your provider, then run
-`npx tessar dev` from the project root. The CLI loads the entry and optional
+`npx @tessar/cli dev` from the project root. The CLI loads the entry and optional
 `.env`, initializes Hono routes and opens `127.0.0.1:4117`. It does not watch or
 restart files yet. `new Tessar()` itself never listens.
 

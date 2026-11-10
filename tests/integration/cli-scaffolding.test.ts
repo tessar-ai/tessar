@@ -128,9 +128,9 @@ it("packs and installs the standalone CLI and scaffolds from a different working
       archives.push(resolve(root, JSON.parse(packed.stdout).filename));
     }
     await command("npm", ["install", "--global", "--prefix", host, "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--loglevel=verbose", ...archives], work, cache);
-    const installed = join(host, process.platform === "win32" ? "node_modules" : "lib/node_modules", "tessar");
+    const installed = join(host, process.platform === "win32" ? "node_modules" : "lib/node_modules", "@tessar/cli");
     const manifest = JSON.parse(await readFile(join(installed, "package.json"), "utf8"));
-    expect(manifest.name).toBe("tessar");
+    expect(manifest.name).toBe("@tessar/cli");
     const coreManifest = JSON.parse(await readFile(resolve("packages/core/package.json"), "utf8"));
     expect(manifest.dependencies).toEqual({ "@tessar/core": "^" + coreManifest.version, hono: "4.13.16", "@hono/node-server": "2.1.6" });
     expect(typeof manifest.bin.tessar).toBe("string");
@@ -159,7 +159,7 @@ it("packs and installs the standalone CLI and scaffolds from a different working
     await mkdir(local);
     await writeFile(join(local, "package.json"), JSON.stringify({ private: true }));
     await command("npm", ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", ...archives], local, cache);
-    expect((await command("npx", ["--offline", "tessar", "--version"], local, cache)).stdout.trim()).toBe(manifest.version);
+    expect((await command("npx", ["--offline", "@tessar/cli", "--version"], local, cache)).stdout.trim()).toBe(manifest.version);
     await run(bin, ["new", "installed-app"], work, "y\ny\n1\ny\n");
     const project = join(work, "installed-app");
     expect(existsSync(join(project, "src/controllers/main.ts"))).toBe(true);

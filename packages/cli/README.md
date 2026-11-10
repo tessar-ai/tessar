@@ -1,4 +1,4 @@
-# tessar
+# @tessar/cli
 
 Create Tessar projects and project-local TypeScript files, and run a standalone development server. Requires Node.js 24.22.1 or newer.
 
@@ -9,7 +9,7 @@ validation errors keep the original failure as `cause`. Errors still print to
 stderr with a nonzero exit status.
 
 ```sh
-npm install -g tessar
+npm install -g @tessar/cli
 tessar new my-agent
 ```
 
@@ -26,8 +26,8 @@ cd my-agent
 npm install
 ```
 
-Without a global installation, use `npx tessar new my-agent` or
-`npx tessar g <kind> <name>`.
+Without a global installation, use `npx @tessar/cli new my-agent` or
+`npx @tessar/cli g <kind> <name>`.
 
 Copy `.env.example` to `.env`, set `OPENAI_API_KEY` and `OPENAI_MODEL`, then run:
 
@@ -132,7 +132,7 @@ alongside their own templates as the SDK grows.
 ## Development server
 
 Install `@tessar/server` in the application and default-export a Tessar instance
-from `src/index.ts`, then run `npx tessar dev`. The CLI resolves server packages
+from `src/index.ts`, then run `npx @tessar/cli dev`. The CLI resolves server packages
 from that project, reads optional `.env`, handles TypeScript source and relative
 `.js` imports, and starts standalone HTTP/SSE. Invalid exports or startup failures
 exit nonzero. SIGINT/SIGTERM shut down HTTP and runtime. No watch/reload or UI is

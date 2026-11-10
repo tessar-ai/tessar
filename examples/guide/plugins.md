@@ -6,6 +6,9 @@ A plugin is a class instance implementing `Plugin`. Its `setup(tessar)` method
 registers capabilities and hooks. Pass plugin instances to a Controller; their
 setup and cleanup follow the Controller's lifecycle.
 
+For application examples covering environment context and human approval, see
+[examples/plugins](../plugins/README.md).
+
 ## Register a tool and extend instructions
 
 Install the optional logger package:

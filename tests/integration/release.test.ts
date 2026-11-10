@@ -89,14 +89,14 @@ it.each([
   expect(verifyArchive(root, plan, source, files)).toEqual(source);
 });
 
-it("releases the unscoped tessar CLI from packages/cli", () => {
+it("releases the scoped CLI from packages/cli", () => {
   const root = fixture();
   mkdirSync(join(root, "packages/cli"));
   writeFileSync(join(root, "packages/cli/package.json"), JSON.stringify({
-    ...manifest(root, "core"), name: "tessar", version: "0.1.0",
+    ...manifest(root, "core"), name: "@tessar/cli", version: "0.1.0",
   }));
-  expect(checkRelease({ root, ref: "tessar@0.1.0" })).toMatchObject({
-    package: "tessar", directory: "packages/cli", archive: "dist/release/tessar-0.1.0.tgz",
+  expect(checkRelease({ root, ref: "cli@0.1.0" })).toMatchObject({
+    package: "@tessar/cli", directory: "packages/cli", archive: "dist/release/tessar-cli-0.1.0.tgz",
   });
 });
 
