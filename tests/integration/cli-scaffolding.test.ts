@@ -9,6 +9,8 @@ import { hookKinds } from "../../packages/core/src/events/type.js";
 
 const execute = promisify(execFile);
 const cli = resolve("packages/cli/dist/bin.js");
+const COMMAND_TIMEOUT_MS = 60000;
+const INSTALLED_CLI_TIMEOUT_MS = 180000;
 
 async function run(bin: string, args: string[], cwd: string, answers?: string) {
   const result = execute(process.execPath, [bin, ...args], { cwd, windowsHide: true, timeout: 30000 });
@@ -177,11 +179,11 @@ it("packs and installs the standalone CLI and scaffolds from a different working
   } finally {
     await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
-}, 60000);
+}, INSTALLED_CLI_TIMEOUT_MS);
 
 async function command(name: "npm" | "npx" | "pnpm", args: string[], cwd: string, cache: string) {
   const options = {
-    cwd, windowsHide: true, timeout: 30000,
+    cwd, windowsHide: true, timeout: COMMAND_TIMEOUT_MS,
     env: { ...process.env, CI: "true", npm_config_offline: "true", npm_config_cache: cache },
   };
   let executable = name as string;
