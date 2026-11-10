@@ -72,6 +72,20 @@ const files = [
   "package/dist/index.d.ts",
 ];
 
+it("discovers scoped packages nested under integrations/auth", () => {
+  const root = fixture();
+  const directory = join(root, "integrations", "auth", "jwt");
+  mkdirSync(directory, { recursive: true });
+  const original = manifest(root, "opentelemetry");
+  const source = { ...original, name: "@tessar/auth-jwt", version: "0.1.0", repository: { ...original.repository, directory: "integrations/auth/jwt" } };
+  writeFileSync(join(directory, "package.json"), JSON.stringify(source));
+  const plan = checkRelease({ root, ref: "auth-jwt@0.1.0" });
+  expect(plan.package).toBe("@tessar/auth-jwt");
+  expect(plan.directory).toBe("integrations/auth/jwt");
+  expect(plan.archive).toBe("dist/release/tessar-auth-jwt-0.1.0.tgz");
+  expect(verifyArchive(root, plan, source, files)).toEqual(source);
+});
+
 it("releases the unscoped tessar CLI from packages/cli", () => {
   const root = fixture();
   mkdirSync(join(root, "packages/cli"));

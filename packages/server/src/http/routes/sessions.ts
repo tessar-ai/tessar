@@ -6,26 +6,34 @@ import type { RuntimeRegistry } from "../../runtime/runtime-registry.js";
 import type { SessionRegistry } from "../../runtime/session-registry.js";
 
 import { CONTROLLER_PATH } from "./controllers.js";
+import { authScope, scoped } from "../access.js";
 const SESSIONS_PATH = CONTROLLER_PATH + "/sessions";
 export const SESSION_PATH = SESSIONS_PATH + "/:sessionId";
 export function registerSessions(app: Hono, runtimes: () => RuntimeRegistry, sessions: () => SessionRegistry) {
   const controller = (c: Context) => required(runtimes().controllers.get(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!));
   app.post(SESSIONS_PATH, async c => {
     const options = await body(c, ["id", "scope", "model", "metadata", "threadId"]);
+    options.scope = scoped(c, options.scope);
     wireModel(options.model);
     const id = controller(c).id;
     return c.json(sessionDescriptor(id, await sessions().create(id, options)), HTTP_STATUS.CREATED);
   });
-  app.get(SESSIONS_PATH, async c => c.json(await controller(c).listSessions(query(c, SCOPED_PAGE_QUERY_FIELDS))));
+  app.get(SESSIONS_PATH, async c => {
+    const options = query(c, SCOPED_PAGE_QUERY_FIELDS);
+    options.scope = scoped(c, options.scope);
+    return c.json(await controller(c).listSessions(options));
+  });
   app.use(SESSION_PATH + "/*", async (c, next) => {
     const id = c.req.param(ROUTE_PARAM.CONTROLLER_ID)!;
-    const session = await sessions().get(id, c.req.param(ROUTE_PARAM.SESSION_ID)!);
     await next();
-    if (c.error && errorInfo(c.error).code === HTTP_ERROR_CODE.COMMIT_CONFLICT) sessions().invalidate(id, session);
+    if (c.error && errorInfo(c.error).code === HTTP_ERROR_CODE.COMMIT_CONFLICT) {
+      const session = await sessions().get(id, c.req.param(ROUTE_PARAM.SESSION_ID)!, authScope(c));
+      sessions().invalidate(id, session);
+    }
   });
-  const get = (c: Context) => sessions().get(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!, c.req.param(ROUTE_PARAM.SESSION_ID)!);
+  const get = (c: Context) => sessions().get(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!, c.req.param(ROUTE_PARAM.SESSION_ID)!, authScope(c));
   app.get(SESSION_PATH, async c => c.json(sessionDescriptor(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!, await get(c))));
-  app.post(SESSION_PATH + "/close", async c => { await sessions().close(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!, c.req.param(ROUTE_PARAM.SESSION_ID)!); return c.body(null, HTTP_STATUS.NO_CONTENT); });
+  app.post(SESSION_PATH + "/close", async c => { await sessions().close(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!, c.req.param(ROUTE_PARAM.SESSION_ID)!, authScope(c)); return c.body(null, HTTP_STATUS.NO_CONTENT); });
   app.post(SESSION_PATH + "/follow-up", async c => {
     const value = await body(c, ["input"]);
     if (value.input === undefined) bad(HTTP_ERROR_MESSAGE.INPUT_REQUIRED);

@@ -8,6 +8,8 @@ export const HTTP_STATUS = {
   ACCEPTED: 202,
   NO_CONTENT: 204,
   BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
   INTERNAL_SERVER_ERROR: 500,
@@ -47,6 +49,8 @@ const STRING_FIELDS = ["id", "threadId", "interruptId", "streamId", "modelId", "
 const EMPTY_STRING_FIELDS = ["reason", "title"];
 const OBJECT_FIELDS = ["metadata", "scope", "options", "modelOptions", "context", "limits", "attributes"];
 const ERROR_STATUS_BY_CODE = new Map<string, ContentfulStatusCode>([
+  [SERVER_ERROR_CODE.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED],
+  [SERVER_ERROR_CODE.FORBIDDEN, HTTP_STATUS.FORBIDDEN],
   ...[
     HTTP_ERROR_CODE.INVALID_REQUEST, "InvalidConfiguration", "InvalidCursor", "InvalidData", "InvalidEvent",
     "InvalidMessage", "InvalidResumeResponse", "InvalidUsage", "SchemaIncompatible", "UnknownTool",

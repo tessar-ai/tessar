@@ -15,6 +15,23 @@ import {
 } from "../src/index.js";
 import { ScriptedProvider } from "../src/testing/scripted-provider.js";
 
+it("checks scoped idle Thread signals before starting a follow-up", async () => {
+  const model = new ScriptedProvider([{ text: "allowed" }]);
+  const agent = new Agent({ id: "scoped-thread-signal", model });
+  const controller = new Controller({ id: "scoped-thread-signal", agent });
+  await controller.initialize();
+  try {
+    const session = await controller.createSession({ scope: { userId: "alice" } });
+    const thread = await session.thread.create();
+    await expect(agent.sendSignal({ threadId: thread.id, content: "foreign", scope: { userId: "bob" } })).rejects.toMatchObject({ code: "ThreadNotFound" });
+    expect(model.calls).toHaveLength(0);
+    await agent.sendSignal({ threadId: thread.id, content: "own", scope: { userId: "alice" } });
+    await vi.waitFor(() => expect(model.calls).toHaveLength(1));
+    await vi.waitFor(() => expect(session.isIdle()).toBe(true));
+    expect(model.calls).toHaveLength(1);
+  } finally { await controller.dispose(); }
+});
+
 it("receives a closing Thread's next message without making its hook wait", async () => {
   const provider = new ScriptedProvider([
     { text: "first" },

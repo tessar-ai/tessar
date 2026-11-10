@@ -1,4 +1,5 @@
-import type { Session, SessionOptions } from "@tessar/core";
+import type { Session, SessionOptions, Scope } from "@tessar/core";
+import { visible } from "../http/access.js";
 import type { RuntimeRegistry } from "./runtime-registry.js";
 import { required } from "../http/protocol.js";
 
@@ -14,22 +15,22 @@ export class SessionRegistry {
     this.attached(controllerId, session);
     return session;
   }
-  async get(controllerId: string, sessionId: string): Promise<Session> {
+  async get(controllerId: string, sessionId: string, scope?: Scope): Promise<Session> {
     const key = this.key(controllerId, sessionId);
     let pending = this.sessions.get(key);
     if (!pending) {
-      pending = required(this.runtimes.controllers.get(controllerId)).getSession(sessionId).then(required);
+      pending = required(this.runtimes.controllers.get(controllerId)).getSession(sessionId, { scope }).then(required);
       this.sessions.set(key, pending);
     }
-    try {
-      const session = await pending;
-      if (session.isDisposed()) { this.sessions.delete(key); return this.get(controllerId, sessionId); }
-      this.attached(controllerId, session);
-      return session;
-    } catch (error) {
+    let session: Session;
+    try { session = await pending; } catch (error) {
       if (this.sessions.get(key) === pending) this.sessions.delete(key);
       throw error;
     }
+    if (!visible(session.scope(), scope)) return required<Session>(undefined);
+    if (session.isDisposed()) { this.sessions.delete(key); return this.get(controllerId, sessionId, scope); }
+    this.attached(controllerId, session);
+    return session;
   }
   invalidate(controllerId: string, session: Session): void {
     if (session.isIdle()) {
@@ -38,8 +39,8 @@ export class SessionRegistry {
       void session.dispose().catch(error => console.error(error));
     }
   }
-  async close(controllerId: string, sessionId: string): Promise<void> {
-    const session = await this.get(controllerId, sessionId);
+  async close(controllerId: string, sessionId: string, scope?: Scope): Promise<void> {
+    const session = await this.get(controllerId, sessionId, scope);
     await session.dispose();
     this.removed(session);
     this.sessions.delete(this.key(controllerId, sessionId));

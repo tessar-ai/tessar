@@ -1,5 +1,6 @@
 packages:
   - packages/*
+  - integrations/auth/*
   - tests/fixtures/apps/*
 minimumReleaseAgeExclude:
   - openai@7.34.0

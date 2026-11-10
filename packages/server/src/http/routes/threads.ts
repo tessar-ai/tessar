@@ -3,13 +3,14 @@ import { threadDescriptor } from "../descriptors.js";
 import { body, query, required, bad, safeError, ROUTE_PARAM, HTTP_STATUS, PAGE_QUERY_FIELDS } from "../protocol.js";
 import type { SessionRegistry } from "../../runtime/session-registry.js";
 import { SESSION_PATH } from "./sessions.js";
+import { authScope } from "../access.js";
 
 const THREADS_PATH = SESSION_PATH + "/threads";
 export const THREAD_PATH = THREADS_PATH + "/:threadId";
 const HISTORY_QUERY_FIELDS = [...PAGE_QUERY_FIELDS, "atCheckpointId"] as const;
 const EXECUTION_QUERY_FIELDS = ["status", ...PAGE_QUERY_FIELDS] as const;
 export function registerThreads(app: Hono, sessions: () => SessionRegistry) {
-  const get = (c: Context) => sessions().get(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!, c.req.param(ROUTE_PARAM.SESSION_ID)!);
+  const get = (c: Context) => sessions().get(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!, c.req.param(ROUTE_PARAM.SESSION_ID)!, authScope(c));
   const thread = async (c: Context) => required(await (await get(c)).thread.get(c.req.param(ROUTE_PARAM.THREAD_ID)!));
   app.post(THREADS_PATH, async c => c.json(threadDescriptor(await (await get(c)).thread.create(
     await body(c, ["id", "title", "messages", "metadata"]))), HTTP_STATUS.CREATED));

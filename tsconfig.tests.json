@@ -6,6 +6,11 @@
       "node"
     ],
     "paths": {
+      "@tessar/auth-api-key": ["./integrations/auth/api-key/src/index.ts"],
+      "@tessar/auth-jwt": ["./integrations/auth/jwt/src/index.ts"],
+      "@tessar/auth-google": ["./integrations/auth/google/src/index.ts"],
+      "@tessar/auth-clerk": ["./integrations/auth/clerk/src/index.ts"],
+      "@tessar/auth-better-auth": ["./integrations/auth/better-auth/src/index.ts"],
       "@tessar/client": ["./packages/client/src/index.ts"],
       "@tessar/server": ["./packages/server/src/index.ts"],
       "@tessar/rag": ["./packages/rag/src/index.ts"],
@@ -49,6 +54,8 @@
   "include": [
     "packages/*/src/**/*.ts",
     "packages/*/test/**/*.ts",
+    "integrations/auth/*/src/**/*.ts",
+    "integrations/auth/*/test/**/*.ts",
     "tests/**/*.ts",
     "examples/**/*.ts",
     "vitest.config.ts"

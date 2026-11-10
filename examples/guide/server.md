@@ -33,7 +33,7 @@ the original instance even when it belongs to a registered Controller; use
 Plugin/subagent delegation remains developer-defined and is not automatically
 exposed by the server.
 
-Optional `server: { hostname, port, prefix, openapiPath, routes, middlewares }`
+Optional `server: { hostname, port, prefix, openapiPath, routes, middlewares, auth }`
 configures standalone hosting. Defaults are `127.0.0.1`, `4117`, empty prefix and
 `/openapi.json`. Swagger/playground UI is deferred.
 

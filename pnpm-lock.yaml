@@ -69,6 +69,48 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
+  integrations/auth/api-key:
+    devDependencies:
+      '@tessar/server':
+        specifier: workspace:*
+        version: link:../../../packages/server
+
+  integrations/auth/better-auth:
+    devDependencies:
+      '@tessar/server':
+        specifier: workspace:*
+        version: link:../../../packages/server
+
+  integrations/auth/clerk:
+    dependencies:
+      jose:
+        specifier: ^6.1.0
+        version: 6.2.15
+    devDependencies:
+      '@tessar/server':
+        specifier: workspace:*
+        version: link:../../../packages/server
+
+  integrations/auth/google:
+    dependencies:
+      jose:
+        specifier: ^6.1.0
+        version: 6.2.15
+    devDependencies:
+      '@tessar/server':
+        specifier: workspace:*
+        version: link:../../../packages/server
+
+  integrations/auth/jwt:
+    dependencies:
+      jose:
+        specifier: ^6.1.0
+        version: 6.2.15
+    devDependencies:
+      '@tessar/server':
+        specifier: workspace:*
+        version: link:../../../packages/server
+
   packages/cli:
     dependencies:
       '@hono/node-server':
@@ -1033,6 +1075,9 @@ packages:
 
   isarray@1.0.0:
     resolution: {integrity: sha512-VLghIWNM6ELQzo7zwmcg0NmTVyWKYjvIeM83yjp0wRDTmUnrM678fQbcKBo6n2CJEF0szoG//ytg+TKla89ALQ==}
+
+  jose@6.2.15:
+    resolution: {integrity: sha512-qdF6ewcZARtef63fJ9AKKZPgxw+t7USH6HLXYcD4CrdmSvDp79rpJSPFEKc90QBeGS63u1KQtN2MZQHC0yDIzA==}
 
   jszip@3.10.2:
     resolution: {integrity: sha512-3l+rb15IOWtUhU0H5MFqES/T6Kh7abYwjosBey/vD6hDt8zoEffkSC5Ws5SGtgVw3gBx2NEbhTeSW1+kWkpyTQ==}
@@ -2215,6 +2260,8 @@ snapshots:
   is-promise@4.0.0: {}
 
   isarray@1.0.0: {}
+
+  jose@6.2.15: {}
 
   jszip@3.10.2:
     dependencies:

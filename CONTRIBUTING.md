@@ -7,6 +7,11 @@ Tessar in an application, start with the [developer guides](examples/guide/READM
 
 Requires Node.js >=24.22.1 and pnpm 11.5.3.
 
+Authentication integrations live in `integrations/auth/<provider>` and publish as
+`@tessar/auth-<provider>`. Workspace discovery, builds, tests and releases include
+these packages alongside `packages/*`; integrations depend on the public server
+contract rather than adding provider dependencies to the server.
+
 ```sh
 pnpm install --frozen-lockfile
 pnpm typecheck

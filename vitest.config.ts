@@ -3,6 +3,11 @@ import { fileURLToPath } from "node:url";
 const path = (name: string) => fileURLToPath(new URL(name, import.meta.url));
 export default defineConfig({
   resolve: { alias: [
+    { find: "@tessar/auth-api-key", replacement: path("./integrations/auth/api-key/src/index.ts") },
+    { find: "@tessar/auth-jwt", replacement: path("./integrations/auth/jwt/src/index.ts") },
+    { find: "@tessar/auth-google", replacement: path("./integrations/auth/google/src/index.ts") },
+    { find: "@tessar/auth-clerk", replacement: path("./integrations/auth/clerk/src/index.ts") },
+    { find: "@tessar/auth-better-auth", replacement: path("./integrations/auth/better-auth/src/index.ts") },
     { find: "@tessar/client", replacement: path("./packages/client/src/index.ts") },
     { find: "@tessar/server/hono", replacement: path("./packages/server/src/framework/hono.ts") },
     { find: "@tessar/server/express", replacement: path("./packages/server/src/framework/express.ts") },
@@ -23,6 +28,6 @@ export default defineConfig({
     { find: "@tessar/mongodb", replacement: path("./packages/mongodb/src/index.ts") },
     { find: "@tessar/openai", replacement: path("./packages/openai/src/index.ts") },
   ] },
-  test: { include: ["packages/*/test/**/*.test.ts", "tests/integration/**/*.test.ts"], testTimeout: 15000 }
+  test: { include: ["packages/*/test/**/*.test.ts", "integrations/auth/*/test/**/*.test.ts", "tests/integration/**/*.test.ts"], testTimeout: 15000 }
 });
 
