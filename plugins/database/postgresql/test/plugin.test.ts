@@ -1,0 +1,69 @@
+import { expect, it, vi } from "vitest";
+import type { StorageBackend } from "@tessar/core";
+import type { Pool } from "pg";
+import { PluginHost } from "../../../../packages/core/src/plugins/host.js";
+const { open } = vi.hoisted(() => ({ open: vi.fn() }));
+vi.mock("../src/backend.js", () => ({ createPostgresqlBackend: open }));
+import { PostgresqlStoragePlugin } from "../src/index.js";
+
+it("passes the borrowed pool through and disposes the registered backend", async () => {
+  const close = vi.fn().mockResolvedValue(undefined);
+  const backend = { close } as unknown as StorageBackend;
+  open.mockResolvedValueOnce(backend);
+  const host = new PluginHost();
+  const pool = { end: vi.fn() } as unknown as Pool;
+  try {
+    await host.initialize([
+      new PostgresqlStoragePlugin({ pool }),
+    ]);
+    expect(host.registrations()).toMatchObject([
+      {
+        kind: "storage",
+        id: "primary",
+        value: { close: expect.any(Function) },
+      },
+    ]);
+    expect(close).not.toHaveBeenCalled();
+    expect(open).toHaveBeenLastCalledWith({ pool });
+  } finally {
+    await host.dispose();
+  }
+  expect(close).toHaveBeenCalledOnce();
+  expect(pool.end).not.toHaveBeenCalled();
+});
+
+it.each([false, true])(
+  "closes a rejected backend without replacing the registration error (close rejects=%s)",
+  async (rejectClose) => {
+    const close = rejectClose
+      ? vi.fn().mockRejectedValue(Error("close failed"))
+      : vi.fn().mockResolvedValue(undefined);
+    const existingClose = vi.fn().mockResolvedValue(undefined);
+    open.mockResolvedValueOnce({ close });
+    const host = new PluginHost();
+    try {
+      await host.initialize([
+        {
+          id: "existing",
+          setup(tessar) {
+            tessar.storage.register({
+              close: existingClose,
+            } as unknown as StorageBackend);
+          },
+        },
+      ]);
+      await expect(
+        host.attach(
+          new PostgresqlStoragePlugin({
+            pool: {} as Pool,
+          }),
+        ),
+      ).rejects.toMatchObject({ code: "RegistrationConflict" });
+      expect(close).toHaveBeenCalledOnce();
+      expect(existingClose).not.toHaveBeenCalled();
+    } finally {
+      await host.dispose();
+    }
+    expect(existingClose).toHaveBeenCalledOnce();
+  },
+);

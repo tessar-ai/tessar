@@ -20,14 +20,14 @@ export default defineConfig({
     { find: "@tessar/core/testing", replacement: path("./packages/core/src/testing/index.ts") },
     { find: "@tessar/core/tool", replacement: path("./packages/core/src/tools/index.ts") },
     { find: "@tessar/core", replacement: path("./packages/core/src/index.ts") },
-    { find: "@tessar/libsql/vector", replacement: path("./packages/libsql/src/vector.ts") },
-    { find: "@tessar/libsql", replacement: path("./packages/libsql/src/index.ts") },
-    { find: "@tessar/postgresql/vector", replacement: path("./packages/postgresql/src/vector.ts") },
-    { find: "@tessar/postgresql", replacement: path("./packages/postgresql/src/index.ts") },
-    { find: "@tessar/mongodb/vector", replacement: path("./packages/mongodb/src/vector.ts") },
-    { find: "@tessar/mongodb", replacement: path("./packages/mongodb/src/index.ts") },
+    { find: "@tessar/libsql/vector", replacement: path("./plugins/database/libsql/src/vector.ts") },
+    { find: "@tessar/libsql", replacement: path("./plugins/database/libsql/src/index.ts") },
+    { find: "@tessar/postgresql/vector", replacement: path("./plugins/database/postgresql/src/vector.ts") },
+    { find: "@tessar/postgresql", replacement: path("./plugins/database/postgresql/src/index.ts") },
+    { find: "@tessar/mongodb/vector", replacement: path("./plugins/database/mongodb/src/vector.ts") },
+    { find: "@tessar/mongodb", replacement: path("./plugins/database/mongodb/src/index.ts") },
     { find: "@tessar/openai", replacement: path("./packages/openai/src/index.ts") },
   ] },
-  test: { include: ["packages/*/test/**/*.test.ts", "integrations/auth/*/test/**/*.test.ts", "tests/integration/**/*.test.ts"], testTimeout: 15000 }
+  test: { include: ["packages/*/test/**/*.test.ts", "integrations/auth/*/test/**/*.test.ts", "plugins/database/*/test/**/*.test.ts", "tests/integration/**/*.test.ts"], testTimeout: 15000 }
 });
 

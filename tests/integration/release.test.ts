@@ -72,17 +72,20 @@ const files = [
   "package/dist/index.d.ts",
 ];
 
-it("discovers scoped packages nested under integrations/auth", () => {
+it.each([
+  ["integrations/auth", "jwt", "auth-jwt"],
+  ["plugins/database", "libsql", "libsql"],
+])("discovers scoped packages nested under %s", (parent, leaf, name) => {
   const root = fixture();
-  const directory = join(root, "integrations", "auth", "jwt");
+  const directory = join(root, parent, leaf);
   mkdirSync(directory, { recursive: true });
   const original = manifest(root, "opentelemetry");
-  const source = { ...original, name: "@tessar/auth-jwt", version: "0.1.0", repository: { ...original.repository, directory: "integrations/auth/jwt" } };
+  const source = { ...original, name: "@tessar/" + name, version: "0.1.0", repository: { ...original.repository, directory: `${parent}/${leaf}` } };
   writeFileSync(join(directory, "package.json"), JSON.stringify(source));
-  const plan = checkRelease({ root, ref: "auth-jwt@0.1.0" });
-  expect(plan.package).toBe("@tessar/auth-jwt");
-  expect(plan.directory).toBe("integrations/auth/jwt");
-  expect(plan.archive).toBe("dist/release/tessar-auth-jwt-0.1.0.tgz");
+  const plan = checkRelease({ root, ref: name + "@0.1.0" });
+  expect(plan.package).toBe("@tessar/" + name);
+  expect(plan.directory).toBe(`${parent}/${leaf}`);
+  expect(plan.archive).toBe(`dist/release/tessar-${name}-0.1.0.tgz`);
   expect(verifyArchive(root, plan, source, files)).toEqual(source);
 });
 

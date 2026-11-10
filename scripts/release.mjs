@@ -14,7 +14,7 @@ const dependencyKinds = [
 ];
 
 function workspace(root) {
-  return ["packages", "integrations/auth"].flatMap(parent => !existsSync(join(root, parent)) ? [] : readdirSync(join(root, parent), { withFileTypes: true })
+  return ["packages", "integrations/auth", "plugins/database"].flatMap(parent => !existsSync(join(root, parent)) ? [] : readdirSync(join(root, parent), { withFileTypes: true })
     .filter(
       (entry) =>
         entry.isDirectory() &&
@@ -53,7 +53,7 @@ export function checkRelease({
   const { directory, manifest } = matches[0];
   assert.match(
     directory,
-    /^(?:packages|integrations\/auth)\/[a-z0-9][a-z0-9._-]*$/,
+    /^(?:packages|integrations\/auth|plugins\/database)\/[a-z0-9][a-z0-9._-]*$/,
     "Unsupported package directory",
   );
   assert.equal(manifest.version, version, `${name} version must match ${ref}`);

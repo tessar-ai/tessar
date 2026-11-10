@@ -154,10 +154,10 @@ Install the packages your application uses:
 | [`@tessar/plugins`](packages/plugins/README.md)       | Plugin discovery/loading, npm plugin management and the `/logger` plugin       |
 | [`@tessar/rag`](packages/rag/README.md)               | Independent document reading and structure-aware chunking                      |
 | [`@tessar/opentelemetry`](packages/opentelemetry/README.md)     | OTLP tracing with Langfuse and Laminar adapters                 |
-| [`@tessar/libsql`](packages/libsql/README.md)         | State/checkpoint storage using a borrowed libSQL database; optional `/vector` entry for vector/BM25 search                 |
+| [`@tessar/libsql`](plugins/database/libsql/README.md)         | State/checkpoint storage using a borrowed libSQL database; optional `/vector` entry for vector/BM25 search                 |
 | [`@tessar/server`](packages/server/README.md)         | Runtime registration, standalone HTTP/SSE and Express/Hono adapters |
-| [`@tessar/postgresql`](packages/postgresql/README.md) | PostgreSQL persistence                                                         |
-| [`@tessar/mongodb`](packages/mongodb/README.md)       | MongoDB persistence                                                            |
+| [`@tessar/postgresql`](plugins/database/postgresql/README.md) | PostgreSQL persistence                                                         |
+| [`@tessar/mongodb`](plugins/database/mongodb/README.md)       | MongoDB persistence                                                            |
 
 Tessar is an early **0.x** SDK; APIs can change between releases. To work on Tessar
 itself, see [Contributing](CONTRIBUTING.md).

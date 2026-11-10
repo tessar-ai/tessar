@@ -32,9 +32,9 @@
         "./packages/core/src/testing/index.ts"
       ],
       "@tessar/libsql": [
-        "./packages/libsql/src/index.ts"
+        "./plugins/database/libsql/src/index.ts"
       ],
-      "@tessar/libsql/vector": ["./packages/libsql/src/vector.ts"],
+      "@tessar/libsql/vector": ["./plugins/database/libsql/src/vector.ts"],
       "@tessar/openai": [
         "./packages/openai/src/index.ts"
       ],
@@ -42,13 +42,13 @@
         "./packages/core/src/testing/storage-conformance.ts"
       ],
       "@tessar/postgresql": [
-        "./packages/postgresql/src/index.ts"
+        "./plugins/database/postgresql/src/index.ts"
       ],
-      "@tessar/postgresql/vector": ["./packages/postgresql/src/vector.ts"],
+      "@tessar/postgresql/vector": ["./plugins/database/postgresql/src/vector.ts"],
       "@tessar/mongodb": [
-        "./packages/mongodb/src/index.ts"
+        "./plugins/database/mongodb/src/index.ts"
       ],
-      "@tessar/mongodb/vector": ["./packages/mongodb/src/vector.ts"]
+      "@tessar/mongodb/vector": ["./plugins/database/mongodb/src/vector.ts"]
     }
   },
   "include": [
@@ -56,6 +56,8 @@
     "packages/*/test/**/*.ts",
     "integrations/auth/*/src/**/*.ts",
     "integrations/auth/*/test/**/*.ts",
+    "plugins/database/*/src/**/*.ts",
+    "plugins/database/*/test/**/*.ts",
     "tests/**/*.ts",
     "examples/**/*.ts",
     "vitest.config.ts"

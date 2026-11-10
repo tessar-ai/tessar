@@ -16,10 +16,10 @@ importers:
         version: link:packages/core
       '@tessar/libsql':
         specifier: workspace:*
-        version: link:packages/libsql
+        version: link:plugins/database/libsql
       '@tessar/mongodb':
         specifier: workspace:*
-        version: link:packages/mongodb
+        version: link:plugins/database/mongodb
       '@tessar/openai':
         specifier: workspace:*
         version: link:packages/openai
@@ -31,7 +31,7 @@ importers:
         version: link:packages/plugins
       '@tessar/postgresql':
         specifier: workspace:*
-        version: link:packages/postgresql
+        version: link:plugins/database/postgresql
       '@tessar/rag':
         specifier: workspace:*
         version: link:packages/rag
@@ -125,16 +125,16 @@ importers:
     devDependencies:
       '@tessar/libsql':
         specifier: workspace:*
-        version: link:../libsql
+        version: link:../../plugins/database/libsql
       '@tessar/mongodb':
         specifier: workspace:*
-        version: link:../mongodb
+        version: link:../../plugins/database/mongodb
       '@tessar/openai':
         specifier: workspace:*
         version: link:../openai
       '@tessar/postgresql':
         specifier: workspace:*
-        version: link:../postgresql
+        version: link:../../plugins/database/postgresql
 
   packages/client: {}
 
@@ -146,30 +146,6 @@ importers:
       zod:
         specifier: ^4.6.7
         version: 4.6.7
-
-  packages/libsql:
-    devDependencies:
-      '@tessar/core':
-        specifier: workspace:*
-        version: link:../core
-      '@tessar/rag':
-        specifier: workspace:*
-        version: link:../rag
-      libsql:
-        specifier: 0.5.29
-        version: 0.5.29
-
-  packages/mongodb:
-    devDependencies:
-      '@tessar/core':
-        specifier: workspace:*
-        version: link:../core
-      '@tessar/rag':
-        specifier: workspace:*
-        version: link:../rag
-      mongodb:
-        specifier: ^6.21.0
-        version: 6.21.0
 
   packages/openai:
     dependencies:
@@ -208,21 +184,6 @@ importers:
       '@tessar/core':
         specifier: workspace:*
         version: link:../core
-
-  packages/postgresql:
-    devDependencies:
-      '@tessar/core':
-        specifier: workspace:*
-        version: link:../core
-      '@tessar/rag':
-        specifier: workspace:*
-        version: link:../rag
-      '@types/pg':
-        specifier: ^8.15.5
-        version: 8.15.5
-      pg:
-        specifier: ^8.16.3
-        version: 8.16.3
 
   packages/rag:
     dependencies:
@@ -274,6 +235,45 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  plugins/database/libsql:
+    devDependencies:
+      '@tessar/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@tessar/rag':
+        specifier: workspace:*
+        version: link:../../../packages/rag
+      libsql:
+        specifier: 0.5.29
+        version: 0.5.29
+
+  plugins/database/mongodb:
+    devDependencies:
+      '@tessar/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@tessar/rag':
+        specifier: workspace:*
+        version: link:../../../packages/rag
+      mongodb:
+        specifier: ^6.21.0
+        version: 6.21.0
+
+  plugins/database/postgresql:
+    devDependencies:
+      '@tessar/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@tessar/rag':
+        specifier: workspace:*
+        version: link:../../../packages/rag
+      '@types/pg':
+        specifier: ^8.15.5
+        version: 8.15.5
+      pg:
+        specifier: ^8.16.3
+        version: 8.16.3
+
   tests/fixtures/apps/cli:
     dependencies:
       '@tessar/core':
@@ -281,7 +281,7 @@ importers:
         version: link:../../../../packages/core
       '@tessar/libsql':
         specifier: workspace:*
-        version: link:../../../../packages/libsql
+        version: link:../../../../plugins/database/libsql
       '@tessar/openai':
         specifier: workspace:*
         version: link:../../../../packages/openai
@@ -311,7 +311,7 @@ importers:
         version: link:../../../../packages/core
       '@tessar/libsql':
         specifier: workspace:*
-        version: link:../../../../packages/libsql
+        version: link:../../../../plugins/database/libsql
       '@tessar/server':
         specifier: workspace:*
         version: link:../../../../packages/server

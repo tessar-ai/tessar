@@ -10,12 +10,12 @@
   },
   "scripts": {
     "build": "pnpm -r build",
-    "build:release": "pnpm --filter \"./packages/*\" --filter \"./integrations/auth/*\" -r pack --pack-destination dist/release",
+    "build:release": "pnpm --filter \"./packages/*\" --filter \"./integrations/auth/*\" --filter \"./plugins/database/*\" -r pack --pack-destination dist/release",
     "typecheck": "tsc --noEmit -p tsconfig.tests.json",
     "test": "vitest run --configLoader native --pool forks --exclude tests/integration/**",
     "test:integration": "vitest run --configLoader native --pool forks tests/integration",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "test:storage": "node --env-file-if-exists=.env.storage node_modules/vitest/vitest.mjs run packages/postgresql/test packages/mongodb/test --configLoader native --pool threads"
+    "test:storage": "node --env-file-if-exists=.env.storage node_modules/vitest/vitest.mjs run plugins/database/postgresql/test plugins/database/mongodb/test --configLoader native --pool threads"
   },
   "devDependencies": {
     "@tessar/client": "workspace:*",
