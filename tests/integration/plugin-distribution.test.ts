@@ -94,7 +94,7 @@ async function command(
     },
   };
   const detailed = (error: any): never => {
-    throw Error(error.message + "\n" + error.stdout + "\n" + error.stderr);
+    throw Error(error.message + `\nexitCode=${error.code} signal=${error.signal} killed=${error.killed}\n` + error.stdout + "\n" + error.stderr);
   };
   if (process.platform !== "win32")
     return execute(name, args, options).catch(detailed);
@@ -239,6 +239,7 @@ it("runs a packed installed CLI from another project and discovers a plugin adde
         "--offline",
         "--ignore-scripts",
         "--omit=peer",
+        "--loglevel=verbose",
         "--no-audit",
         "--no-fund",
         ...tarballs,

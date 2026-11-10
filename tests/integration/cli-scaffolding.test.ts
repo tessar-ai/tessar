@@ -125,7 +125,7 @@ it("packs and installs the standalone CLI and scaffolds from a different working
       const packed = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--config.manage-package-manager-versions=false", "--json", "--pack-destination", root], realpathSync(resolve("packages/cli/node_modules", dependency)), cache);
       archives.push(resolve(root, JSON.parse(packed.stdout).filename));
     }
-    await command("npm", ["install", "--global", "--prefix", host, "--offline", "--ignore-scripts", "--no-audit", "--no-fund", ...archives], work, cache);
+    await command("npm", ["install", "--global", "--prefix", host, "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--loglevel=verbose", ...archives], work, cache);
     const installed = join(host, process.platform === "win32" ? "node_modules" : "lib/node_modules", "tessar");
     const manifest = JSON.parse(await readFile(join(installed, "package.json"), "utf8"));
     expect(manifest.name).toBe("tessar");
@@ -194,7 +194,7 @@ async function command(name: "npm" | "npx" | "pnpm", args: string[], cwd: string
     executable = process.execPath;
     args = [launcher, ...args];
   }
-  return execute(executable, args, options).catch((error: { message: string; stdout?: string; stderr?: string }) => {
-    throw Error(`${error.message}\n${error.stdout ?? ""}\n${error.stderr ?? ""}`);
+  return execute(executable, args, options).catch((error: { message: string; stdout?: string; stderr?: string; code?: number | string; signal?: string; killed?: boolean }) => {
+    throw Error(`${error.message}\nexitCode=${error.code} signal=${error.signal} killed=${error.killed}\n${error.stdout ?? ""}\n${error.stderr ?? ""}`);
   });
 }

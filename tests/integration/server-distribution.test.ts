@@ -37,7 +37,8 @@ test("server tarball installs independently and public declarations compile", as
     }
     const project = join(directory, "application"); await mkdir(project);
     await writeFile(join(project, "package.json"), JSON.stringify({ private: true, type: "module", packageManager: "pnpm@11.5.3",
-      dependencies: { "@tessar/core": `file:${archives[0]}`, "@tessar/server": `file:${archives[1]}`, "@tessar/auth-api-key": `file:${archives[2]}`, zod: external.zod }, pnpm: { overrides: external } }));
+      dependencies: { "@tessar/core": `file:${archives[0]}`, "@tessar/server": `file:${archives[1]}`, "@tessar/auth-api-key": `file:${archives[2]}`, zod: external.zod } }));
+    await writeFile(join(project, "pnpm-workspace.yaml"), JSON.stringify({ overrides: external }));
     await command(["install", "--offline", "--ignore-scripts"], project);
     const manifest = JSON.parse(await readFile(join(project, "node_modules/@tessar/server/package.json"), "utf8"));
     expect(manifest.peerDependencies["@tessar/core"]).not.toContain("workspace:");
