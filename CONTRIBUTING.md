@@ -106,7 +106,8 @@ missing, pending or unsuccessful CI run blocks publication; after CI succeeds,
 re-run the failed release workflow without moving the tag.
 
 The release workflow discovers the selected package under
-`packages/*/package.json`, validates its version, builds the workspace, and
+`packages/*/package.json`, `plugins/database/*/package.json` and
+`integrations/auth/*/package.json`, validates its version, builds the workspace, and
 packs/publishes only that package. Adding a package does not require editing a
 publish list. Legacy `v*` tags no longer trigger publication.
 Stable tags use npm `latest`; prereleases such as `plugins@0.2.0-beta.1` use `next`.
@@ -137,9 +138,11 @@ dependencies. It also checks npm for an already published target version and
 compatible published internal dependencies before attempting publication.
 
 Publish changed dependencies first and wait for their release to succeed before
-tagging dependents. For the current release, publish `core@0.1.5` first, then
-`plugins@0.1.5`, `openai@0.1.4`, `libsql@0.1.4`, `postgresql@0.1.4` and
-`mongodb@0.1.4`. Packed extension Core peers use the compatible `^0.1.5` range.
+tagging dependents. For the current release, publish `core@0.1.6` first, then
+RAG and server before database vector plugins and auth integrations respectively.
+Existing extensions use `plugins@0.1.6`, `openai@0.1.5`, `opentelemetry@0.1.2`,
+`libsql@0.1.4`, `postgresql@0.1.5` and `mongodb@0.1.5`.
+Packed extension Core peers use the compatible `^0.1.6` range.
 When releasing multiple versions of the same package, finish the earlier
 release first so the `latest` npm tag cannot race backwards.
 

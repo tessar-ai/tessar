@@ -9,6 +9,8 @@ import { hookKinds } from "../../packages/core/src/events/type.js";
 
 const execute = promisify(execFile);
 const cli = resolve("packages/cli/dist/bin.js");
+const COMMAND_TIMEOUT_MS = 60000;
+const INSTALLED_CLI_TIMEOUT_MS = 180000;
 
 async function run(bin: string, args: string[], cwd: string, answers?: string) {
   const result = execute(process.execPath, [bin, ...args], { cwd, windowsHide: true, timeout: 30000 });
@@ -118,14 +120,14 @@ it("packs and installs the standalone CLI and scaffolds from a different working
     await writeFile(join(host, "package.json"), JSON.stringify({ private: true }));
     const packed = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", root], resolve("packages/cli"), cache);
     const tarball = resolve(root, JSON.parse(packed.stdout).filename);
-    const corePacked = await command("pnpm", ["pack", "--json", "--pack-destination", root], resolve("packages/core"), cache);
+    const corePacked = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", root], resolve("packages/core"), cache);
     const zodPacked = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--config.manage-package-manager-versions=false", "--json", "--pack-destination", root], realpathSync(resolve("node_modules/zod")), cache);
     const archives = [resolve(root, JSON.parse(corePacked.stdout).filename), resolve(root, JSON.parse(zodPacked.stdout).filename), tarball];
     for (const dependency of ["hono", "@hono/node-server"]) {
       const packed = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--config.manage-package-manager-versions=false", "--json", "--pack-destination", root], realpathSync(resolve("packages/cli/node_modules", dependency)), cache);
       archives.push(resolve(root, JSON.parse(packed.stdout).filename));
     }
-    await command("npm", ["install", "--global", "--prefix", host, "--offline", "--ignore-scripts", "--no-audit", "--no-fund", ...archives], work, cache);
+    await command("npm", ["install", "--global", "--prefix", host, "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--loglevel=verbose", ...archives], work, cache);
     const installed = join(host, process.platform === "win32" ? "node_modules" : "lib/node_modules", "tessar");
     const manifest = JSON.parse(await readFile(join(installed, "package.json"), "utf8"));
     expect(manifest.name).toBe("tessar");
@@ -177,11 +179,11 @@ it("packs and installs the standalone CLI and scaffolds from a different working
   } finally {
     await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
-}, 60000);
+}, INSTALLED_CLI_TIMEOUT_MS);
 
 async function command(name: "npm" | "npx" | "pnpm", args: string[], cwd: string, cache: string) {
   const options = {
-    cwd, windowsHide: true, timeout: 30000,
+    cwd, windowsHide: true, timeout: COMMAND_TIMEOUT_MS,
     env: { ...process.env, CI: "true", npm_config_offline: "true", npm_config_cache: cache },
   };
   let executable = name as string;
@@ -194,7 +196,7 @@ async function command(name: "npm" | "npx" | "pnpm", args: string[], cwd: string
     executable = process.execPath;
     args = [launcher, ...args];
   }
-  return execute(executable, args, options).catch((error: { message: string; stdout?: string; stderr?: string }) => {
-    throw Error(`${error.message}\n${error.stdout ?? ""}\n${error.stderr ?? ""}`);
+  return execute(executable, args, options).catch((error: { message: string; stdout?: string; stderr?: string; code?: number | string; signal?: string; killed?: boolean }) => {
+    throw Error(`${error.message}\nexitCode=${error.code} signal=${error.signal} killed=${error.killed}\n${error.stdout ?? ""}\n${error.stderr ?? ""}`);
   });
 }

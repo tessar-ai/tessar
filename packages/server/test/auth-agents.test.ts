@@ -16,7 +16,7 @@ function post(user: string, path: string, body: unknown) {
 function last(text: string) { return text.split("\n").filter(line => line.startsWith("data: ")).map(line => JSON.parse(line.slice(6))).at(-1)!; }
 
 test("independent Agent controls cannot cross scope, including a supplied stream ID", async () => {
-  const model = new ScriptedProvider([{ gate: new Promise<void>(() => {}), text: "later" }]);
+  const model = new ScriptedProvider([{ gate: new Promise<void>(() => { }), text: "later" }]);
   const agent = new Agent({ id: crypto.randomUUID(), model });
   host = await start({ agents: [agent], server: { auth } });
   const path = `/api/agents/${agent.id}`;

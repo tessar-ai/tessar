@@ -40,10 +40,14 @@ test("client supports direct Agents without inventing Controllers and preserves 
 });
 
 test("prefixed server enforces headers on JSON and SSE", async () => {
-  const host = await start({ server: { prefix: "/tessar", middlewares: [registerMiddleware("*", async (c, next) => {
-    if (c.req.header("authorization") !== "Bearer test") return c.json({ denied: true }, 401);
-    await next();
-  })] } }); server = host.server;
+  const host = await start({
+    server: {
+      prefix: "/tessar", middlewares: [registerMiddleware("*", async (c, next) => {
+        if (c.req.header("authorization") !== "Bearer test") return c.json({ denied: true }, 401);
+        await next();
+      })]
+    }
+  }); server = host.server;
   const baseURL = host.url + "/tessar";
   await expect(new TessarClient({ baseURL }).listAgents()).rejects.toMatchObject({ status: 401 });
   const client = new TessarClient({ baseURL, headers: { authorization: "Bearer test" } });
@@ -138,7 +142,7 @@ test("independent Agent suspension/resume uses existing interrupt contract", asy
 });
 
 test("explicit Session abort is separate from disconnect", async () => {
-  const model = new ScriptedProvider([{ gate: new Promise<void>(() => {}), text: "never" }]);
+  const model = new ScriptedProvider([{ gate: new Promise<void>(() => { }), text: "never" }]);
   const host = await start({ controllers: [new Controller({ id: "main", agent: new Agent({ id: "worker", model }) })] }); server = host.server;
   const session = await new TessarClient({ baseURL: host.url }).getController("main").createSession();
   await session.thread.create();

@@ -18,7 +18,7 @@ await writeFile(
 );
 console.log(
   "Vendored " +
-    Object.keys(output.entries).length +
-    " providers; " +
-    output.revision,
+  Object.keys(output.entries).length +
+  " providers; " +
+  output.revision,
 );

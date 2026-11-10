@@ -32,46 +32,46 @@ function completion(api: string, id: number) {
   const data =
     api === "responses"
       ? [
-          {
-            type: "response.completed",
-            response: {
-              id: "response_" + id,
-              output: [
-                {
-                  id: "msg_" + id,
-                  type: "message",
-                  role: "assistant",
-                  content: [
-                    {
-                      type: "output_text",
-                      text: "persisted answer",
-                      annotations: [],
-                    },
-                  ],
-                },
-              ],
-            },
-          },
-        ]
-      : [
-          {
-            id: "chat_" + id,
-            choices: [
+        {
+          type: "response.completed",
+          response: {
+            id: "response_" + id,
+            output: [
               {
-                index: 0,
-                delta: { role: "assistant", content: "persisted answer" },
-                finish_reason: null,
+                id: "msg_" + id,
+                type: "message",
+                role: "assistant",
+                content: [
+                  {
+                    type: "output_text",
+                    text: "persisted answer",
+                    annotations: [],
+                  },
+                ],
               },
             ],
           },
-          {
-            id: "chat_" + id,
-            choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
-          },
-        ];
+        },
+      ]
+      : [
+        {
+          id: "chat_" + id,
+          choices: [
+            {
+              index: 0,
+              delta: { role: "assistant", content: "persisted answer" },
+              finish_reason: null,
+            },
+          ],
+        },
+        {
+          id: "chat_" + id,
+          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+        },
+      ];
   return new Response(
     data.map((value) => `data: ${JSON.stringify(value)}\n\n`).join("") +
-      (api === "responses" ? "" : "data: [DONE]\n\n"),
+    (api === "responses" ? "" : "data: [DONE]\n\n"),
     { headers: { "Content-Type": "text/event-stream" } },
   );
 }
@@ -119,7 +119,7 @@ for (const api of ["responses", "chat-completions"] as const)
       const controller = new Controller({
         id: "app",
         agent: new Agent({ id: "assistant", model }),
-        plugins: [new LibsqlStoragePlugin({ database: createTestDatabase(filename)})],
+        plugins: [new LibsqlStoragePlugin({ database: createTestDatabase(filename) })],
       });
       await controller.initialize();
       return controller;
@@ -252,26 +252,26 @@ it("reopens a suspended Session with summary state and does not replay its compl
   });
   async function open(resumed = false, configurationId = "v1") {
     return AgentHarness.create({
-      backend: await createLibsqlBackend({ database: createTestDatabase(filename)}),
+      backend: await createLibsqlBackend({ database: createTestDatabase(filename) }),
       plugins: [plugin(configurationId)],
       modelScripts: resumed
         ? [{ text: "finished" }]
         : [
-            {
-              response: {
-                message: MessageCodec.encode(
-                  new AssistantMessage([
-                    {
-                      type: "tool-call",
-                      toolCallId: "call",
-                      name: "work",
-                      arguments: {},
-                    },
-                  ]),
-                ),
-              },
+          {
+            response: {
+              message: MessageCodec.encode(
+                new AssistantMessage([
+                  {
+                    type: "tool-call",
+                    toolCallId: "call",
+                    name: "work",
+                    arguments: {},
+                  },
+                ]),
+              ),
             },
-          ],
+          },
+        ],
     });
   }
   let h = await open();
@@ -337,18 +337,18 @@ it("reopens a suspended Session with summary state and does not replay its compl
               rows: db
                 .prepare(
                   "SELECT * FROM tessar_" +
-                    table +
-                    ([
-                      "messages",
-                      "streams",
-                      "turns",
-                      "model_attempts",
-                      "tool_executions",
-                      "interrupts",
-                    ].includes(table)
-                      ? " WHERE to_revision IS NULL"
-                      : "") +
-                    " LIMIT 2",
+                  table +
+                  ([
+                    "messages",
+                    "streams",
+                    "turns",
+                    "model_attempts",
+                    "tool_executions",
+                    "interrupts",
+                  ].includes(table)
+                    ? " WHERE to_revision IS NULL"
+                    : "") +
+                  " LIMIT 2",
                 )
                 .all()
                 .map((row) =>
@@ -420,7 +420,7 @@ it.each(["endpoint", "protocol"])(
         id: "app",
         agent: new Agent({ id: "app", model }),
         plugins: [
-          new LibsqlStoragePlugin({ database: createTestDatabase(filename)}),
+          new LibsqlStoragePlugin({ database: createTestDatabase(filename) }),
           {
             id: "approval",
             setup(tessar) {

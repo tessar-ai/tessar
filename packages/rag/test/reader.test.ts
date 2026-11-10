@@ -82,10 +82,12 @@ it("returns real file provenance and preserves native filesystem errors", async 
 });
 
 it("extracts HTML without scripts and preserves existing Markdown structures", async () => {
-  const result = await new DocumentReader().load({ source: {
-    text: "<html><head><style>bad-style</style></head><body><h1>Guide</h1><p>Hello <strong>world</strong></p><script>bad-script</script></body></html>",
-    mimeType: "text/html",
-  } }).result();
+  const result = await new DocumentReader().load({
+    source: {
+      text: "<html><head><style>bad-style</style></head><body><h1>Guide</h1><p>Hello <strong>world</strong></p><script>bad-script</script></body></html>",
+      mimeType: "text/html",
+    }
+  }).result();
   expect(result[0]?.format).toBe("markdown");
   expect(result[0]?.text).toContain("# Guide");
   expect(result[0]?.text).toContain("**world**");

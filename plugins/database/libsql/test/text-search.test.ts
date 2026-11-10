@@ -19,16 +19,20 @@ function insert(store: LibsqlVectorStore, contents: readonly Content[]) {
 
 it("ranks by native BM25 and preserves chunk provenance without vector payload", async () => {
   const store = open();
-  const chunk: Chunk = { text: "tessar tessar", format: "markdown",
+  const chunk: Chunk = {
+    text: "tessar tessar", format: "markdown",
     source: { uri: "file:///manual.pdf", page: 2 }, metadata: { project: "handbook" },
-    position: { contentIndex: 0, start: 0, end: 13 } };
+    position: { contentIndex: 0, start: 0, end: 13 }
+  };
   const ids = await insert(store, [content("tessar configuration in a longer document"), chunk, content("unrelated")]);
   const results = await store.searchBM25("tessar");
   expect(results.map(r => r.id)).toEqual([ids[1], ids[0]]);
   expect(results[0]!.score).toBeGreaterThan(results[1]!.score);
   expect(results[1]!.score).toBeGreaterThan(0);
-  expect(results[0]).toEqual({ id: ids[1], createdAt: (await store.get(ids[1]!))!.createdAt,
-    content: chunk, score: results[0]!.score });
+  expect(results[0]).toEqual({
+    id: ids[1], createdAt: (await store.get(ids[1]!))!.createdAt,
+    content: chunk, score: results[0]!.score
+  });
   expect(await store.searchBM25("tessar", { topK: 1 })).toEqual([results[0]]);
 });
 
@@ -61,8 +65,10 @@ it("filters source and typed metadata before topK, using bound literals", async 
     { ...content("manual"), source: { uri: "file:///manual.pdf", page: 3 }, metadata: { active: 1, n: "1" } },
     content("unrelated"),
   ]);
-  const results = await store.searchBM25("manual", { topK: 1,
-    filter: { source: { uri: "file:///manual.pdf", page: 3 }, metadata: { active: true, n: 1, 'a".$': null } } });
+  const results = await store.searchBM25("manual", {
+    topK: 1,
+    filter: { source: { uri: "file:///manual.pdf", page: 3 }, metadata: { active: true, n: 1, 'a".$': null } }
+  });
   expect(results.map(r => r.id)).toEqual([ids[1]]);
   expect(await store.searchBM25("manual", { filter: { metadata: { missing: null } } })).toEqual([]);
   expect(await store.searchBM25("manual", { filter: { source: { uri: "' OR 1=1 --" } } })).toEqual([]);
