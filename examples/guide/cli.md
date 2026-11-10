@@ -1,9 +1,9 @@
 # CLI scaffolding
 
-Run `npx tessar new my-agent`, or install `tessar` globally to create a project:
+Run `npx @tessar/cli new my-agent`, or install `@tessar/cli` globally to create a project:
 
 ```sh
-npm install -g tessar
+npm install -g @tessar/cli
 tessar new my-agent
 ```
 

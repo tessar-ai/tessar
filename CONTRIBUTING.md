@@ -111,8 +111,8 @@ The release workflow discovers the selected package under
 packs/publishes only that package. Adding a package does not require editing a
 publish list. Legacy `v*` tags no longer trigger publication.
 Stable tags use npm `latest`; prereleases such as `plugins@0.2.0-beta.1` use `next`.
-The unscoped CLI package `tessar` remains in `packages/cli` and uses tags such as
-`tessar@0.1.0`, producing `tessar-0.1.0.tgz`.
+The CLI package `@tessar/cli` remains in `packages/cli` and uses tags such as
+`cli@0.1.0`, producing `tessar-cli-0.1.0.tgz`. Its executable remains `tessar`.
 
 Extensions that use the application's Core runtime declare `@tessar/core` as a
 required `peerDependency: "workspace:^"`, with `devDependency: "workspace:*"` for
