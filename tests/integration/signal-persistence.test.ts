@@ -1,4 +1,4 @@
-import { createTestDatabase } from "../../packages/libsql/test/database-fixture.js";
+import { createTestDatabase } from "../../plugins/database/libsql/test/database-fixture.js";
 import { removeSqliteTestDirectory as rm } from "../helpers/sqlite-cleanup.js";
 import { expect, it, vi } from "vitest";
 import { mkdtemp } from "node:fs/promises";

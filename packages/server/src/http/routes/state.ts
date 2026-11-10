@@ -5,13 +5,14 @@ import type { ThreadStateHub } from "../../runtime/thread-state-hub.js";
 import type { SseTransport } from "../sse.js";
 import { SESSION_PATH } from "./sessions.js";
 import { safeState, ROUTE_PARAM } from "../protocol.js";
+import { authScope } from "../access.js";
 
 export function registerState(app: Hono, sessions: () => SessionRegistry, hub: ThreadStateHub, transport: SseTransport) {
   app.get(SESSION_PATH + "/state", async c => c.json(safeState(await hub.getSnapshot(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!,
-    await sessions().get(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!, c.req.param(ROUTE_PARAM.SESSION_ID)!)))));
+    await sessions().get(c.req.param(ROUTE_PARAM.CONTROLLER_ID)!, c.req.param(ROUTE_PARAM.SESSION_ID)!, authScope(c))))));
   app.get(SESSION_PATH + "/state/stream", async c => {
     const controllerId = c.req.param(ROUTE_PARAM.CONTROLLER_ID)!;
-    const session = await sessions().get(controllerId, c.req.param(ROUTE_PARAM.SESSION_ID)!);
+    const session = await sessions().get(controllerId, c.req.param(ROUTE_PARAM.SESSION_ID)!, authScope(c));
     await hub.getSnapshot(controllerId, session);
     return transport.response(c, (push, end) => {
       let version = 0;

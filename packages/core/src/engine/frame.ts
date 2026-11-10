@@ -10,7 +10,7 @@ import {
   type PluginStateDefinition,
 } from "../state/plugin-state.js";
 import type { Lease } from "../state/storage-ports.js";
-import type { Checkpoint, RecordEntry, StreamLimits } from "../state/schema.js";
+import type { Checkpoint, RecordEntry, Scope, StreamLimits } from "../state/schema.js";
 import type { StreamRecord } from "../trace/records.js";
 import { stateTool } from "../runtime-state.js";
 import type { LoopContext } from "../loop.js";
@@ -40,6 +40,7 @@ export type ExecutionRequest = (
     }
   | { kind: "recover"; threadId: string; streamId: string; model?: ModelRef }
 ) & {
+  scope?: Scope;
   signal?: AbortSignal;
   adapter?: ModelAdapter;
   modelOptions?: JsonObject;

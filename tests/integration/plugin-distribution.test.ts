@@ -18,7 +18,7 @@ it("installs packed libSQL without its optional driver or RAG peers", async () =
     await mkdir(host);
     await writeFile(join(host, "package.json"), JSON.stringify({ private: true, type: "module" }));
     const tarballs: string[] = [];
-    for (const directory of ["packages/core", "packages/libsql"]) {
+    for (const directory of ["packages/core", "plugins/database/libsql"]) {
       const packed = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", packs], resolve(directory), cache);
       tarballs.push(resolve(packs, JSON.parse(packed.stdout).filename));
     }
@@ -41,7 +41,7 @@ it("installs packed libSQL without its optional driver or RAG peers", async () =
     expect(installed.peerDependenciesMeta.libsql.optional).toBe(true);
     // Supply the chosen native driver locally so the consumer test stays offline.
     await command("npm", ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund",
-      realpathSync(resolve("packages/libsql/node_modules/libsql"))], host, cache);
+      realpathSync(resolve("plugins/database/libsql/node_modules/libsql"))], host, cache);
     await writeFile(join(host, "main.mjs"), `
       import assert from 'node:assert/strict';
       import {TessarError} from '@tessar/core';

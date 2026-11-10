@@ -63,7 +63,7 @@ for (const file of ["examples", "tests/fixtures/apps"]
   .flatMap((directory) => files(resolve(root, directory)))
   .filter((path) => path.endsWith(".ts"))) {
   if (
-    /(?:@tessar\/[^"']+\/src\/|(?:\.\.\/)+packages\/[^"']+\/src\/)/.test(
+    /(?:@tessar\/[^"']+\/src\/|(?:\.\.\/)+(?:packages\/[^"']+|integrations\/auth\/[^"']+|plugins\/database\/[^"']+)\/src\/)/.test(
       readFileSync(file, "utf8"),
     )
   )

@@ -1,3 +1,5 @@
+import { HTTP_STATUS } from "./protocol.js";
+
 type Schema = Record<string, unknown>;
 const object: Schema = { type: "object", additionalProperties: true };
 const string: Schema = { type: "string" };
@@ -95,7 +97,7 @@ export function openapiDocument(routes: readonly { path: string; method: string 
         ...(result.streaming ? { content: { "text/event-stream": { schema: string } } } : result.schema ? { content: { "application/json": { schema: result.schema } } } : {})
       }
     };
-    for (const [status, description] of [[400, "Invalid request"], [404, "Resource not found"], [409, "State conflict"], [500, "Unexpected error"], [502, "Provider error"], [503, "Unavailable runtime or storage"]] as const)
+    for (const [status, description] of [[HTTP_STATUS.BAD_REQUEST, "Invalid request"], [HTTP_STATUS.UNAUTHORIZED, "Authentication required"], [HTTP_STATUS.FORBIDDEN, "Request not permitted"], [HTTP_STATUS.NOT_FOUND, "Resource not found"], [HTTP_STATUS.CONFLICT, "State conflict"], [HTTP_STATUS.INTERNAL_SERVER_ERROR, "Unexpected error"], [HTTP_STATUS.BAD_GATEWAY, "Provider error"], [HTTP_STATUS.SERVICE_UNAVAILABLE, "Unavailable runtime or storage"]] as const)
       responses[status] = { description, content: { "application/json": { schema: ref("Error") } } };
     const body = route.method === "POST" ? requestSchema(route.path) : undefined;
     (paths[path] ??= {})[route.method.toLowerCase()] = {

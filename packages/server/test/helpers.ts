@@ -6,14 +6,14 @@ import { ScriptedProvider } from "@tessar/core/testing";
 import { Tessar } from "../src/index.js";
 import type { TessarOptions } from "../src/index.js";
 
-export async function start(options: TessarOptions = {}) {
+export async function start<User = unknown>(options: TessarOptions<User> = {}) {
   let resolve!: (url: string) => void;
   const listening = new Promise<string>(done => { resolve = done; });
   const log = vi.spyOn(console, "log").mockImplementation(value => {
     const match = String(value).match(/http:\/\/[^ ]+/);
     if (match) resolve(match[0]);
   });
-  const tessar = new Tessar({
+  const tessar = new Tessar<User>({
     ...(options.agents === undefined && options.controllers === undefined ? {
       controllers: [new Controller({ id: crypto.randomUUID(), agent: new Agent({ id: crypto.randomUUID(), model: new ScriptedProvider([{ text: "Hello" }]) }) })],
     } : {}),
@@ -33,4 +33,4 @@ export async function start(options: TessarOptions = {}) {
   return { server, url, request };
 }
 
-export function startServer(tessar: Tessar) { return bootstrap(tessar, app => new TessarServer({ app, tessar })); }
+export function startServer(tessar: Tessar<any>) { return bootstrap(tessar, app => new TessarServer({ app, tessar })); }

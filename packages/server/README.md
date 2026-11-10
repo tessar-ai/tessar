@@ -3,6 +3,11 @@
 Tessar runtime registration, standalone HTTP/SSE hosting and application adapters.
 Requires Node.js >=24.22.1.
 
+Optional `server.auth` accepts an `AuthProvider` and optional `authorize` and `scope`
+callbacks. It protects built-in runtime endpoints; custom routes and OpenAPI remain
+developer-owned. See the [authentication guide](../../examples/guide/auth.md) for
+custom providers and integrations under `integrations/auth/`.
+
 ## Runtime and standalone development
 
 Install `@tessar/core`, `@tessar/server` and your provider. Export a Tessar instance
@@ -43,7 +48,7 @@ queues, persisted conversation history or model selection from an implicit host.
 `tessar.shutdown()` disposes explicit Controllers and shuts down independent Agents.
 
 Optional `server` configuration on Tessar contains `hostname`, `port`, `prefix`,
-`openapiPath`, `routes` and `middlewares`. Port defaults to `4117`; `port: 0`
+`openapiPath`, `routes`, `middlewares` and `auth`. Port defaults to `4117`; `port: 0`
 selects a free port. The CLI handles SIGINT/SIGTERM, stops HTTP/SSE, then calls
 `tessar.shutdown()`. Startup failures print the original exception and exit nonzero.
 Borrowed database connections remain developer-owned.

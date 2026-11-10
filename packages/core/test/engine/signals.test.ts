@@ -27,9 +27,22 @@ function gate() {
   return { promise, resolve };
 }
 
-it.each([thread.prepare, thread.started, input.prepare])(
-  "accepts input from %s without waiting for admission",
-  async (hook) => {
+it("checks scoped stream signals in core before accepting input", async () => {
+  const release = gate();
+  const model = new ScriptedProvider([{ gate: release.promise, text: "done" }]);
+  const agent = new Agent({ id: "scoped-signal", model });
+  const stream = agent.stream("start", { scope: { userId: "alice" } });
+  const done = collect(stream);
+  try {
+    await vi.waitFor(() => expect(model.calls).toHaveLength(1));
+    await expect(agent.sendSignal({ streamId: stream.id!, content: "foreign", scope: { userId: "bob" } })).rejects.toMatchObject({ code: "ThreadNotFound" });
+    await expect(agent.sendSignal({ streamId: stream.id!, content: "own", scope: { userId: "alice" } })).resolves.toBeUndefined();
+  } finally { stream.abort(); release.resolve(); await done; await agent.shutdown(); }
+});
+
+it.each([thread.prepare, thread.started, input.prepare].flatMap(hook => [false, true].map(scoped => ({ hook, scoped }))))(
+  "accepts input from $hook without waiting for admission (scope=$scoped)",
+  async ({ hook, scoped }) => {
     const release = gate();
     let receipt: "pending" | "accepted" | "rejected" = "pending";
     let sent = false;
@@ -49,6 +62,7 @@ it.each([thread.prepare, thread.started, input.prepare])(
                   .sendSignal({
                     streamId: "target",
                     content: "during admission",
+                    ...(scoped ? { scope: { userId: "alice" } } : {}),
                   })
                   .then(
                     () => {
@@ -68,7 +82,7 @@ it.each([thread.prepare, thread.started, input.prepare])(
       ],
     });
     await controller.initialize();
-    const stream = agent.stream("start", { id: "target" });
+    const stream = agent.stream("start", { id: "target", scope: { userId: "alice" } });
     const done = collect(stream);
     try {
       await vi.waitFor(() => expect(receipt).toBe("accepted"), {
@@ -86,7 +100,7 @@ it.each([thread.prepare, thread.started, input.prepare])(
   },
 );
 
-it("accepts cross-stream signals from admission hooks without circular waits", async () => {
+it.each([false, true])("accepts cross-stream signals from admission hooks without circular waits (scope=%s)", async (scoped) => {
   const entered = gate(),
     release = gate();
   let count = 0,
@@ -108,6 +122,7 @@ it("accepts cross-stream signals from admission hooks without circular waits", a
               .sendSignal({
                 streamId: index === 0 ? "second" : "first",
                 content: "cross input",
+                ...(scoped ? { scope: { userId: "alice" } } : {}),
               })
               .then(() => {
                 accepted++;
@@ -121,8 +136,8 @@ it("accepts cross-stream signals from admission hooks without circular waits", a
   });
   await controller.initialize();
   const done = Promise.all([
-    collect(agent.stream("a", { id: "first" })),
-    collect(agent.stream("b", { id: "second" })),
+    collect(agent.stream("a", { id: "first", scope: { userId: "alice" } })),
+    collect(agent.stream("b", { id: "second", scope: { userId: "alice" } })),
   ]);
   try {
     await vi.waitFor(() => expect(accepted).toBe(2), { timeout: 500 });

@@ -9,7 +9,7 @@ export class RuntimeRegistry {
   readonly records = new Map<string, RecordStore>();
   private readonly independentAgents: readonly Agent[];
 
-  constructor(options: TessarOptions) {
+  constructor(options: TessarOptions<any>) {
     const controllers = [...(options.controllers ?? [])];
     this.independentAgents = [...(options.agents ?? [])];
     for (const controller of controllers) {

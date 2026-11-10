@@ -9,6 +9,8 @@ import type {
 } from "./frame.js";
 import type { ExecutionRuntime } from "./runtime.js";
 import { CommitCoordinator } from "../state/commit.js";
+import type { Scope } from "../state/schema.js";
+import { normalizeScope } from "../state/scope.js";
 
 const ALREADY_TERMINAL = "AlreadyTerminal";
 
@@ -17,6 +19,7 @@ interface TransientMessage {
   message: MessageData;
 }
 interface Mailbox {
+  scope?: Scope;
   id: string;
   threadId: string;
   runtime: ExecutionRuntime;
@@ -42,7 +45,8 @@ export function reserveSignals(
   runtime: ExecutionRuntime,
 ): void {
   if (request.kind !== "input") return;
-  reserveTarget(agent, request.id!, request.threadId, runtime);
+  const box = reserveTarget(agent, request.id!, request.threadId, runtime);
+  box.scope = normalizeScope(request.scope ?? request.thread?.scope() ?? request.session?.scope());
 }
 
 function reserveTarget(
@@ -103,6 +107,7 @@ export function bindSignals(
   const box = entries.get(frame.stream.id)!;
   if (box.frame !== frame) box.failure = undefined;
   box.frame = frame;
+  box.scope = frame.cp.state.scope;
   frame.signals = box;
   if (frame.admitted) box.resolve();
 }
