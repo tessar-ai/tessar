@@ -73,13 +73,13 @@ it("uses a single instance concurrently for different purposes without changing 
       answers: body.questions.allowed
         ? response.answers
         : {
-            route: {
-              type: "choice",
-              choice: "billing",
-              confidence: 0.9,
-              probabilities: { billing: 0.9, engineering: 0.1 },
-            },
+          route: {
+            type: "choice",
+            choice: "billing",
+            confidence: 0.9,
+            probabilities: { billing: 0.9, engineering: 0.1 },
           },
+        },
       usage: response.usage,
     });
   });

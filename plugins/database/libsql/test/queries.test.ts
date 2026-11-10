@@ -19,7 +19,7 @@ for (const name of ["memory", "sqlite"]) {
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createLibsqlBackend({ database: createTestDatabase(":memory:")});
+        : await createLibsqlBackend({ database: createTestDatabase(":memory:") });
     try {
       const service = new ThreadService(backend),
         queries = new StateQueries(backend);
@@ -57,7 +57,7 @@ for (const name of ["memory", "sqlite"]) {
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createLibsqlBackend({ database: createTestDatabase(":memory:")});
+        : await createLibsqlBackend({ database: createTestDatabase(":memory:") });
     try {
       const ids = ["中", "é", "z", "_", "A", "a", "😀", "!"],
         queries = new StateQueries(backend);
@@ -120,7 +120,7 @@ for (const name of ["memory", "sqlite"])
     const backend =
       name === "memory"
         ? createMemoryBackend()
-        : await createLibsqlBackend({ database: createTestDatabase(":memory:")});
+        : await createLibsqlBackend({ database: createTestDatabase(":memory:") });
     const h = await AgentHarness.create({
       backend,
       modelScripts: [{ text: "answer" }],

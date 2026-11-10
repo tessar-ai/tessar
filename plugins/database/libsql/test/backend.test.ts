@@ -17,7 +17,7 @@ import { AgentHarness } from "@tessar/core/testing";
 import { CommitCoordinator } from "../../../../packages/core/src/state/commit.js";
 import { createLibsqlBackend } from "../src/backend.js";
 storageConformance("sqlite", async () =>
-  createLibsqlBackend({ database: createTestDatabase(":memory:")}),
+  createLibsqlBackend({ database: createTestDatabase(":memory:") }),
 );
 it("rolls back publication when a lease expires during SQLite writes", async () => {
   const batch = initialBatch();
@@ -56,8 +56,8 @@ it("rolls back publication when a lease expires during SQLite writes", async () 
 it("reopens committed state and fences independently connected owners", async () => {
   const path = await mkdtemp(join(tmpdir(), "tessar-"));
   const filename = join(path, "state.db"),
-    a = await createLibsqlBackend({ database: createTestDatabase(filename)}),
-    b = await createLibsqlBackend({ database: createTestDatabase(filename)});
+    a = await createLibsqlBackend({ database: createTestDatabase(filename) }),
+    b = await createLibsqlBackend({ database: createTestDatabase(filename) });
   try {
     const lease = await a.ownership.acquire({
       threadId: "t1",
@@ -80,7 +80,7 @@ it("reopens committed state and fences independently connected owners", async ()
     await a.close();
     await b.close();
   }
-  const reopened = await createLibsqlBackend({ database: createTestDatabase(filename)});
+  const reopened = await createLibsqlBackend({ database: createTestDatabase(filename) });
   try {
     expect(await reopened.checkpoints.get("cp-t1")).toMatchObject({
       revision: 1,
@@ -97,7 +97,7 @@ it("reopens committed state and fences independently connected owners", async ()
 });
 
 it("persists Session CAS, validates scope/Agent identity, and clears all deleted selections", async () => {
-  const backend = await createLibsqlBackend({ database: createTestDatabase(":memory:")});
+  const backend = await createLibsqlBackend({ database: createTestDatabase(":memory:") });
   const h = await AgentHarness.create({ backend });
   try {
     const a = await h.controller.createSession({ scope: { user: "a" } }),

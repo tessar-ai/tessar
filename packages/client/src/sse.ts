@@ -5,7 +5,7 @@ import type { StateEvent } from "./types.js";
 const STATE_CHANGED = "state_changed";
 const ABORT_EVENT = "abort";
 const SSE_FIELD = { EVENT: "event", DATA: "data" } as const;
-export interface StateStream extends AsyncIterable<StateEvent> {}
+export interface StateStream extends AsyncIterable<StateEvent> { }
 
 export async function stateStream(response: Response, signal?: AbortSignal): Promise<StateStream> {
   if (response.headers.get(HEADER.CONTENT_TYPE)?.split(";")[0]?.trim().toLowerCase() !== MIME.SSE || !response.body) {

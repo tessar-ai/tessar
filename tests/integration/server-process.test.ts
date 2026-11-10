@@ -13,7 +13,8 @@ function launch(env: Record<string, string> = {}) {
   child.stdout.on("data", value => { stdout += value; });
   child.stderr.on("data", value => { stderr += value; });
   const exited = new Promise<number | null>((resolve, reject) => { child.once("error", reject); child.once("exit", resolve); });
-  return { child, exited, output: () => ({ stdout, stderr }),
+  return {
+    child, exited, output: () => ({ stdout, stderr }),
     async url() {
       await expect.poll(() => stdout.match(/http:\/\/[^\s]+/)?.[0], { timeout: PROCESS_WAIT_TIMEOUT_MS }).toBeTruthy();
       return stdout.match(/http:\/\/[^\s]+/)![0];
@@ -30,9 +31,11 @@ test("public-package server persists Session/Thread/records across native libSQL
     processHandle = launch(env);
     let url = await processHandle.url();
     const request = async (path: string, method = "GET", body?: unknown) => {
-      const response = await fetch(url + path, { method, ...(body === undefined ? {} : {
-        body: JSON.stringify(body), headers: { "content-type": "application/json" },
-      }) });
+      const response = await fetch(url + path, {
+        method, ...(body === undefined ? {} : {
+          body: JSON.stringify(body), headers: { "content-type": "application/json" },
+        })
+      });
       expect(response.ok, await (!response.ok ? response.text() : Promise.resolve(""))).toBe(true);
       return response.status === 204 ? null : response.json();
     };

@@ -6,7 +6,7 @@ class FixtureEmbedding implements EmbeddingModel {
   readonly ref = { providerId: "fixture", modelId: "model" };
   vectors?: number[][];
   query = [1, 0];
-  constructor(readonly dimensions: number) {}
+  constructor(readonly dimensions: number) { }
   async embedDocuments(input: readonly (string | { text: string })[]) {
     return this.vectors ?? input.map(() => Array.from({ length: this.dimensions }, () => 1));
   }

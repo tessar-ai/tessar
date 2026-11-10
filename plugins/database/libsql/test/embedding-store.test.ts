@@ -10,8 +10,10 @@ import { removeSqliteTestDirectory } from "../../../../tests/helpers/sqlite-clea
 
 const content = { text: "manual", format: "text" as const, metadata: {} };
 function model() {
-  return { ref: { providerId: "fixture", modelId: "test" },
-    embedDocuments: vi.fn(async () => [[1, 0]]), embedQuery: vi.fn(async () => [1, 0]) };
+  return {
+    ref: { providerId: "fixture", modelId: "test" },
+    embedDocuments: vi.fn(async () => [[1, 0]]), embedQuery: vi.fn(async () => [1, 0])
+  };
 }
 
 async function filename() {

@@ -34,8 +34,10 @@ test("client tarball installs alone without core, server or zod and bundles with
       archives.push(resolve(directory, JSON.parse(packed.stdout).filename));
     }
     const project = join(directory, "application"); await mkdir(project);
-    await writeFile(join(project, "package.json"), JSON.stringify({ private: true, type: "module", packageManager: "pnpm@11.5.3",
-      dependencies: { "@tessar/client": `file:${archives[0]}` } }));
+    await writeFile(join(project, "package.json"), JSON.stringify({
+      private: true, type: "module", packageManager: "pnpm@11.5.3",
+      dependencies: { "@tessar/client": `file:${archives[0]}` }
+    }));
     await command(["install", "--offline", "--ignore-scripts"], project);
     expect(existsSync(join(project, "node_modules/@tessar/server"))).toBe(false);
     expect(existsSync(join(project, "node_modules/@tessar/core"))).toBe(false);

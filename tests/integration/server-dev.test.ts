@@ -21,7 +21,8 @@ function launch(root: string) {
   child.stdout!.on("data", value => { stdout += value; });
   child.stderr!.on("data", value => { stderr += value; });
   const exited = new Promise<number | null>((resolve, reject) => { child.once("error", reject); child.once("exit", resolve); });
-  return { child, exited, output: () => ({ stdout, stderr }),
+  return {
+    child, exited, output: () => ({ stdout, stderr }),
     async stop() { if (child.connected) { child.send("shutdown"); child.disconnect(); } await exited; },
   };
 }

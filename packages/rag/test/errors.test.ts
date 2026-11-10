@@ -75,7 +75,7 @@ it("preserves an external exception even when it extends the shared base", async
 });
 
 it("does not replace a sibling error class that uses the default core source", async () => {
-  class OtherTessarError extends TessarError {}
+  class OtherTessarError extends TessarError { }
   const failure = new OtherTessarError("OtherFailure", "Sibling error");
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(failure));
   await expect(new DocumentReader().load({ source: { url: "https://example.com/notes.txt" } }).result())
