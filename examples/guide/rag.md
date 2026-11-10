@@ -263,7 +263,7 @@ default 0). Filters support exact source
 URI/page and exact top-level scalar metadata; combine fields with AND. Delete
 accepts either IDs or the same nonempty filter and returns a deletion count.
 You do not need to attach metadata beforehand to discover or delete saved content.
-See [libSQL vector storage](../../packages/libsql/README.md#independent-vector-storage)
+See [libSQL vector storage](../../plugins/database/libsql/README.md#independent-vector-storage)
 for filter limits, error handling and connection behavior.
 
 Storage needs no Agent/Controller/Session or extension. It maintains a native
@@ -340,7 +340,7 @@ larger output rejects without halfvec conversion or dimension reduction.
 Unfiltered vector search is approximate. Source/metadata filters score the matching
 subset exactly before topK, which can cost more for large matching sets. Original
 vectors remain available through get/list. No agent lifecycle or context injection
-is added. See the [adapter API](../../packages/postgresql/README.md#independent-vector-storage)
+is added. See the [adapter API](../../plugins/database/postgresql/README.md#independent-vector-storage)
 for details. No live remote deployment verification is claimed.
 
 For unfiltered HNSW search, topK is a maximum; the server candidate budget
@@ -446,7 +446,7 @@ with InvalidState while its index is building, without hidden waiting. An
 incompatible existing definition rejects with InvalidConfiguration; Tessar does
 not update it automatically. Search visibility can lag committed inserts/deletes;
 successful get/list does not guarantee immediate search visibility. Plan explicit
-readiness handling in the application. See the [MongoDB API](../../packages/mongodb/README.md#independent-vector-storage).
+readiness handling in the application. See the [MongoDB API](../../plugins/database/mongodb/README.md#independent-vector-storage).
 Live ordinary storage and Search verification need separate configured test URLs;
 skipped tests do not verify either deployment.
 

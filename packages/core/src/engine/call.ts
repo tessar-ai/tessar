@@ -21,6 +21,7 @@ import { prepareThread } from "../state/thread-operations.js";
 import { standaloneRuntime, type ExecutionRuntime } from "./runtime.js";
 import type { Stream } from "./delivery.js";
 import { retainStandalone } from "./continuation.js";
+import { normalizeScope } from "../state/scope.js";
 
 export function modelRef(model: ModelSelection): ModelRef {
   return "ref" in model ? model.ref : model;
@@ -104,12 +105,13 @@ export function callAgent(
       typeof input === "string" ? new HumanMessage(input) : input,
     );
     const threadId = agent.ids.next("thread");
+    const scope = normalizeScope(options.scope);
     lifecycle = controller
       ? undefined
       : retainStandalone(agent, threadId, runtime);
     const prepare = controller
       ? () =>
-          prepareThread(controller, { scope: options.scope }, threadId).then(
+          prepareThread(controller, { scope }, threadId).then(
             () => {},
           )
       : () =>
@@ -117,13 +119,14 @@ export function callAgent(
             next: (kind) =>
               kind === "thread" ? threadId : agent.ids.next(kind),
           })
-            .create({ scope: options.scope })
+            .create({ scope })
             .then(() => {});
     const stream = agent.admit(
       {
         kind: "input",
         id: options.id,
         threadId,
+        scope,
         input: messages,
         model: ref,
         adapter: selected.adapter,

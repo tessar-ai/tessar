@@ -38,6 +38,7 @@ Examples perform real model requests and can incur provider charges.
 | --- | --- |
 | Create a project or generate SDK files | [CLI scaffolding](cli.md) |
 | Host runtimes over HTTP and SSE | [Standalone server](server.md) |
+| Authenticate self-hosted runtime APIs | [Server authentication](auth.md) |
 | Run an agent without application lifecycle code | [Agent](agent.md) |
 | Display output as it arrives | [Streaming](stream.md) |
 | Give the agent application functions | [Tools and messages](tools.md) |

@@ -1,6 +1,7 @@
 import type { Agent, Controller } from "@tessar/core";
 import type { Handler, MiddlewareHandler as HonoMiddlewareHandler } from "hono";
 import type { Tessar } from "./tessar.js";
+import type { AuthOptions } from "./auth.js";
 
 export type RouteHandler = Handler;
 export type MiddlewareHandler = HonoMiddlewareHandler;
@@ -13,7 +14,8 @@ export interface MiddlewareRegistration {
   readonly path: string;
   readonly handler: MiddlewareHandler;
 }
-export interface ServerOptions {
+export interface ServerOptions<User = unknown> {
+  auth?: AuthOptions<User>;
   hostname?: string;
   port?: number;
   routes?: readonly RouteRegistration[];
@@ -24,12 +26,12 @@ export interface ServerOptions {
 export type TessarRequestHandler = (request: Request) => Promise<Response>;
 export interface TessarServerOptions<App> {
   app: App;
-  tessar: Tessar;
+  tessar: Tessar<any>;
   prefix?: string;
   openapiPath?: string;
 }
-export interface TessarOptions {
+export interface TessarOptions<User = unknown> {
   agents?: readonly Agent[];
   controllers?: readonly Controller[];
-  server?: ServerOptions;
+  server?: ServerOptions<User>;
 }

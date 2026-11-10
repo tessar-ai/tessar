@@ -7,7 +7,7 @@ import type { TessarRequestHandler, TessarServerOptions } from "../types.js";
 
 export abstract class TessarServerAdapter<App> {
   protected readonly app: App;
-  protected readonly tessar: Tessar;
+  protected readonly tessar: Tessar<any>;
   private readonly prefix: string;
   private readonly openapiPath: string;
   private application?: ServerApplication;

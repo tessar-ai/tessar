@@ -1,0 +1,39 @@
+{
+  "name": "@tessar/auth-better-auth",
+  "version": "0.1.0",
+  "description": "better-auth request authentication provider for Tessar servers.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tessar-ai/tessar.git",
+    "directory": "integrations/auth/better-auth"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24.22.1"
+  },
+  "peerDependencies": {
+    "@tessar/server": "workspace:^"
+  },
+  "devDependencies": {
+    "@tessar/server": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "tsc -p tsconfig.json && node ../../../scripts/copy-license.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

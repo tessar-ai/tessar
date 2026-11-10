@@ -7,6 +7,7 @@ import {
 import { MessageCodec } from "./messages/codec.js";
 import type { ContentPart } from "./messages/parts.js";
 import type { JsonObject } from "./json.js";
+import type { Scope } from "./state/schema.js";
 
 const INVALID_CONFIGURATION = "InvalidConfiguration";
 
@@ -15,6 +16,7 @@ export type SignalTarget =
   | { threadId: string; streamId?: never };
 
 export type SendSignalOptions = SignalTarget & {
+  scope?: Scope;
   content: string | readonly ContentPart[];
   persist?: boolean;
   tagName?: string;

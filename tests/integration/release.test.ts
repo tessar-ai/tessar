@@ -72,6 +72,23 @@ const files = [
   "package/dist/index.d.ts",
 ];
 
+it.each([
+  ["integrations/auth", "jwt", "auth-jwt"],
+  ["plugins/database", "libsql", "libsql"],
+])("discovers scoped packages nested under %s", (parent, leaf, name) => {
+  const root = fixture();
+  const directory = join(root, parent, leaf);
+  mkdirSync(directory, { recursive: true });
+  const original = manifest(root, "opentelemetry");
+  const source = { ...original, name: "@tessar/" + name, version: "0.1.0", repository: { ...original.repository, directory: `${parent}/${leaf}` } };
+  writeFileSync(join(directory, "package.json"), JSON.stringify(source));
+  const plan = checkRelease({ root, ref: name + "@0.1.0" });
+  expect(plan.package).toBe("@tessar/" + name);
+  expect(plan.directory).toBe(`${parent}/${leaf}`);
+  expect(plan.archive).toBe(`dist/release/tessar-${name}-0.1.0.tgz`);
+  expect(verifyArchive(root, plan, source, files)).toEqual(source);
+});
+
 it("releases the unscoped tessar CLI from packages/cli", () => {
   const root = fixture();
   mkdirSync(join(root, "packages/cli"));

@@ -3079,7 +3079,7 @@ export declare class FileTransport implements LogTransport {
 
 ### libSQL options
 
-Nguồn: [packages/libsql/src/backend.ts](packages/libsql/src/backend.ts).
+Nguồn: [plugins/database/libsql/src/backend.ts](plugins/database/libsql/src/backend.ts).
 
 ```ts
 export interface LibsqlStorageOptions {
@@ -3092,7 +3092,7 @@ export declare function createLibsqlBackend(options: LibsqlStorageOptions): Prom
 
 ### PostgreSQL options
 
-Nguồn: [packages/postgresql/src/database.ts](packages/postgresql/src/database.ts).
+Nguồn: [plugins/database/postgresql/src/database.ts](plugins/database/postgresql/src/database.ts).
 
 ```ts
 export interface PostgresqlStorageOptions {
@@ -3103,7 +3103,7 @@ export interface PostgresqlStorageOptions {
 
 ### MongoDB options
 
-Nguồn: [packages/mongodb/src/database.ts](packages/mongodb/src/database.ts).
+Nguồn: [plugins/database/mongodb/src/database.ts](plugins/database/mongodb/src/database.ts).
 
 ```ts
 export interface MongoDBStorageOptions {
@@ -3812,7 +3812,7 @@ id/createdAt/content and return a descending cosine score without vectors.
 Unfiltered search is approximate; filtered search scores the matching subset
 exactly before topK. Empty collections return [] without a provider call.
 No agent/context lifecycle or live remote verification is claimed. See
-[adapter setup](../packages/postgresql/README.md#independent-vector-storage).
+[adapter setup](../plugins/database/postgresql/README.md#independent-vector-storage).
 
 `searchBM25(query, { topK?, filter? }?)` uses `pg_search` BM25. An administrator
 must separately install the server extension and enable it in the database with
@@ -3875,7 +3875,7 @@ visibility does not guarantee search-after-insert visibility.
 Tests use TESSAR_TEST_MONGODB_URL for ordinary storage/native text and optional
 TESSAR_TEST_MONGODB_SEARCH_URL for Search. Skips do not verify a deployment;
 no live verification claim is made here. See the
-[MongoDB adapter](../packages/mongodb/README.md#independent-vector-storage).
+[MongoDB adapter](../plugins/database/mongodb/README.md#independent-vector-storage).
 
 ## Compatible embedding options and reranker
 

@@ -6,7 +6,7 @@ import { SessionRegistry } from "./session-registry.js";
 import { ThreadStateHub } from "./thread-state-hub.js";
 import { ObserverPlugin } from "./observer-plugin.js";
 
-const contexts = new WeakMap<Tessar, RuntimeContext>();
+const contexts = new WeakMap<Tessar<any>, RuntimeContext>();
 
 export class RuntimeContext {
   readonly registry: RuntimeRegistry;
@@ -15,7 +15,7 @@ export class RuntimeContext {
   readonly initialization: Promise<void>;
   private closing = false;
   private disposal?: Promise<void>;
-  constructor(options: TessarOptions) {
+  constructor(options: TessarOptions<any>) {
     this.registry = new RuntimeRegistry(options);
     this.sessions = new SessionRegistry(this.registry, (id, session) => this.hub.attach(id, session), session => this.hub.remove(session));
     this.initialization = this.initialize();
@@ -48,10 +48,10 @@ export class RuntimeContext {
   }
 }
 
-export function createRuntime(tessar: Tessar, options: TessarOptions): void {
+export function createRuntime(tessar: Tessar<any>, options: TessarOptions<any>): void {
   contexts.set(tessar, new RuntimeContext(options));
 }
-export function runtimeFor(tessar: Tessar): RuntimeContext {
+export function runtimeFor(tessar: Tessar<any>): RuntimeContext {
   const runtime = contexts.get(tessar);
   if (!runtime) throw new TessarServerError("InvalidConfiguration", "Expected a Tessar instance");
   return runtime;

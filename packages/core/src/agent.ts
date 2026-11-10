@@ -7,6 +7,7 @@ import type {
   ModelRef,
 } from "./models/contract.js";
 import type { Scope, InterruptRecord, StreamLimits } from "./state/schema.js";
+import { matchesScope, normalizeScope } from "./state/scope.js";
 import type { StreamRecord } from "./trace/records.js";
 import type { StorageBackend } from "./state/storage-ports.js";
 import type { PluginHost } from "./plugins/host.js";
@@ -79,6 +80,7 @@ import {
 const ERROR_CODE = {
   INVALID_CONFIGURATION: "InvalidConfiguration",
   DISPOSED: "Disposed",
+  THREAD_NOT_FOUND: "ThreadNotFound",
 } as const;
 
 export type ModelSelection = ModelAdapter | Model | ModelRef;
@@ -247,6 +249,7 @@ export class Agent<M extends ModelSelection = ModelSelection> {
   async sendSignal(options: SendSignalOptions): Promise<void> {
     if (this.closed) fail(ERROR_CODE.DISPOSED, "Agent closed");
     const message = createSignalMessage(options);
+    const scope = options.scope === undefined ? undefined : normalizeScope(options.scope);
     const persist = options.persist ?? true;
     const box = findSignalTarget(this, options);
     if (options.threadId !== undefined) {
@@ -256,6 +259,8 @@ export class Agent<M extends ModelSelection = ModelSelection> {
           "Thread signal targets require a live Session",
         );
       const controller = this.controller;
+      if (scope !== undefined)
+        await controller.queries.requireThread(options.threadId, { scope });
       const session = controller.signalSession(
         options.threadId,
         box?.frame?.request.session,
@@ -299,6 +304,10 @@ export class Agent<M extends ModelSelection = ModelSelection> {
       );
     }
     if (!box) fail("StreamNotFound", "Signal target is not active");
+    if (scope !== undefined) {
+      if (box.scope === undefined) await box.runtime.queries.requireThread(box.threadId, { scope });
+      else if (!matchesScope(box.scope, scope)) fail(ERROR_CODE.THREAD_NOT_FOUND, "Thread does not match query");
+    }
     deliverSignal(this.executionContext(box.runtime), box, message, persist);
   }
   /** @internal Shared admission for Thread, Session and testing. */
