@@ -21,7 +21,7 @@ export default new Tessar({ agents: [assistant] });
 ```
 
 ```sh
-npx tessar dev
+npx @tessar/cli dev
 ```
 
 The CLI loads that default export, reads the project's optional `.env`, initializes
