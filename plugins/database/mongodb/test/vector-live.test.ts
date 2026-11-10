@@ -203,7 +203,14 @@ describe.skipIf(!searchUri)("MongoDB Search vector (requires TESSAR_TEST_MONGODB
     const embedding = model();
     const { store, database, connect } = await fixture(embedding, searchUri!);
     const ids = await store.insert([content("alpha alpha alpha", { keep: false }), content("alpha beta", { keep: true }), content("unrelated")]);
-    const results = await visible(() => store.searchBM25("alpha"), rows => rows.length === 2);
+    const results = await visible(() => store.searchBM25("alpha"), rows => rows.length === 2).catch(async error => {
+      const collections = await database.listCollections({}, { nameOnly: true }).toArray();
+      for (const { name } of collections) {
+        const indexes = await database.collection(name).aggregate<{ name: string; latestDefinition: unknown }>([{ $listSearchIndexes: {} }]).toArray();
+        if (indexes.length) console.error("MongoDB Search definitions:", JSON.stringify(indexes.map(index => ({ name: index.name, definition: index.latestDefinition }))));
+      }
+      throw error;
+    });
     expect(new Set(results.map(row => row.id))).toEqual(new Set(ids.slice(0, 2)));
     expect(results.every(row => Number.isFinite(row.score) && !("vector" in row))).toBe(true);
     expect((await store.searchBM25("alpha", { topK: 1, filter: { metadata: { keep: true } } })).map(row => row.id)).toEqual([ids[1]]);
