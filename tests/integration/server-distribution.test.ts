@@ -25,7 +25,8 @@ test("server tarball installs independently and public declarations compile", as
   try {
     const archives: string[] = [];
     for (const path of ["packages/core", "packages/server", "integrations/auth/api-key"]) {
-      const packed = await command(["pack", "--json", "--pack-destination", directory], resolve(path));
+      await execute(process.execPath, [resolve("scripts/copy-license.mjs")], { cwd: resolve(path), windowsHide: true });
+      const packed = await command(["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", directory], resolve(path));
       archives.push(resolve(directory, JSON.parse(packed.stdout).filename));
     }
     const project = join(directory, "application"); await mkdir(project);

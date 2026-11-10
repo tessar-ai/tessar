@@ -27,7 +27,9 @@ async function linkSdk(project: string, backend: string) {
   if (backend === "postgresql") dependencies.push("pg", "@types/pg");
   if (backend === "mongodb") dependencies.push("mongodb");
   for (const name of dependencies) {
-    const source = name.startsWith("@tessar/") ? `packages/${name.slice(8)}` : `node_modules/${name}`;
+    const source = name.startsWith("@tessar/")
+      ? `${name === `@tessar/${backend}` && backend !== "memory" ? "plugins/database" : "packages"}/${name.slice(8)}`
+      : `node_modules/${name}`;
     const target = join(project, "node_modules", name);
     await mkdir(dirname(target), { recursive: true });
     await symlink(realpathSync(resolve(source)), target, process.platform === "win32" ? "junction" : "dir");

@@ -30,7 +30,7 @@ test("client tarball installs alone without core, server or zod and bundles with
   try {
     const archives: string[] = [];
     for (const name of ["client"]) {
-      const packed = await command(["pack", "--json", "--pack-destination", directory], resolve("packages", name));
+      const packed = await command(["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", directory], resolve("packages", name));
       archives.push(resolve(directory, JSON.parse(packed.stdout).filename));
     }
     const project = join(directory, "application"); await mkdir(project);

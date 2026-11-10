@@ -153,6 +153,18 @@ describe("MongoDBVectorStore", () => {
     expect(f.session.withTransaction).toHaveBeenCalledOnce();
   });
 
+  it("accepts MongoDB's explicit default string mapping and rejects changed scoring fields", async () => {
+    const f = fixture(); await f.store.insert([f.content]);
+    await expect(f.store.searchBM25("hello")).rejects.toMatchObject({ code: "InvalidState" });
+    const index = f.data().indexes[0];
+    index.latestDefinition = structuredClone(index.definition);
+    Object.assign(index.latestDefinition.mappings.fields.text, { indexOptions: "offsets", store: true, norms: "include" });
+    index.queryable = true;
+    await expect(f.store.searchBM25("hello")).resolves.toEqual([]);
+    index.latestDefinition.mappings.fields.text.norms = "omit";
+    await expect(f.store.searchBM25("hello")).rejects.toMatchObject({ code: "InvalidConfiguration" });
+  });
+
   it("rejects oversized tokens and invalid options before any provider I/O", async () => {
     const f = fixture();
     await expect(f.store.insert([{ ...f.content, metadata: { huge: "é".repeat(17000) } }])).rejects.toMatchObject({ code: "InvalidData" });

@@ -118,7 +118,7 @@ it("packs and installs the standalone CLI and scaffolds from a different working
     await writeFile(join(host, "package.json"), JSON.stringify({ private: true }));
     const packed = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", root], resolve("packages/cli"), cache);
     const tarball = resolve(root, JSON.parse(packed.stdout).filename);
-    const corePacked = await command("pnpm", ["pack", "--json", "--pack-destination", root], resolve("packages/core"), cache);
+    const corePacked = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", root], resolve("packages/core"), cache);
     const zodPacked = await command("pnpm", ["pack", "--config.ignore-scripts=true", "--config.manage-package-manager-versions=false", "--json", "--pack-destination", root], realpathSync(resolve("node_modules/zod")), cache);
     const archives = [resolve(root, JSON.parse(corePacked.stdout).filename), resolve(root, JSON.parse(zodPacked.stdout).filename), tarball];
     for (const dependency of ["hono", "@hono/node-server"]) {
