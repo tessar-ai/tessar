@@ -1,6 +1,6 @@
 {
   "name": "@tessar/postgresql",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "license": "Apache-2.0",
   "description": "PostgreSQL persistence for Tessar state, checkpoints and indexed vector storage.",
   "keywords": ["tessar","ai-agent","postgresql","postgres","storage","persistence","checkpoints","typescript"],
