@@ -108,5 +108,5 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test --maxWorkers 4
-      - run: pnpm test:integration --maxWorkers 4
+      - run: pnpm test:integration --maxWorkers ${{ runner.os == 'Windows' && 2 || 4 }}
       - run: pnpm check:boundaries

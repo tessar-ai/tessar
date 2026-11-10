@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { delimiter, dirname } from "node:path";
 
 const execute = promisify(execFile);
@@ -29,9 +29,15 @@ test("server tarball installs independently and public declarations compile", as
       const packed = await command(["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", directory], resolve(path));
       archives.push(resolve(directory, JSON.parse(packed.stdout).filename));
     }
+    const external: Record<string, string> = {};
+    for (const name of ["hono", "@hono/node-server", "zod"]) {
+      const source = name === "zod" ? resolve("node_modules", name) : resolve("packages/server/node_modules", name);
+      const packed = await command(["pack", "--config.ignore-scripts=true", "--config.manage-package-manager-versions=false", "--json", "--pack-destination", directory], realpathSync(source));
+      external[name] = `file:${resolve(directory, JSON.parse(packed.stdout).filename)}`;
+    }
     const project = join(directory, "application"); await mkdir(project);
     await writeFile(join(project, "package.json"), JSON.stringify({ private: true, type: "module", packageManager: "pnpm@11.5.3",
-      dependencies: { "@tessar/core": `file:${archives[0]}`, "@tessar/server": `file:${archives[1]}`, "@tessar/auth-api-key": `file:${archives[2]}`, zod: "4.6.7" } }));
+      dependencies: { "@tessar/core": `file:${archives[0]}`, "@tessar/server": `file:${archives[1]}`, "@tessar/auth-api-key": `file:${archives[2]}`, zod: external.zod }, pnpm: { overrides: external } }));
     await command(["install", "--offline", "--ignore-scripts"], project);
     const manifest = JSON.parse(await readFile(join(project, "node_modules/@tessar/server/package.json"), "utf8"));
     expect(manifest.peerDependencies["@tessar/core"]).not.toContain("workspace:");

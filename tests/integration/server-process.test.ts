@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { createServer } from "node:net";
 
 const entry = resolve("tests/fixtures/apps/server/dist/main.js");
+const PROCESS_WAIT_TIMEOUT_MS = 10000;
 function launch(env: Record<string, string> = {}) {
   const child = spawn(process.execPath, [entry], { env: { ...process.env, ...env }, windowsHide: true, stdio: "pipe" });
   let stdout = "", stderr = "";
@@ -14,7 +15,7 @@ function launch(env: Record<string, string> = {}) {
   const exited = new Promise<number | null>((resolve, reject) => { child.once("error", reject); child.once("exit", resolve); });
   return { child, exited, output: () => ({ stdout, stderr }),
     async url() {
-      await expect.poll(() => stdout.match(/http:\/\/[^\s]+/)?.[0], { timeout: 10000 }).toBeTruthy();
+      await expect.poll(() => stdout.match(/http:\/\/[^\s]+/)?.[0], { timeout: PROCESS_WAIT_TIMEOUT_MS }).toBeTruthy();
       return stdout.match(/http:\/\/[^\s]+/)![0];
     },
     async stop() { child.stdin.end(); await exited; },
@@ -42,7 +43,7 @@ test("public-package server persists Session/Thread/records across native libSQL
     await request(c + "/records/notes", "POST", { data: { saved: true } });
     const receipt = await request(s + "/follow-up", "POST", { input: "hello" });
     expect(receipt.threadId).toBe(thread.id);
-    await expect.poll(async () => (await request(s + "/state")).status).toBe("completed");
+    await expect.poll(async () => (await request(s + "/state")).status, { timeout: PROCESS_WAIT_TIMEOUT_MS }).toBe("completed");
     expect((await request("/calls")).count).toBe(1);
     await processHandle.stop();
     processHandle = launch(env); url = await processHandle.url();
@@ -74,7 +75,7 @@ test("startup errors retain diagnostics and return a nonzero exit", async () => 
     ] as const) {
       const host = launch(env);
       try {
-        await expect.poll(() => host.output().stderr, { timeout: 10000 }).toContain(expected);
+        await expect.poll(() => host.output().stderr, { timeout: PROCESS_WAIT_TIMEOUT_MS }).toContain(expected);
         await host.stop();
         expect(await host.exited).toBe(1);
         expect(host.output().stdout).not.toContain("listening");
@@ -97,7 +98,7 @@ test("explicit HTTP resume after restart does not repeat a completed tool effect
     const s = `/api/controllers/fixture/sessions/${session.id}`;
     await request(s + "/threads", "POST", {});
     expect((await request(s + "/follow-up", "POST", { input: "work" })).status).toBe(202);
-    await expect.poll(async () => (await request(s + "/state")).data.status).toBe("suspended");
+    await expect.poll(async () => (await request(s + "/state")).data.status, { timeout: PROCESS_WAIT_TIMEOUT_MS }).toBe("suspended");
     const interrupt = (await request(s + "/state")).data.interrupt;
     expect(await readFile(env.TESSAR_FIXTURE_EFFECT, "utf8")).toBe("effect\n");
     await host.stop();
@@ -105,7 +106,7 @@ test("explicit HTTP resume after restart does not repeat a completed tool effect
     expect((await request(s + "/state")).data.status).toBe("suspended");
     expect((await request("/calls")).data.count).toBe(0);
     expect((await request(s + "/resume", "POST", { interruptId: interrupt.id, value: true })).status).toBe(202);
-    await expect.poll(async () => (await request(s + "/state")).data.status).toBe("completed");
+    await expect.poll(async () => (await request(s + "/state")).data.status, { timeout: PROCESS_WAIT_TIMEOUT_MS }).toBe("completed");
     expect((await request("/calls")).data.count).toBe(1);
     expect(await readFile(env.TESSAR_FIXTURE_EFFECT, "utf8")).toBe("effect\n");
   } finally {
