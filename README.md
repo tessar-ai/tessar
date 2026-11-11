@@ -1,6 +1,6 @@
 <div align="center">
 
-
+<img src="docs\assets\tessar.png" alt="Tessar" width="180" />
 
 <h1>Tessar</h1>
 
