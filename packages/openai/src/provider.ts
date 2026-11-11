@@ -18,12 +18,12 @@ import {
   createClient,
   clientKeys,
   OPENAI_API,
+  OPENAI_ENDPOINT,
   type OpenAIOptions,
 } from "./adapter.js";
 import { OpenAIChatAdapter } from "./chat-adapter.js";
 
 const UNSUPPORTED_OPTION = "UnsupportedOption";
-const OPENAI_ENDPOINT = "https://api.openai.com/v1";
 
 export type OpenAIModelOptions = Omit<
   ResponseCreateParamsStreaming,

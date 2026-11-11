@@ -169,6 +169,9 @@ Reconnect receives a fresh snapshot; event IDs are observation markers, not repl
 cursors. Disconnecting never aborts/replays execution. Explicit abort is separate.
 Slow viewers retain only one pending latest snapshot. Direct Agent SSE keeps
 draining the SDK iterator after the viewer disconnects.
+If the SDK iterator exceeds its event buffer, SSE ends with a viewer-local
+`failed` state containing `ConsumerTooSlow`. This does not abort the execution or
+change its persisted status; a Session can still read its actual state/result.
 
 Memory storage is lost on restart. Durable storage restores persisted data;
 unfinished work requires explicit resume/recover. HTTP accepts JSON model IDs/refs,

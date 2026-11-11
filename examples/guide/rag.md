@@ -182,6 +182,12 @@ const model: EmbeddingModel = new OpenAIEmbedding({
 ```
 
 Pass this configured model into the store for both insertion and semantic search.
+For custom OpenAI-compatible endpoints, `OpenAIEmbedding.ref.connectionId`
+distinguishes the resolved base URL without storing the URL itself. Reopening a
+collection with a different endpoint is rejected, even with the same model name
+and vector dimensions. Older custom-endpoint collections without that identity
+are also rejected; use a new collection for new ingestion. Default OpenAI
+collections remain compatible. No data is automatically migrated or re-embedded.
 For large input arrays, add `batchSize: 100` and `concurrency: 3` to the embedding
 constructor. The adapter splits arrays without changing text and returns vectors
 in input order. Omitting batchSize sends one request; concurrency defaults to 1.

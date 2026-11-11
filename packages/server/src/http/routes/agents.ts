@@ -9,6 +9,8 @@ import { authScope, scoped, visible } from "../access.js";
 
 const AGENTS_PATH = "/api/agents";
 const AGENT_PATH = AGENTS_PATH + "/:agentId";
+const CONSUMER_TARGET = "consumer";
+const FAILED_STATUS = "failed";
 export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, transport: SseTransport, hub: ThreadStateHub) {
   const getAgent = (c: Context) => required(runtimes().agents.get(c.req.param(ROUTE_PARAM.AGENT_ID)!));
   const active = new Map<string, { stream: Stream; scope: Scope }>();
@@ -34,10 +36,18 @@ export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, trans
           hub.observe(event);
           if (stream.id && !key) { key = streamKey(agentId, stream.id); active.set(key, { stream, scope }); }
           if (event.type === stateChanged) { last = event as StateEvent; viewer?.(last); }
+          if (event.type === streamEvents.error && event.payload.target === CONSUMER_TARGET) {
+            // Only this viewer failed; do not publish a failure to the shared Thread state.
+            viewer?.(new EventEnvelope(stateChanged, { state: {
+              messages: [], currentMessage: null, tools: [], interrupt: null, queuedInputs: 0,
+              ...last?.payload.state, status: FAILED_STATUS, error: event.payload.error,
+            } }, event));
+            break;
+          }
         }
       } catch (error) {
         console.error(error);
-        if (last) viewer?.(new EventEnvelope(stateChanged, { state: { ...last.payload.state, status: "failed", error: errorInfo(error) } }, last));
+        if (last) viewer?.(new EventEnvelope(stateChanged, { state: { ...last.payload.state, status: FAILED_STATUS, error: errorInfo(error) } }, last));
       } finally {
         if (key && active.get(key)?.stream === stream) active.delete(key);
         end();

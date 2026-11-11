@@ -1,14 +1,17 @@
 import { Buffer } from "node:buffer";
+import { createHash } from "node:crypto";
 import type OpenAI from "openai";
 import type { ClientOptions } from "openai";
 import type { EmbeddingCreateParams } from "openai/resources/embeddings";
 import { fail, requireId, snapshotModelOptions, TessarError, type JsonObject, type ModelRef } from "@tessar/core";
-import { clientKeys, createClient } from "./adapter.js";
+import { clientKeys, createClient, OPENAI_ENDPOINT } from "./adapter.js";
 
 const ERROR_CODE = {
   INVALID_CONFIGURATION: "InvalidConfiguration",
   INVALID_DATA: "InvalidData",
 } as const;
+const OPENAI_PROVIDER_ID = "openai";
+const ENDPOINT_HASH_ALGORITHM = "sha256";
 
 export type OpenAIEmbeddingOptions = ClientOptions & Omit<EmbeddingCreateParams, "input"> & {
   documentOptions?: JsonObject;
@@ -40,7 +43,6 @@ export class OpenAIEmbedding {
     this.#concurrency = configuration.concurrency ?? 1;
     this.#documentOptions = methodOptions(configuration.documentOptions);
     this.#queryOptions = methodOptions(configuration.queryOptions);
-    this.ref = Object.freeze({ providerId: "openai", modelId: configuration.model });
     const clientOptions = Object.fromEntries(
       clientKeys.filter(key => configuration[key] !== undefined)
         .map(key => [key, configuration[key]]),
@@ -53,6 +55,15 @@ export class OpenAIEmbedding {
       fail("UnsupportedOption", "Embedding input belongs to embedDocuments() or embedQuery()");
     this.#body = snapshotModelOptions(body) as unknown as Readonly<RequestBody>;
     this.#client = createClient(clientOptions);
+    const endpoint = new URL(this.#client.baseURL);
+    endpoint.pathname = endpoint.pathname.replace(/\/+$/, "");
+    const identity = endpoint.toString();
+    this.ref = Object.freeze({
+      providerId: OPENAI_PROVIDER_ID, modelId: configuration.model,
+      ...(identity === OPENAI_ENDPOINT ? {} : {
+        connectionId: createHash(ENDPOINT_HASH_ALGORITHM).update(identity).digest("hex"),
+      }),
+    });
   }
 
   async embedDocuments(input: readonly (string | { text: string })[]): Promise<number[][]> {

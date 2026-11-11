@@ -19,7 +19,8 @@ export class SessionRegistry {
     const key = this.key(controllerId, sessionId);
     let pending = this.sessions.get(key);
     if (!pending) {
-      pending = required(this.runtimes.controllers.get(controllerId)).getSession(sessionId, { scope }).then(required);
+      // Share restoration, not a caller's scoped lookup; visibility is checked below for each request.
+      pending = required(this.runtimes.controllers.get(controllerId)).getSession(sessionId).then(required);
       this.sessions.set(key, pending);
     }
     let session: Session;
