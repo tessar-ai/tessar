@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs\assets\tessar.png" alt="Tessar" width="300" />
+<img src="docs\assets\tessar.png" alt="Tessar" width="200" />
 
 <h1>Tessar</h1>
 
