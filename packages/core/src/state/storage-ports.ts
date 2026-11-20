@@ -99,6 +99,7 @@ export interface StorageBackend {
     page(
       query: StateQuery & PageOptions & { agentId: string },
     ): Promise<Page<SessionRecord>>;
+    /** Validate revision and selected Thread existence/scope atomically before publishing. */
     compareAndSet(
       value: SessionRecord,
       expectedRevision: number,

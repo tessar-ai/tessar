@@ -38,6 +38,10 @@ pnpm test:storage --maxWorkers 4
 These tests use generated schemas/databases and skip when their URLs are absent.
 MongoDB needs a replica set or sharded deployment supporting transactions.
 
+For repeatable local agent execution measurements without a model service, see
+[benchmark/README.md](benchmark/README.md). Benchmarks are manual and separate
+from correctness tests; compare identical workloads and checkpoint semantics.
+
 ## Storage adapter structure
 
 Keep equivalent responsibilities in the same place across libSQL, PostgreSQL and

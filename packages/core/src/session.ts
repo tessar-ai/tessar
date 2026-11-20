@@ -62,6 +62,11 @@ const ERROR_CODE = {
   THREAD_NOT_SELECTED: "ThreadNotSelected",
   SESSION_BUSY: "SessionBusy",
 } as const;
+const RECORD_KIND = {
+  STREAMS: "streams",
+  TOOLS: "tool_executions",
+  INTERRUPTS: "interrupts",
+} as const;
 export interface SessionOptions {
   id?: string;
   scope?: Scope;
@@ -115,15 +120,17 @@ export class Session {
       this.view.update(empty);
       return;
     }
-    const snapshot = await this.selection.snapshot();
+    const snapshot = await this.selection.readSnapshot();
+    const records = { threadId: this.selection.id, atCheckpointId: snapshot.currentCheckpointId };
     const stream = snapshot.activeStreamId
-      ? await this.selection.getStream(snapshot.activeStreamId)
+      ? await this.controller.backend.executions.get(RECORD_KIND.STREAMS, snapshot.activeStreamId, records)
       : null;
     const interruptId = snapshot.execution?.pendingInterruptId;
     const tools = stream
       ? await this.controller.backend.executions.listRecords(
-        "tool_executions",
+        RECORD_KIND.TOOLS,
         this.selection.id,
+        { atCheckpointId: snapshot.currentCheckpointId },
       )
       : [];
     this.view.update({
@@ -131,13 +138,15 @@ export class Session {
       messages: snapshot.state.messages,
       status: stream?.status ?? "idle",
       interrupt: interruptId
-        ? await this.selection.getInterrupt(interruptId)
+        ? await this.controller.backend.executions.get(RECORD_KIND.INTERRUPTS, interruptId, records)
         : null,
       tools: tools
         .filter((tool) => tool.streamId === stream?.id)
         .map(stateTool),
       queuedInputs: this.queue.length,
     });
+    if (snapshot.activeStreamId) this.blocked.add(this.selection.id);
+    else this.blocked.delete(this.selection.id);
   }
   private publishState(patch: Partial<RuntimeState> = {}): void {
     this.notify(stateChanged, {
@@ -522,12 +531,8 @@ export class Session {
           this.context(),
         );
         this.checkThreadSelectionChange();
-        const snapshot = await thread.snapshot();
-        this.checkThreadSelectionChange();
         await this.persist({ selectedThreadId: thread.id });
         this.selection = thread;
-        if (snapshot.activeStreamId) this.blocked.add(id);
-        else this.blocked.delete(id);
         await this.restoreState();
         this.notify(sessionHooks.threadSwitched, {
           previousThreadId,
@@ -653,6 +658,14 @@ export class Session {
       await this.assertCurrent();
       if (this.controlPending)
         fail(ERROR_CODE.SESSION_BUSY, "Session control operation is pending");
+      const selected = this.selection;
+      if (this.blocked.has(selected.id)) {
+        const head = await this.controller.queries.requireThread(selected.id, { scope: selected.scope() });
+        this.check();
+        if (this.controlPending || this.selection !== selected)
+          fail(ERROR_CODE.SESSION_BUSY, "Session selection changed while checking Thread activity");
+        if (!head.activeStreamId) this.blocked.delete(selected.id);
+      }
       const receipt = immutable({
         id: randomIds.next("input"),
         threadId: this.selection.id,
@@ -790,7 +803,7 @@ export class Session {
     await this.foreground?.done;
     this.check();
     if (this.busy) fail(ERROR_CODE.SESSION_BUSY, "Session has active work");
-    const ref = options.model ?? (await thread.snapshot()).execution?.modelRef;
+    const ref = options.model ?? (await thread.readSnapshot()).execution?.modelRef;
     const adapter = ref ? this.controller.sessionModel(ref).adapter : undefined;
     return this.attach(thread, { ...options, adapter }, false);
   }
@@ -822,7 +835,7 @@ export class Session {
       return;
     }
     const thread = await this.target(),
-      snapshot = await thread.snapshot();
+      snapshot = await thread.readSnapshot();
     if (!snapshot.activeStreamId) return;
     await foreground?.done;
     await this.agent.cancel(

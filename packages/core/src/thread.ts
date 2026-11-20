@@ -19,6 +19,7 @@ import { aggregateUsage } from "./trace/usage.js";
 import type { SessionHookHandle } from "./plugins/context.js";
 
 const INVALID_CONFIGURATION = "InvalidConfiguration";
+const THREAD_NOT_FOUND = "ThreadNotFound";
 export interface ExecutionListOptions extends PageOptions {
   status?: string;
 }
@@ -79,17 +80,26 @@ export class Thread {
   private get filter() {
     return { scope: this.scope() };
   }
+  /** @internal Read execution state without scanning model usage history. */
+  async readSnapshot() {
+    const head = await this.query.requireThread(this.id, this.filter),
+      cp = await this.controller.backend.checkpoints.get(head.currentCheckpointId);
+    this.check();
+    if (!cp) fail(THREAD_NOT_FOUND, "Thread checkpoint is no longer available");
+    return {
+      ...cp,
+      activeStreamId: head.activeStreamId,
+      currentCheckpointId: cp.id,
+    };
+  }
   async snapshot() {
-    const cp = await this.query.snapshot(this.id, this.filter),
-      head = await this.query.requireThread(this.id, this.filter),
+    const snapshot = await this.readSnapshot(),
       attempts = await this.controller.backend.executions.listRecords(
         "model_attempts",
         this.id,
       );
     return {
-      ...cp,
-      activeStreamId: head.activeStreamId,
-      currentCheckpointId: cp.id,
+      ...snapshot,
       usage: aggregateUsage(attempts),
     };
   }

@@ -37,6 +37,27 @@ export function storageConformance(
   factory: () => Promise<StorageBackend>,
 ): void {
   describe(name, () => {
+    it("rejects missing, foreign and deleted Session selections without publishing", async () => {
+      const backend = await factory();
+      const harness = await AgentHarness.create({ backend });
+      try {
+        const session = await harness.controller.createSession({ scope: { userId: "one" } });
+        const previous = (await backend.sessions.get(session.id))!;
+        const threads = new ThreadService(backend);
+        const foreign = await threads.create({ scope: { userId: "other" } });
+        const deleted = await threads.create({ scope: { userId: "one" } });
+        await threads.delete(deleted.id);
+        for (const selectedThreadId of ["missing-thread", foreign.id, deleted.id]) {
+          await expect(backend.sessions.compareAndSet({
+            ...previous, selectedThreadId, revision: previous.revision + 1,
+          }, previous.revision)).rejects.toMatchObject({ code: "ThreadNotFound" });
+          expect(await backend.sessions.get(session.id)).toEqual(previous);
+        }
+      } finally {
+        await harness.dispose();
+        await backend.close();
+      }
+    });
     it("lists execution records across a Thread with status-bound paging and isolation", async () => {
       const backend = await factory();
       const harness = await AgentHarness.create({ backend });
