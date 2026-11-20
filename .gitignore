@@ -13,4 +13,5 @@ docs/superpowers
 /plugins/database/*/LICENSE
 /integrations/auth/*/LICENSE
 .pnpm-store
+/benchmark/results/
 tessar-conversation.md

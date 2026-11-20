@@ -1,6 +1,7 @@
 import { stream as streamEvents, input as inputEvents, model as modelEvents, text as textEvents, reasoning as reasoningEvents, tool as toolEvents, message as messageEvents } from "./events/type.js";
 import type { ErrorInfo } from "./errors.js";
 import { immutable, type JsonValue } from "./json.js";
+import { freezeSnapshot, jsonSnapshots } from "./json-snapshot.js";
 import type { ContentPart } from "./messages/parts.js";
 import type { MessageData } from "./messages/message.js";
 export type RuntimePart = {
@@ -78,16 +79,24 @@ export class StateView {
     return this.value;
   }
   update(patch: Partial<RuntimeState>): RuntimeState {
-    return (this.value = immutable({ ...this.value, ...patch }));
+    if (!jsonSnapshots.has(this.value))
+      return (this.value = immutable({ ...this.value, ...patch }));
+    const { messages, ...rest } = patch;
+    const next = { ...this.value, ...immutable(rest) };
+    if (Object.hasOwn(patch, "messages"))
+      next.messages = jsonSnapshots.has(messages!) ? messages! : immutable(messages!);
+    return (this.value = freezeSnapshot(next, true));
   }
   private upsert(
     message: MessageData | RuntimeMessage,
   ): readonly RuntimeMessage[] {
-    return this.value.messages.some((value) => value.id === message.id)
+    message = immutable(message);
+    const messages = this.value.messages.some((value) => value.id === message.id)
       ? this.value.messages.map((value) =>
         value.id === message.id ? message : value,
       )
       : [...this.value.messages, message];
+    return freezeSnapshot(messages, true);
   }
   consume(event: StreamEvent): RuntimeState | null {
     switch (event.type) {
@@ -107,9 +116,9 @@ export class StateView {
         return this.update({
           currentMessage: null,
           error: null,
-          messages: this.value.messages.filter(
-            (message) => message.id !== draft?.id,
-          ),
+          messages: draft ? this.value.messages.filter(
+            (message) => message.id !== draft.id,
+          ) : this.value.messages,
         });
       }
       case textEvents.start:
@@ -198,9 +207,9 @@ export class StateView {
         if (message.role === "assistant") {
           const draft = this.value.currentMessage;
           this.update({
-            messages: this.value.messages.filter(
-              (value) => value.id !== draft?.id,
-            ),
+            messages: draft ? this.value.messages.filter(
+              (value) => value.id !== draft.id,
+            ) : this.value.messages,
             currentMessage: null,
           });
         }

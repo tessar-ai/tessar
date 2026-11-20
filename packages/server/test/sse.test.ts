@@ -56,6 +56,24 @@ test("Agent stream returns state envelopes and completes with one model call", a
   expect(model.calls).toHaveLength(1);
 });
 
+test("Agent SSE reports consumer overflow without failing the stored execution", async () => {
+  const model = new ScriptedProvider([{ text: "x".repeat(4 * 1024 * 1024 + 1024) }]);
+  const agent = new Agent({ id: crypto.randomUUID(), model });
+  const host = await start({ controllers: [new Controller({ id: agent.id, agent })] }); server = host.server;
+  const response = await fetch(host.url + `/api/agents/${agent.id}/stream`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: "question" }),
+  });
+  const frames = (await response.text()).split("\n").filter(line => line.startsWith("data: "))
+    .map(line => JSON.parse(line.slice(6)));
+  const final = frames.at(-1)!;
+  expect(final.payload.state).toMatchObject({ status: "failed", error: { code: "ConsumerTooSlow", source: "tessar" } });
+  const c = `/api/controllers/${agent.id}`;
+  const { data: session } = await host.request(c + "/sessions", "POST", {});
+  const path = c + `/sessions/${session.id}/threads/${final.threadId}/streams`;
+  await expect.poll(async () => (await host.request(path)).data.items[0]?.status).toBe("completed");
+  expect(model.calls).toHaveLength(1);
+});
+
 test("Session SSE initial snapshot and reconnect do not submit input", async () => {
   const host = await start(); server = host.server;
   const { data: [agent] } = await host.request("/api/agents");

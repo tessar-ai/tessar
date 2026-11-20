@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import OpenAI from "openai";
 import { TessarError } from "@tessar/core";
 import * as sdk from "../src/index.js";
@@ -8,6 +8,33 @@ interface Call {
   body: Record<string, unknown>;
   headers: Headers;
 }
+
+it("distinguishes embedding endpoints while preserving stable identities across instances and key rotation", () => {
+  const make = (baseURL?: string, apiKey = "test") => new sdk.OpenAIEmbedding({ apiKey, model: "same-name", baseURL });
+  const first = make("https://first.test/v1");
+  expect(first.ref).not.toEqual(make("https://second.test/v1").ref);
+  expect(first.ref).toEqual(make("https://first.test/v1/", "rotated-key").ref);
+  expect(first.ref).toEqual(make("https://FIRST.test/v1").ref);
+  expect(make("https://first.test/v1?deployment=model/").ref)
+    .not.toEqual(make("https://first.test/v1?deployment=model").ref);
+  expect(make("https://api.openai.com/v1/").ref).toEqual({ providerId: "openai", modelId: "same-name" });
+  expect(make().ref).toEqual(make("https://api.openai.com/v1").ref);
+  const privateEndpoint = make("https://user:secret@endpoint.test/v1?token=private");
+  expect(privateEndpoint.ref.connectionId).toEqual(expect.any(String));
+  expect(JSON.stringify(privateEndpoint.ref)).not.toMatch(/secret|private|endpoint\.test/);
+});
+
+it("uses the SDK-resolved embedding endpoint when configured through the environment", () => {
+  vi.stubEnv("OPENAI_BASE_URL", "https://environment.test/v1");
+  try {
+    const configuration = { apiKey: "test", model: "same-name" };
+    const inferred = new sdk.OpenAIEmbedding(configuration);
+    const explicit = new sdk.OpenAIEmbedding({ ...configuration, baseURL: "https://environment.test/v1/" });
+    const other = new sdk.OpenAIEmbedding({ ...configuration, baseURL: "https://other.test/v1" });
+    expect(inferred.ref).toEqual(explicit.ref);
+    expect(inferred.ref).not.toEqual(other.ref);
+  } finally { vi.unstubAllEnvs(); }
+});
 
 it("forwards separate provider options without inferring task names", async () => {
   const transport = fixture();
@@ -72,7 +99,7 @@ it("exports a standalone OpenAIEmbedding and preserves native options, endpoint 
     defaultHeaders: { "x-custom": "value" }, dimensions: 2, user: "user-a",
     encoding_format: "float", timeout: 1000, maxRetries: 0, fetch: transport.fetch,
   });
-  expect(model.ref).toEqual({ providerId: "openai", modelId: "fixture" });
+  expect(model.ref).toEqual({ providerId: "openai", modelId: "fixture", connectionId: expect.any(String) });
   expect(Object.isFrozen(model.ref)).toBe(true);
   expect(await model.embedDocuments(["first\nline", "second"])).toEqual([[1, 2], [3, 4]]);
   expect(transport.calls).toHaveLength(1);

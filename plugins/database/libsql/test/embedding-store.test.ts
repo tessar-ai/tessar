@@ -1,6 +1,7 @@
 import { createTestDatabase } from "./database-fixture.js";
 import { expect, it, vi } from "vitest";
 import { LibsqlVectorStore } from "@tessar/libsql/vector";
+import { OpenAIEmbedding } from "@tessar/openai";
 import Database from "libsql";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -15,6 +16,36 @@ function model() {
     embedDocuments: vi.fn(async () => [[1, 0]]), embedQuery: vi.fn(async () => [1, 0])
   };
 }
+
+it("rejects reopening a collection with the same model name at a different embedding endpoint", async () => {
+  const database = createTestDatabase(":memory:");
+  const embedding = (baseURL: string) => new OpenAIEmbedding({
+    apiKey: "test", model: "same-name", baseURL, encoding_format: "float",
+    fetch: async () => Response.json({ data: [{ index: 0, embedding: [1, 0] }] }),
+  });
+  const store = new LibsqlVectorStore({ database, embedding: embedding("https://first.test/v1") });
+  try { await store.insert([content]); } finally { await store.close(); }
+  expect(() => new LibsqlVectorStore({ database, embedding: embedding("https://second.test/v1") }))
+    .toThrow(/different embedding model/);
+  const reopened = new LibsqlVectorStore({ database, embedding: embedding("https://first.test/v1/") });
+  try { expect(await reopened.list()).toHaveLength(1); } finally { await reopened.close(); }
+});
+
+it.each(["https://api.openai.com/v1", "https://custom.test/v1"])(
+  "handles legacy collections without endpoint identity safely (%s)", async baseURL => {
+    const database = createTestDatabase(":memory:");
+    const legacy = { ...model(), ref: { providerId: "openai", modelId: "same-name" } };
+    const store = new LibsqlVectorStore({ database, embedding: legacy });
+    try { await store.insert([content]); } finally { await store.close(); }
+    const embedding = new OpenAIEmbedding({ apiKey: "test", model: "same-name", baseURL });
+    if (baseURL === "https://api.openai.com/v1") {
+      const reopened = new LibsqlVectorStore({ database, embedding });
+      try { expect(await reopened.list()).toHaveLength(1); } finally { await reopened.close(); }
+    } else {
+      expect(() => new LibsqlVectorStore({ database, embedding })).toThrow(/different embedding model/);
+    }
+  },
+);
 
 async function filename() {
   const directory = await mkdtemp(join(tmpdir(), "tessar-embedding-store-"));
