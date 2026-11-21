@@ -2,6 +2,7 @@
 
 Measure Tessar's TypeScript execution overhead before considering native code.
 See [Memory lifecycle](memory-lifecycle.md) for retained-heap measurements and cache/queue limits.
+See [Rust feasibility](rust-analysis.md) for the fresh baseline, remaining CPU work and proposed native spike.
 The fixed in-memory provider has no network, timers, request cloning or variable
 model decisions. Every tool returns the same in-memory result. The benchmark
 uses the real Agent, Controller, memory backend, checkpoints and stream iterator.
