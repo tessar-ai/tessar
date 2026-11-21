@@ -1,4 +1,5 @@
 import type OpenAI from "openai";
+import { createHash } from "node:crypto";
 import type { ResponseCreateParamsStreaming } from "openai/resources/responses/responses";
 import type { ChatCompletionCreateParamsStreaming } from "openai/resources/chat/completions/completions";
 import {
@@ -18,12 +19,13 @@ import {
   createClient,
   clientKeys,
   OPENAI_API,
+  OPENAI_ENDPOINT,
   type OpenAIOptions,
 } from "./adapter.js";
 import { OpenAIChatAdapter } from "./chat-adapter.js";
 
 const UNSUPPORTED_OPTION = "UnsupportedOption";
-const OPENAI_ENDPOINT = "https://api.openai.com/v1";
+const ENDPOINT_HASH_ALGORITHM = "sha256";
 
 export type OpenAIModelOptions = Omit<
   ResponseCreateParamsStreaming,
@@ -140,11 +142,17 @@ export class OpenAIChat<
           : requireId(connectionId, "connection id"),
       resolver: new ProfileResolver(),
     };
+    const endpoint = selected.client.baseURL.replace(/\/$/, "");
+    const address = new URL(endpoint);
+    // SDK URLs may contain credentials; persist only their identity, not their secrets.
+    const savedEndpoint = address.username || address.password || address.search || address.hash
+      ? ENDPOINT_HASH_ALGORITHM + ":" + createHash(ENDPOINT_HASH_ALGORITHM).update(endpoint).digest("hex")
+      : endpoint;
     const descriptor = Object.freeze({
       providerId,
       connectionId: selected.identity,
       protocol: api,
-      endpoint: selected.client.baseURL.replace(/\/$/, ""),
+      endpoint: savedEndpoint,
     });
     super(
       clientOptions,
@@ -173,7 +181,7 @@ export class OpenAIChat<
     this.registration = {
       id: providerId,
       create: (modelId) => this.withModel(modelId),
-      endpoint: clientOptions.baseURL ?? OPENAI_ENDPOINT,
+      endpoint: savedEndpoint,
       metadataPartition: metadataPartition ?? selected.identity,
       catalogModelRef: (ref) =>
         officialEndpoint

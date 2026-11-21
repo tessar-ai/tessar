@@ -1,5 +1,5 @@
 import { fail, requireId } from "../errors.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
 export interface InstructionSection {
   readonly id: string;
   readonly content: string;

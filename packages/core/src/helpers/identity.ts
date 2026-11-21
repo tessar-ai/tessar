@@ -1,4 +1,4 @@
-import { fail } from "./errors.js";
+import { fail } from "../errors.js";
 
 type Reservation = {
   entries: Map<string, WeakRef<object>>;

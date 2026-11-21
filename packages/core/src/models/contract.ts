@@ -1,6 +1,6 @@
 import type { Instruction } from "../instructions/instruction.js";
 import type { MessageData } from "../messages/message.js";
-import type { JsonObject } from "../json.js";
+import type { JsonObject } from "../helpers/json.js";
 import type { ModelUsage } from "../trace/usage.js";
 import type { MetadataResolver } from "./profile.js";
 export interface ModelRef {

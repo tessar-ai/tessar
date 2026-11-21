@@ -21,13 +21,14 @@ import {
   type ValueRegistration,
 } from "./registry.js";
 import { definePluginState } from "../state/plugin-state.js";
-import { systemClock } from "../json.js";
+import { systemClock } from "../helpers/json.js";
 import { guardStorage } from "../state/storage-errors.js";
 import type { StorageBackend } from "../state/storage-ports.js";
 
 const REGISTRATION_CONFLICT = "RegistrationConflict";
 export class PluginHost {
   private slots: PluginSlot[] = [];
+  private readonly capabilityKeys = new Set<string>();
   private definitions = new Map<string, { kind: EventKind; version: number }>(
     Object.entries(hookKinds).map(([name, kind]) => [
       name,
@@ -71,6 +72,8 @@ export class PluginHost {
   ) {
     this.diagnostics = options.diagnostics ?? (() => { });
     this.values = options.values ?? [];
+    for (const value of this.values)
+      this.capabilityKeys.add(JSON.stringify([value.kind, value.id]));
     this.storage = options.storage;
   }
   async initialize(plugins: readonly Plugin[]): Promise<void> {
@@ -115,13 +118,9 @@ export class PluginHost {
             "InvalidTransition",
             "Storage backend is fixed after initialization",
           );
-        if (
-          [
-            ...this.values,
-            ...this.slots.filter((s) => !s.detached).flatMap((s) => s.values),
-            ...slot.values,
-          ].some((v) => v.kind === kind && v.id === id)
-        )
+        const key = JSON.stringify([kind, id]);
+        if (this.capabilityKeys.has(key) ||
+          (slot.detached && slot.values.some((v) => v.kind === kind && v.id === id)))
           fail(REGISTRATION_CONFLICT, "Capability already registered");
         slot.values.push({
           kind,
@@ -132,6 +131,7 @@ export class PluginHost {
           pluginVersion: plugin.version ?? 1,
           configurationId,
         });
+        if (!slot.detached) this.capabilityKeys.add(key);
       };
       const tessar: PluginContext = {
         registry: { register },
@@ -256,7 +256,7 @@ export class PluginHost {
         this.diagnostics(
           errorInfo(error, { source: "plugin", pluginId: plugin.id }),
         );
-        slot.detached = true;
+        this.detachSlot(slot);
         await this.releaseSlot(slot);
         throw error;
       }
@@ -266,9 +266,16 @@ export class PluginHost {
     return this.serialize(async () => {
       const slot = this.slots.find((s) => s.plugin.id === id && !s.detached);
       if (!slot) return;
-      slot.detached = true;
+      this.detachSlot(slot);
       await this.releaseSlot(slot);
     });
+  }
+  private detachSlot(slot: PluginSlot): void {
+    if (slot.detached) return;
+    slot.detached = true;
+    this.slots = this.slots.filter(value => value !== slot);
+    for (const value of slot.values)
+      this.capabilityKeys.delete(JSON.stringify([value.kind, value.id]));
   }
   private async releaseSlot(slot: PluginSlot): Promise<void> {
     if (!slot.detached || slot.references || slot.disposed) return;
@@ -330,7 +337,7 @@ export class PluginHost {
     this.closed = true;
     return (this.disposal ??= this.serialize(async () => {
       for (const slot of this.slots.slice().reverse()) {
-        slot.detached = true;
+        this.detachSlot(slot);
         await this.releaseSlot(slot);
       }
     }));

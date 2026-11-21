@@ -1,4 +1,4 @@
-import { assertJson, immutable, type JsonValue } from "../json.js";
+import { assertJson, immutable, type JsonValue } from "../helpers/json.js";
 
 /** A tool control value; ordinary JSON is never interpreted as suspension. */
 export class ToolSuspension {

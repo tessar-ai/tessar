@@ -32,7 +32,7 @@ import {
   type IdGenerator,
   type JsonObject,
   type JsonValue,
-} from "./json.js";
+} from "./helpers/json.js";
 import {
   normalizeInstruction,
   type Instruction,
@@ -61,8 +61,9 @@ import { services } from "./engine/services.js";
 import { callAgent, modelRef, readOutcome } from "./engine/call.js";
 import type { ExecutionRuntime } from "./engine/runtime.js";
 import { isModelAdapter } from "./models/stream.js";
-import { reserveId } from "./identity.js";
+import { reserveId } from "./helpers/identity.js";
 import { createSignalMessage, type SendSignalOptions } from "./signal.js";
+import { InputCapacity } from "./helpers/input-capacity.js";
 import {
   reserveSignals,
   releaseSignals,
@@ -161,6 +162,7 @@ export class Agent<M extends ModelSelection = ModelSelection> {
   private readonly active = new Map<string, ExecutionFrame>();
   private readonly reservedStreamIds = new Set<string>();
   private readonly pendingModels = new Map<string, ModelAdapter>();
+  private readonly signalCapacity = new InputCapacity();
   private closed = false;
   private readonly releaseId: () => void;
   private readonly resumeAdmissions = new Map<
@@ -248,67 +250,72 @@ export class Agent<M extends ModelSelection = ModelSelection> {
   }
   async sendSignal(options: SendSignalOptions): Promise<void> {
     if (this.closed) fail(ERROR_CODE.DISPOSED, "Agent closed");
+    this.signalCapacity.check(options);
     const message = createSignalMessage(options);
-    const scope = options.scope === undefined ? undefined : normalizeScope(options.scope);
-    const persist = options.persist ?? true;
-    const box = findSignalTarget(this, options);
-    if (options.threadId !== undefined) {
-      if (!this.controller)
-        fail(
-          "ThreadNotSelected",
-          "Thread signal targets require a live Session",
-        );
-      const controller = this.controller;
-      if (scope !== undefined)
-        await controller.queries.requireThread(options.threadId, { scope });
-      const session = controller.signalSession(
-        options.threadId,
-        box?.frame?.request.session,
-      );
-      return session.receiveSignal(
-        options.threadId,
-        message,
-        persist,
-        async () => {
-          let current = findSignalTarget(this, options);
-          if (current && !current.accepting) return false;
-          if (!current) {
-            const head = await controller.queries.requireThread(
-              options.threadId!,
-              { scope: session.scope() },
-            );
-            if (!head.activeStreamId) return false;
-            const cp = await controller.backend.checkpoints.get(
-              head.currentCheckpointId,
-            );
-            if (!cp?.execution?.pendingInterruptId)
-              fail(
-                "RecoveryRequired",
-                "Recover Thread before delivering signal",
-              );
-            current = retainedSignals(
-              this,
-              head.activeStreamId,
-              head.id,
-              controller,
-            );
-          }
-          deliverSignal(
-            this.executionContext(current.runtime),
-            current,
-            message,
-            persist,
+    const release = this.signalCapacity.reserve(message);
+    try {
+      const scope = options.scope === undefined ? undefined : normalizeScope(options.scope);
+      const persist = options.persist ?? true;
+      const box = findSignalTarget(this, options);
+      if (options.threadId !== undefined) {
+        if (!this.controller)
+          fail(
+            "ThreadNotSelected",
+            "Thread signal targets require a live Session",
           );
-          return true;
-        },
-      );
-    }
-    if (!box) fail("StreamNotFound", "Signal target is not active");
-    if (scope !== undefined) {
-      if (box.scope === undefined) await box.runtime.queries.requireThread(box.threadId, { scope });
-      else if (!matchesScope(box.scope, scope)) fail(ERROR_CODE.THREAD_NOT_FOUND, "Thread does not match query");
-    }
-    deliverSignal(this.executionContext(box.runtime), box, message, persist);
+        const controller = this.controller;
+        if (scope !== undefined)
+          await controller.queries.requireThread(options.threadId, { scope });
+        const session = controller.signalSession(
+          options.threadId,
+          box?.frame?.request.session,
+        );
+        await session.receiveSignal(
+          options.threadId,
+          message,
+          persist,
+          async () => {
+            let current = findSignalTarget(this, options);
+            if (current && !current.accepting) return false;
+            if (!current) {
+              const head = await controller.queries.requireThread(
+                options.threadId!,
+                { scope: session.scope() },
+              );
+              if (!head.activeStreamId) return false;
+              const cp = await controller.backend.checkpoints.get(
+                head.currentCheckpointId,
+              );
+              if (!cp?.execution?.pendingInterruptId)
+                fail(
+                  "RecoveryRequired",
+                  "Recover Thread before delivering signal",
+                );
+              current = retainedSignals(
+                this,
+                head.activeStreamId,
+                head.id,
+                controller,
+              );
+            }
+            deliverSignal(
+              this.executionContext(current.runtime),
+              current,
+              message,
+              persist,
+            );
+            return true;
+          },
+        );
+        return;
+      }
+      if (!box) fail("StreamNotFound", "Signal target is not active");
+      if (scope !== undefined) {
+        if (box.scope === undefined) await box.runtime.queries.requireThread(box.threadId, { scope });
+        else if (!matchesScope(box.scope, scope)) fail(ERROR_CODE.THREAD_NOT_FOUND, "Thread does not match query");
+      }
+      deliverSignal(this.executionContext(box.runtime), box, message, persist);
+    } finally { release(); }
   }
   /** @internal Shared admission for Thread, Session and testing. */
   admit(

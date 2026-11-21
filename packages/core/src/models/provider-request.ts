@@ -1,5 +1,5 @@
 import { fail } from "../errors.js";
-import { assertJson, immutable } from "../json.js";
+import { assertJson, immutable } from "../helpers/json.js";
 import type { ProviderRequest } from "./contract.js";
 
 const INVALID_HOOK_RESULT = "InvalidHookResult";

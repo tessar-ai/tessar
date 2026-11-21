@@ -27,6 +27,7 @@ import {
 import { decodeOutput, encodeInput } from "./codec.js";
 
 const UNSUPPORTED_OPTION = "UnsupportedOption";
+export const OPENAI_ENDPOINT = "https://api.openai.com/v1";
 export const OPENAI_API = { RESPONSES: "responses", CHAT_COMPLETIONS: "chat-completions" } as const;
 export interface OpenAIOptions extends ClientOptions {
   providerId?: string;

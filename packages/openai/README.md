@@ -147,8 +147,11 @@ const queryVector = await model.embedQuery("How many days of leave do employees 
 The instance runs directly and matches the `EmbeddingModel` interface exported
 by `@tessar/rag`. This package does not depend on RAG or its document parsers.
 
-`model.ref` is readonly and frozen: `{ providerId: "openai", modelId: modelName }`.
-It exposes no API key or transport headers. A vector store can receive this
+`model.ref` is readonly and frozen: `{ providerId: "openai", modelId: modelName }`
+for the default OpenAI endpoint. Other endpoints include a stable `connectionId`
+derived from a SHA-256 hash of the SDK-resolved base URL, ignoring trailing
+slashes. The URL itself, API key and transport headers are not stored in the ref.
+A vector store can receive this
 instance as `embedding`, persist its identity and perform document/query embedding
 without repeating the model configuration or dimensions:
 
@@ -172,10 +175,16 @@ try {
 
 Install `@tessar/libsql`, `libsql@0.5.29` and its optional peer `@tessar/rag`
 to use that entry. The application owns and closes the native database.
-Dimensions are inferred by the store from actual vectors. The ref identifies the
-configured model, not its weights or every provider-side configuration change;
-using the same model name at a different compatible endpoint does not itself
-change this adapter's ref. No automatic re-embedding is performed.
+Dimensions are inferred by the store from actual vectors. Changing the endpoint
+changes the ref even when the model name and dimensions match, so a store rejects
+the incompatible connection. Separate instances using the same endpoint share an
+identity, and rotating an API key does not change it. The ref cannot detect
+changed weights or routing behind an unchanged endpoint/model name.
+
+Existing collections using the default OpenAI endpoint keep their identity.
+Older collections made with a custom endpoint lack its connection identity and
+are rejected rather than adopted automatically. Keep their data and use a new
+collection for new ingestion. Tessar does not migrate or re-embed stored data.
 
 | Constructor option | Behavior |
 | --- | --- |
@@ -269,6 +278,14 @@ Recreate that binding after restart. Stored continuity includes provider,
 connection, protocol and effective endpoint; reusing the ID with a different
 endpoint/protocol is rejected. API keys and transport headers are not included
 in the descriptor. Unspecified connection IDs remain random and isolated.
+
+Endpoints containing URL userinfo, a query or a fragment are stored as a SHA-256
+fingerprint in connection descriptors and Responses continuity. HTTP still uses
+the original SDK URL; ordinary endpoints retain their existing representation.
+Existing checkpoints containing a raw URL with userinfo, a query or a fragment
+are not rewritten and no longer match the new fingerprint. Handle that saved
+binding explicitly when restoring it, and rotate any credentials previously
+stored there; Tessar does not migrate or erase it.
 
 Legacy native state has only its old connection ID. An application may explicitly
 reuse that saved ID after verifying the original endpoint/protocol itself; Tessar

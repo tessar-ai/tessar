@@ -1,8 +1,8 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { TessarServerError } from "../errors.js";
 import { registerMiddleware, registerRoute } from "./registration.js";
 import { fields, invalid } from "../runtime/validation.js";
-import { httpError, HTTP_ERROR_CODE, HTTP_ERROR_MESSAGE } from "./protocol.js";
+import { httpError, limitBody, HTTP_ERROR_CODE, HTTP_ERROR_MESSAGE } from "./protocol.js";
 import { registerControllers } from "./routes/controllers.js";
 import { registerSessions } from "./routes/sessions.js";
 import { registerThreads } from "./routes/threads.js";
@@ -23,18 +23,25 @@ export class ServerApplication {
   private readonly transport = new SseTransport();
   constructor(runtime: RuntimeContext, config: ServerOptions<any> = {}) {
     const app = new Hono();
+    app.use("*", (_c, next) => runtime.sessions.request(next));
     app.onError(httpError);
     app.notFound(c => httpError(new TessarServerError(HTTP_ERROR_CODE.NOT_FOUND, HTTP_ERROR_MESSAGE.NOT_FOUND), c));
+    let protectedRoutes: { method: string; pattern: RegExp }[] = [];
+    const builtIn = (c: Context) => {
+      const method = c.req.method === ROUTE_METHOD.HEAD ? ROUTE_METHOD.GET : c.req.method;
+      return protectedRoutes.some(route => route.method === method && route.pattern.test(c.req.path));
+    };
+    app.use("*", async (c, next) => {
+      if (builtIn(c)) await limitBody(c);
+      await next();
+    });
     for (const middleware of config.middlewares ?? []) {
       fields(middleware, ["path", "handler"]);
       const entry = registerMiddleware(middleware.path, middleware.handler);
       app.use(entry.path, entry.handler);
     }
-    let protectedRoutes: { method: string; pattern: RegExp }[] = [];
     if (config.auth) app.use("*", async (c, next) => {
-      const method = c.req.method === ROUTE_METHOD.HEAD ? ROUTE_METHOD.GET : c.req.method;
-      if (protectedRoutes.some(route => route.method === method && route.pattern.test(c.req.path)))
-        await authenticate(c, config.auth!);
+      if (builtIn(c)) await authenticate(c, config.auth!);
       await next();
     });
     registerAgents(app, () => runtime.registry, this.transport, runtime.hub);

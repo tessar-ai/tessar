@@ -1,5 +1,76 @@
 import { expect, it } from "vitest";
+import { queryObjects } from "node:v8";
 import { ModelRegistry } from "../../src/models/registry.js";
+it("releases provider factories and model handles on shutdown", async () => {
+  class Provider { readonly id = "owned"; create(): never { throw Error("unused"); } }
+  const registry = new ModelRegistry();
+  async function seed() {
+    registry.registerProvider(new Provider());
+    await registry.get({ providerId: "owned", modelId: "m" }).refreshProfile();
+  }
+  await seed(); registry.dispose();
+  await new Promise<void>(resolve => setImmediate(resolve));
+  expect(queryObjects(Provider)).toBe(0);
+});
+
+it("removes a detached provider's cached and in-flight profiles without clearing a replacement", async () => {
+  const registry = new ModelRegistry();
+  const gate = Promise.withResolvers<void>();
+  try {
+    const remove = registry.registerProvider({ id: "reloadable", metadataPartition: "stable",
+      create() { throw Error("unused"); }, metadata: { async resolve() { await gate.promise; return { name: "old" }; } },
+    });
+    const old = registry.get({ providerId: "reloadable", modelId: "m" });
+    const pending = old.refreshProfile();
+    remove();
+    registry.registerProvider({ id: "reloadable", metadataPartition: "stable",
+      create() { throw Error("unused"); }, metadata: { async resolve() { return { name: "new" }; } },
+    });
+    const current = registry.get({ providerId: "reloadable", modelId: "m" });
+    const replacement = current.refreshProfile();
+    gate.resolve(); await Promise.all([pending, replacement]);
+    expect(current.profile().name).toBe("new");
+    expect(registry.resolver.cache.size).toBe(1);
+  } finally { gate.resolve(); registry.dispose(); }
+});
+
+it("does not retain profiles after repeated provider removal", async () => {
+  const registry = new ModelRegistry();
+  try {
+    for (let index = 0; index < 10; index++) {
+      const remove = registry.registerProvider({ id: "reloadable", create() { throw Error("unused"); },
+        metadata: { async resolve() { return { name: "profile" }; } },
+      });
+      await registry.get({ providerId: "reloadable", modelId: "m" }).refreshProfile();
+      remove();
+    }
+    expect(registry.resolver.cache.size).toBe(0);
+  } finally { registry.dispose(); }
+});
+
+it.each([false, true])("isolates profiles for separate connections (concurrent: %s)", async concurrent => {
+  const registry = new ModelRegistry();
+  const gate = Promise.withResolvers<void>();
+  registry.registerProvider({
+    id: "custom", create() { throw Error("unused adapter"); },
+    metadata: { async resolve(ref) {
+      await gate.promise;
+      return { contextWindow: ref.connectionId === "a" ? 1000 : 2000 };
+    } },
+  });
+  try {
+    const a = registry.get({ providerId: "custom", modelId: "model", connectionId: "a" });
+    const first = a.refreshProfile();
+    if (!concurrent) { gate.resolve(); await first; }
+    const b = registry.get({ providerId: "custom", modelId: "model", connectionId: "b" });
+    const second = b.refreshProfile();
+    gate.resolve();
+    await Promise.all([first, second]);
+    expect(a.profile()).toMatchObject({ connectionId: "a", contextWindow: 1000 });
+    expect(b.profile()).toMatchObject({ connectionId: "b", contextWindow: 2000 });
+  } finally { gate.resolve(); registry.dispose(); }
+});
+
 it("forgets retained connections when a provider is detached or replaced", () => {
   const registry = new ModelRegistry();
   const adapter = (endpoint: string): import("../../src/models/contract.js").ModelAdapter => ({

@@ -1,4 +1,5 @@
-import { fail } from "./errors.js";
+import { fail } from "../errors.js";
+import { freezeSnapshot, jsonSnapshots } from "./json-snapshot.js";
 
 const INVALID_DATA = "InvalidData";
 export type JsonValue =
@@ -19,6 +20,7 @@ export function assertJson(
   if (typeof value !== "object" || parents.has(value!))
     fail(INVALID_DATA, "Value is not serializable JSON");
   const object = value as object;
+  if (jsonSnapshots.has(object)) return;
   if (
     !Array.isArray(object) &&
     Object.getPrototypeOf(object) !== Object.prototype &&
@@ -42,15 +44,11 @@ export function assertJson(
   parents.delete(object);
 }
 export function deepFreeze<T>(value: T): Readonly<T> {
-  if (value && typeof value === "object") {
-    for (const child of Object.values(value)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value as Readonly<T>;
+  return freezeSnapshot(value, false);
 }
 export function immutable<T>(value: T): Readonly<T> {
   assertJson(value);
-  return deepFreeze(structuredClone(value));
+  return freezeSnapshot(structuredClone(value), true);
 }
 export interface Clock {
   now(): string;

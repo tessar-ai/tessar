@@ -9,7 +9,7 @@ import {
   createTool,
   stream,
 } from "../src/index.js";
-import type { RuntimeState } from "../src/runtime-state.js";
+import { StateView, type RuntimeState } from "../src/runtime-state.js";
 import { ScriptedProvider } from "../src/testing/scripted-provider.js";
 import { fixture } from "./test-fixture.js";
 import { z } from "zod";
@@ -56,9 +56,50 @@ it("publishes immutable incremental snapshots from a standalone stream", async (
   expect(partial).toBeDefined();
   expect(Object.isFrozen(partial.messages)).toBe(true);
   expect(text(partial)).toContain("Hel");
+  const next = snapshots.find((state) => text(state).includes("Hello"))!;
+  expect(next.messages[0]).toBe(partial.messages[0]);
+  const waiting = snapshots.filter(state => state.status === "running" && !state.currentMessage && state.messages.length === 1);
+  expect(waiting.length).toBeGreaterThan(1);
+  for (const state of waiting) expect(state.messages).toBe(waiting[0]!.messages);
   expect(text(snapshots.at(-1)!)).toEqual(["Hi", "Hello"]);
   expect(snapshots.at(-1)!.status).toBe("completed");
   expect(snapshots.at(-1)!.currentMessage).toBeNull();
+});
+
+it("reuses frozen history when only queue state changes", () => {
+  const view = new StateView();
+  const first = view.update({ messages: [MessageCodec.encode(new HumanMessage("previous"))] });
+  const next = view.update({ queuedInputs: 1 });
+  expect(next.messages).toBe(first.messages);
+  expect(first.queuedInputs).toBe(0);
+  expect(next.queuedInputs).toBe(1);
+  expect(Object.isFrozen(next)).toBe(true);
+});
+
+it("detaches caller-owned frozen arrays and their mutable message content", () => {
+  const content = [{ type: "text" as const, text: "original" }];
+  const messages = Object.freeze([{ schemaVersion: 1 as const, id: "source", role: "user" as const, content }]);
+  const view = new StateView();
+  const first = view.update({ messages });
+  content[0]!.text = "changed";
+  const next = view.update({ messages });
+  expect(text(first)).toEqual(["original"]);
+  expect(text(next)).toEqual(["changed"]);
+  expect(Object.isFrozen(first.messages[0]!.content[0])).toBe(true);
+});
+
+it("keeps opaque cloned array properties isolated between snapshots", () => {
+  const values = Object.assign([], { extra: new Date(0) });
+  const messages = [{
+    schemaVersion: 1 as const, id: "opaque", role: "user" as const,
+    content: [{ type: "text" as const, text: "original" }], metadata: { values },
+  }];
+  const view = new StateView();
+  const first = view.update({ messages });
+  const next = view.update({ queuedInputs: 1 });
+  const opaque = (state: RuntimeState) => (state.messages[0]!.metadata!.values as unknown as { extra: Date }).extra;
+  opaque(first).setTime(1000);
+  expect(opaque(next).getTime()).toBe(0);
 });
 
 it("creates and selects a scoped Thread and keeps a Session snapshot across queued turns", async () => {
@@ -300,7 +341,7 @@ it("delivers text before the provider finishes and preserves detailed events", a
   let finished = false;
   const model = {
     ref: { providerId: "live", modelId: "test" },
-    validate() {},
+    validate() { },
     async *stream() {
       yield start("live-answer");
       yield partDelta("live-answer", "Hel", "text", "text");
@@ -357,9 +398,9 @@ it("projects prepared input and removes failed drafts before a retry", async () 
           tessar.hook("message.prepare", (event) =>
             event.payload.role === "user"
               ? {
-                  ...event.payload,
-                  content: [{ type: "text", text: "prepared" }],
-                }
+                ...event.payload,
+                content: [{ type: "text", text: "prepared" }],
+              }
               : event.payload,
           );
           tessar.hook("model.recover", () => ({ decision: "retry" }));

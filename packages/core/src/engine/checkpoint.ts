@@ -6,7 +6,8 @@ import {
   turn as turnHooks,
 } from "../events/type.js";
 import { fail, type ErrorInfo } from "../errors.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
+import { freezeSnapshot, jsonSnapshots } from "../helpers/json-snapshot.js";
 import { type StreamOutcome } from "../events/type.js";
 import { MessageCodec } from "../messages/codec.js";
 import { ToolMessage, type MessageData } from "../messages/message.js";
@@ -90,8 +91,8 @@ async function commitNow(
     revision: frame.cp.revision + 1,
     createdAt: execution.clock.now(),
     cause,
-    state: { ...frame.cp.state, pluginStates: frame.state.snapshots() },
-    execution: frame.cp.execution ? { ...frame.cp.execution } : null,
+    state: freezeSnapshot({ ...frame.cp.state, pluginStates: frame.state.snapshots() }, true),
+    execution: frame.cp.execution ? structuredClone(frame.cp.execution) : null,
   };
   if (cause === "Suspended" && cp.execution?.pendingInterruptId) {
     const record = frame.records.get(
@@ -121,7 +122,11 @@ async function commitNow(
     frame.lease,
   );
   frame.committedRecords = versions;
-  frame.cp = { ...structuredClone(cp), execution: frame.cp.execution };
+  // Frozen native descendants still need copy isolation when they are not proven JSON.
+  frame.cp = {
+    ...(jsonSnapshots.has(cp.state) ? cp : structuredClone(cp)),
+    execution: frame.cp.execution,
+  };
   await execution.hook(frame, checkpointHooks.committed, {
     checkpointId: cp.id,
     revision: cp.revision,

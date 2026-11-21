@@ -11,7 +11,7 @@ import {
   TessarError,
   type ErrorInfo,
 } from "./errors.js";
-import { immutable, randomIds } from "./json.js";
+import { immutable, randomIds } from "./helpers/json.js";
 import { normalizeScope } from "./state/scope.js";
 import { snapshotModelOptions } from "./models/options.js";
 import type { StoredModelSelection, SessionRecord } from "./state/schema.js";
@@ -32,7 +32,9 @@ import { canonicalJson } from "./state/commit.js";
 import { Session, type SessionOptions } from "./session.js";
 import { isModelAdapter } from "./models/stream.js";
 import { toolRegistrations } from "./engine/runtime.js";
-import { reserveId } from "./identity.js";
+import { reserveId } from "./helpers/identity.js";
+
+const MAX_DIAGNOSTICS = 100;
 
 export class Controller {
   private readonly liveSessions = new Set<Session>();
@@ -67,6 +69,7 @@ export class Controller {
     context: EventContext = {},
   ): void => {
     this.diagnostics.push(error);
+    if (this.diagnostics.length > MAX_DIAGNOSTICS) this.diagnostics.shift();
     // Copy only event identity, never execution services from the failing hook.
     const event = new EventEnvelope(
       diagnosticHooks,
@@ -79,7 +82,7 @@ export class Controller {
     );
     void this.hooks
       .dispatch(diagnosticHooks, event.payload, { ...event })
-      .catch(() => {});
+      .catch(() => { });
   };
   /** @internal */ readonly hooks: PluginHost;
   /** @internal */ backend!: StorageBackend;
@@ -145,29 +148,29 @@ export class Controller {
         ...toolRegistrations(this.agent.id, this.agent.listTool()),
         ...(isModelAdapter(model)
           ? [
-              {
-                kind: "provider",
+            {
+              kind: "provider",
+              id: model.ref.providerId,
+              version: 1,
+              pluginId: this.agent.id,
+              pluginVersion: 1,
+              configurationId: model.ref.connectionId ?? null,
+              value: {
                 id: model.ref.providerId,
-                version: 1,
-                pluginId: this.agent.id,
-                pluginVersion: 1,
-                configurationId: model.ref.connectionId ?? null,
-                value: {
-                  id: model.ref.providerId,
-                  create: (modelId: string) => {
-                    const model = this.agent.getModel();
-                    if (!isModelAdapter(model))
-                      fail("MissingProvider", "Executable model is missing");
-                    if (model.ref.modelId === modelId) return model;
-                    if (model.withModel) return model.withModel(modelId);
-                    fail(
-                      "UnsupportedModelSelection",
-                      "This adapter cannot select another model ID",
-                    );
-                  },
-                } satisfies ModelProviderRegistration,
-              },
-            ]
+                create: (modelId: string) => {
+                  const model = this.agent.getModel();
+                  if (!isModelAdapter(model))
+                    fail("MissingProvider", "Executable model is missing");
+                  if (model.ref.modelId === modelId) return model;
+                  if (model.withModel) return model.withModel(modelId);
+                  fail(
+                    "UnsupportedModelSelection",
+                    "This adapter cannot select another model ID",
+                  );
+                },
+              } satisfies ModelProviderRegistration,
+            },
+          ]
           : []),
       ],
     });
@@ -337,7 +340,7 @@ export class Controller {
     if (
       record.selectedModel.connection &&
       canonicalJson(record.selectedModel.connection) !==
-        canonicalJson(selected.stored.connection ?? null)
+      canonicalJson(selected.stored.connection ?? null)
     )
       fail("ModelContextIncompatible", "Session model connection changed");
     const thread = record.selectedThreadId
@@ -354,6 +357,7 @@ export class Controller {
       thread,
     );
     await session.restoreState();
+    this.requireReady();
     this.liveSessions.add(session);
     return session;
   }
@@ -367,7 +371,7 @@ export class Controller {
   dispose(): Promise<void> {
     if (this.disposal) return this.disposal;
     this.disposal = (async () => {
-      if (this.initialization) await this.initialization.catch(() => {});
+      if (this.initialization) await this.initialization.catch(() => { });
       this.phase = "closing";
       const sessions = [...this.liveSessions].map((session) =>
         session.close(true),

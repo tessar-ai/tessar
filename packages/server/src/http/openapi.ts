@@ -97,7 +97,7 @@ export function openapiDocument(routes: readonly { path: string; method: string 
         ...(result.streaming ? { content: { "text/event-stream": { schema: string } } } : result.schema ? { content: { "application/json": { schema: result.schema } } } : {})
       }
     };
-    for (const [status, description] of [[HTTP_STATUS.BAD_REQUEST, "Invalid request"], [HTTP_STATUS.UNAUTHORIZED, "Authentication required"], [HTTP_STATUS.FORBIDDEN, "Request not permitted"], [HTTP_STATUS.NOT_FOUND, "Resource not found"], [HTTP_STATUS.CONFLICT, "State conflict"], [HTTP_STATUS.INTERNAL_SERVER_ERROR, "Unexpected error"], [HTTP_STATUS.BAD_GATEWAY, "Provider error"], [HTTP_STATUS.SERVICE_UNAVAILABLE, "Unavailable runtime or storage"]] as const)
+    for (const [status, description] of [[HTTP_STATUS.BAD_REQUEST, "Invalid request"], [HTTP_STATUS.UNAUTHORIZED, "Authentication required"], [HTTP_STATUS.FORBIDDEN, "Request not permitted"], [HTTP_STATUS.NOT_FOUND, "Resource not found"], [HTTP_STATUS.CONFLICT, "State conflict"], [HTTP_STATUS.PAYLOAD_TOO_LARGE, "Request body too large"], [HTTP_STATUS.TOO_MANY_REQUESTS, "Pending input capacity exceeded"], [HTTP_STATUS.INTERNAL_SERVER_ERROR, "Unexpected error"], [HTTP_STATUS.BAD_GATEWAY, "Provider error"], [HTTP_STATUS.SERVICE_UNAVAILABLE, "Unavailable runtime or storage"]] as const)
       responses[status] = { description, content: { "application/json": { schema: ref("Error") } } };
     const body = route.method === "POST" ? requestSchema(route.path) : undefined;
     (paths[path] ??= {})[route.method.toLowerCase()] = {

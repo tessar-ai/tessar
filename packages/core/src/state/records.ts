@@ -1,5 +1,5 @@
 import { requireId } from "../errors.js";
-import { assertJson, immutable, randomIds, systemClock, type JsonValue } from "../json.js";
+import { assertJson, immutable, randomIds, systemClock, type JsonValue } from "../helpers/json.js";
 import { normalizeScope } from "./scope.js";
 import type { Page, PageOptions, Scope, StateQuery } from "./schema.js";
 

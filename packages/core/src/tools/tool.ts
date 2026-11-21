@@ -5,7 +5,7 @@ import {
   immutable,
   type JsonObject,
   type JsonValue,
-} from "../json.js";
+} from "../helpers/json.js";
 import { ToolMessage } from "../messages/message.js";
 import type { TrackedServices } from "../engine/tracked-effects.js";
 import { ToolSuspension } from "./suspension.js";

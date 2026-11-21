@@ -1,7 +1,10 @@
 export * from "./errors.js";
-export * from "./json.js";
+export * from "./helpers/json.js";
 export * from "./messages/parts.js";
-export * from "./messages/message.js";
+export {
+  Message, HumanMessage, SystemMessage, AssistantMessage, ToolMessage, normalizeContent,
+  type MessageRole, type MessageOptions, type MessageData,
+} from "./messages/message.js";
 export { MessageCodec } from "./messages/codec.js";
 export * from "./instructions/instruction.js";
 export * from "./events/definition.js";
