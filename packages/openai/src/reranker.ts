@@ -15,6 +15,7 @@ export interface OpenAIRerankerOptions {
 export interface RerankOptions {
   topK?: number;
   score_threshold?: number;
+  signal?: AbortSignal;
 }
 
 export type RerankDocument = string | { text: string } | { content: { text: string } };
@@ -53,7 +54,7 @@ export class OpenAIReranker {
       throw new TessarError(ERROR_CODE.INVALID_DATA, "Rerank requires a string query and an array of candidates");
     if (!options || typeof options !== "object" || Array.isArray(options))
       throw new TessarError(ERROR_CODE.INVALID_DATA, "Rerank options must be an object");
-    const { topK = 5, score_threshold } = options;
+    const { topK = 5, score_threshold, signal } = options;
     if (!Number.isSafeInteger(topK) || topK < 1)
       throw new TessarError(ERROR_CODE.INVALID_DATA, "topK must be a positive safe integer");
     if (score_threshold !== undefined && (typeof score_threshold !== "number" || !Number.isFinite(score_threshold)))
@@ -73,6 +74,7 @@ export class OpenAIReranker {
       method: "POST",
       headers: { "content-type": "application/json", authorization: "Bearer " + this.#apiKey },
       body: JSON.stringify({ model: this.#model, query, documents: texts, top_n: limit }),
+      signal,
     });
     if (!response.ok) {
       if (response.body && !response.body.locked)

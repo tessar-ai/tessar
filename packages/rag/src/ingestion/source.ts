@@ -1,4 +1,6 @@
 import { readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { Buffer } from "node:buffer";
 import { extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { fail, requireId } from "@tessar/core";
@@ -18,6 +20,7 @@ export const MIME_TYPE = {
 } as const;
 
 const INVALID_CONFIGURATION = "InvalidConfiguration";
+const SOURCE_TOO_LARGE = "SourceTooLarge";
 
 const extensions: Record<string, string> = {
   ".txt": MIME_TYPE.TEXT,
@@ -56,7 +59,7 @@ function fileMime(path: string): string {
 }
 
 /** Snapshot caller-owned values before any asynchronous source acquisition. */
-export function snapshotSource(value: unknown): ReadSource {
+export function snapshotSource(value: unknown, maxBytes?: number): ReadSource {
   object(value, "source");
   const variants = ["path", "url", "text", "data"].filter((key) =>
     Object.hasOwn(value, key),
@@ -96,6 +99,7 @@ export function snapshotSource(value: unknown): ReadSource {
       fail(INVALID_CONFIGURATION, "source text must be a string");
     if (value.mimeType !== undefined)
       requireId(value.mimeType as string, "source MIME type");
+    if (maxBytes !== undefined) checkSize(Buffer.byteLength(value.text), maxBytes);
     return {
       text: value.text,
       ...(value.mimeType === undefined
@@ -105,6 +109,7 @@ export function snapshotSource(value: unknown): ReadSource {
   }
   if (!(value.data instanceof Uint8Array))
     fail(INVALID_CONFIGURATION, "source data must be Uint8Array");
+  if (maxBytes !== undefined) checkSize(value.data.byteLength, maxBytes);
   return {
     data: new Uint8Array(value.data),
     mimeType: requireId(value.mimeType as string, "source MIME type"),
@@ -117,9 +122,26 @@ export interface LoadedSource {
   uri?: string;
 }
 
+function checkSize(bytes: number, maxBytes: number): void {
+  if (bytes > maxBytes)
+    throw new TessarRagError(SOURCE_TOO_LARGE, `Document source exceeds ${maxBytes} bytes`);
+}
+
+async function readBounded(chunks: AsyncIterable<Uint8Array>, maxBytes: number): Promise<Uint8Array> {
+  const parts: Uint8Array[] = [];
+  let bytes = 0;
+  for await (const part of chunks) {
+    bytes += part.byteLength;
+    checkSize(bytes, maxBytes);
+    parts.push(part);
+  }
+  return Buffer.concat(parts, bytes);
+}
+
 export async function loadSource(
   source: ReadSource,
   signal: AbortSignal,
+  maxBytes?: number,
 ): Promise<LoadedSource> {
   signal.throwIfAborted();
   if ("text" in source && source.text !== undefined)
@@ -133,20 +155,24 @@ export async function loadSource(
     const path = resolve(source.path),
       mimeType = fileMime(path);
     return {
-      data: await readFile(path, { signal }),
+      data: maxBytes === undefined
+        ? await readFile(path, { signal })
+        : await readBounded(createReadStream(path, { signal }), maxBytes),
       mimeType,
       uri: pathToFileURL(path).href,
     };
   }
   const response = await fetch(source.url!, { signal });
   try {
+    const url = new URL(response.url || source.url!);
+    url.username = url.password = url.search = url.hash = "";
     if (!response.ok)
       throw new TessarRagError(
         "SourceReadFailed",
         `HTTP ${response.status} while reading source`,
         {
           source: "provider",
-          details: { status: response.status, url: response.url },
+          details: { status: response.status, url: url.href },
         },
       );
     const type = response.headers
@@ -156,12 +182,16 @@ export async function loadSource(
       .toLowerCase();
     const mimeType =
       !type || type === "application/octet-stream"
-        ? fileMime(new URL(response.url).pathname)
+        ? fileMime(url.pathname)
         : mimeOf(type);
     return {
-      data: new Uint8Array(await response.arrayBuffer()),
+      data: maxBytes === undefined
+        ? new Uint8Array(await response.arrayBuffer())
+        : response.body
+          ? await readBounded(response.body as import("node:stream/web").ReadableStream<Uint8Array>, maxBytes)
+          : new Uint8Array(),
       mimeType,
-      uri: response.url,
+      uri: url.href,
     };
   } finally {
     if (response.body && !response.body.locked)

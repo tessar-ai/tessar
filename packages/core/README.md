@@ -37,6 +37,11 @@ for the same execution. Session callers use `session.resume()` and their existin
 subscription. See the [tool guide](../../examples/guide/tools.md) for user questions,
 conditional approval, UI integration and persistence boundaries.
 
+With only the stream ID, call `await agent.abort(streamId, { reason, scope })`
+to cancel active or waiting work held by the current Agent. Both options are
+optional. REST uses the authenticated scope for this check. Use
+`session.abort()` for executions started by a Session.
+
 ```ts
 import { Agent, Controller, HumanMessage, ToolMessage } from "@tessar/core";
 import { createTool } from "@tessar/core/tool";

@@ -23,6 +23,7 @@ interface Mailbox {
   capacity: InputCapacity;
   reservations: Map<string, () => void>;
   scope?: Scope;
+  sessionOwned?: boolean;
   id: string;
   threadId: string;
   runtime: ExecutionRuntime;
@@ -50,6 +51,7 @@ export function reserveSignals(
   if (request.kind !== "input") return;
   const box = reserveTarget(agent, request.id!, request.threadId, runtime);
   box.scope = normalizeScope(request.scope ?? request.thread?.scope() ?? request.session?.scope());
+  box.sessionOwned = !!request.session;
 }
 
 function reserveTarget(
@@ -88,9 +90,9 @@ export function retainedSignals(
   threadId: string,
   runtime: ExecutionRuntime,
 ): Mailbox {
-  const box =
-    mailboxes.get(agent)?.get(id) ??
-    reserveTarget(agent, id, threadId, runtime);
+  const existing = mailboxes.get(agent)?.get(id);
+  const box = existing ?? reserveTarget(agent, id, threadId, runtime);
+  if (!existing) box.sessionOwned = true;
   box.resolve();
   return box;
 }
@@ -113,6 +115,7 @@ export function bindSignals(
   if (box.frame !== frame) box.failure = undefined;
   box.frame = frame;
   box.scope = frame.cp.state.scope;
+  box.sessionOwned = !!frame.request.session;
   frame.signals = box;
   if (frame.admitted) box.resolve();
 }

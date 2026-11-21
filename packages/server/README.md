@@ -167,6 +167,9 @@ Thread see its admitted execution state. SSE sends `event: state_changed` with
 an EventEnvelope containing `payload.state`, followed by current updates.
 Reconnect receives a fresh snapshot; event IDs are observation markers, not replay
 cursors. Disconnecting never aborts/replays execution. Explicit abort is separate.
+The Agent abort route can also cancel an execution waiting for approval after its
+response has ended, as long as the current runtime still holds that execution.
+For persisted work after restart, use the Session API.
 Idle Session handles use a least-recently-used cache capped at 100 handles and
 16 MiB of estimated serialized state/metadata. Requests, SSE viewers, unfinished
 executions, interruptions and queued input keep their handles pinned. Eviction

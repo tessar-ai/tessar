@@ -60,7 +60,7 @@ Danh mục gồm API ứng dụng, API viết plugin/provider/storage và các s
 
 | Nhóm API | Constructor / tạo đối tượng | Method / callback | Dữ liệu và namespace giữ property |
 | --- | --- | --- | --- |
-| Agent | `new Agent(options)` | getModel, getInstruction, listTool, limits, stream, generate, resume, sendSignal, shutdown | id |
+| Agent | `new Agent(options)` | getModel, getInstruction, listTool, limits, stream, generate, resume, abort, sendSignal, shutdown | id |
 | Controller | `new Controller(options)` | initialize, dispose, createSession, getSession, listSessions, plugins.attach/detach | id, agent, plugins |
 | Session | Controller tạo/khôi phục | scope, metadata, subscribe, followUp, resume, recover, abort, dispose, model manager, thread manager | id, agent, controller, model/thread namespace |
 | Thread | Session.thread tạo/lấy/fork | scope, snapshot, history/checkpoint/trace/interrupt reads, dispose | id |
@@ -173,6 +173,7 @@ const agent = new Agent({
 | `.stream(input, options?)` | Phần 4 | `Stream` |
 | `.generate(input, options?)` | Phần 4 | `Promise<GenerateOutcome>` |
 | `.resume(options)` | Bảng dưới | `Stream` tiếp tục execution suspended |
+| `.abort(streamId, options?)` | `streamId: string`, `{ reason?: string; scope?: Scope }` | `Promise<void>`; hủy execution đang chạy hoặc đang chờ trong runtime hiện tại |
 | `.sendSignal(options)` | `SendSignalOptions`; bảng dưới | `Promise<void>`; xác nhận đã nhận, không phải kết quả model |
 | `.shutdown()` | Không có | `Promise<void>`; kết thúc tài nguyên/lifecycle của Agent |
 
@@ -818,6 +819,7 @@ export declare class Agent<M extends ModelSelection = ModelSelection> {
     stream<T extends ModelAdapter = M extends ModelAdapter ? M : ModelAdapter>(input: AgentInput, options?: AgentStreamOptions<T>): Stream;
     generate<T extends ModelAdapter = M extends ModelAdapter ? M : ModelAdapter>(input: AgentInput, options?: AgentExecutionOptions<T>): Promise<GenerateOutcome>;
     resume(options: AgentResumeOptions): Stream;
+    abort(streamId: string, options?: { reason?: string; scope?: Scope }): Promise<void>;
     sendSignal(options: SendSignalOptions): Promise<void>;
     shutdown(): Promise<void>;
 }
@@ -3560,6 +3562,7 @@ interface ReadInput {
 }
 interface ReadOptions {
   metadata?: JsonObject;
+  maxBytes?: number;
 }
 interface Content {
   text: string;

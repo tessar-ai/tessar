@@ -25,7 +25,7 @@ describe("scaffold templates", () => {
     expect(Object.hasOwn(files, "src/sessions/chat.ts")).toBe(options.session);
     expect(Object.hasOwn(files, "src/storage.ts")).toBe(options.backend !== "memory");
     const expectedDependencies: Record<string, string> = {
-      "@tessar/core": metadata.coreVersion, "@tessar/openai": metadata.openaiVersion, zod: metadata.zodVersion,
+      "@tessar/core": "^0.1.5", "@tessar/openai": metadata.openaiVersion, zod: metadata.zodVersion,
     };
     if (options.backend !== "memory") {
       expectedDependencies[`@tessar/${options.backend}`] = metadata.backendVersions[options.backend];
@@ -80,7 +80,7 @@ describe("scaffold templates", () => {
     const files = projectFiles("my-app", metadata);
     expect(Object.keys(files).sort()).toEqual([".env.example", ".gitignore", "README.md", "package.json", "src/agents/assistant.ts", "src/main.ts", "tsconfig.json"]);
     const manifest = JSON.parse(files["package.json"]!);
-    expect(manifest.dependencies).toEqual({ "@tessar/core": "0.1.5", "@tessar/openai": "0.1.4", zod: "^4.6.7" });
+    expect(manifest.dependencies).toEqual({ "@tessar/core": "^0.1.5", "@tessar/openai": "0.1.4", zod: "^4.6.7" });
     expect(manifest.scripts.start).toContain("dist/main.js");
     expect(files["src/main.ts"]).toContain('"./agents/assistant.js"');
     expect(files["src/main.ts"]).toContain("if (!apiKey || !model)");

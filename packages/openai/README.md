@@ -310,7 +310,9 @@ Candidates can be strings, Content/Chunk objects or search results containing
 score: providerRerankScore }[]`, sorted descending; original retrieval scores
 remain inside the candidate. `topK` defaults to 5, capped at candidate count;
 optional `score_threshold` uses the provider's native scale. Empty input skips
-HTTP. Constructor requires a complete endpoint, API key and model; optional
+HTTP. Pass `signal` in the method options to cancel the request and response
+read, for example `{ signal: context.signal }` inside a Tessar tool.
+Constructor requires a complete endpoint, API key and model; optional
 `fetch` supplies the transport. The endpoint must accept
 `{ model, query, documents: string[], top_n }` and return
 `{ results: [{ index, relevance_score }] }`, as native Cohere and OpenRouter do.

@@ -19,6 +19,7 @@ export interface ReadInput {
 
 export interface ReadOptions {
   metadata?: JsonObject;
+  maxBytes?: number;
 }
 
 export interface Content {

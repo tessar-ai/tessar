@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { Agent, Controller, AssistantMessage, MessageCodec, createTool } from "@tessar/core";
+import { Agent, Controller, AssistantMessage, MessageCodec, createTool, stream } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { z } from "zod";
 import { start } from "./helpers.js";
@@ -46,6 +46,35 @@ test("suspended independent Agent retains owner scope across resume", async () =
   expect(last(await resumed.text()).payload.state.status).toBe("completed");
 });
 
+test.each([
+  ["stream", false], ["generate", false], ["stream", true], ["generate", true],
+] as const)("aborts a waiting Agent after %s has ended (Controller: %s)", async (method, controlled) => {
+  const ask = createTool({ name: "ask", description: "Choose", schema: z.object({}), resumeSchema: z.string(), execute: (_, context) => context.suspend({ question: "Choose" }) });
+  const model = new ScriptedProvider([{ response: { message: MessageCodec.encode(new AssistantMessage([{ type: "tool-call", name: "ask", toolCallId: "call", arguments: {} }])) } }]);
+  const agent = new Agent({ id: crypto.randomUUID(), model, tools: { ask } });
+  host = await start(controlled
+    ? { controllers: [new Controller({ id: crypto.randomUUID(), agent })], server: { auth } }
+    : { agents: [agent], server: { auth } });
+  const path = `/api/agents/${agent.id}`;
+  const started = await post("alice", path + "/" + method, { input: "choose" });
+  expect(started.status).toBe(200);
+  const result = method === "stream"
+    ? last(await started.text())
+    : await started.json();
+  const state = result.payload?.state ?? result;
+  expect(state.status).toBe("suspended");
+  const abort = path + "/streams/" + result.streamId + "/abort";
+  expect((await post("alice", abort, {})).status).toBe(204);
+  expect((await post("alice", abort, {})).status).toBe(404);
+  if (controlled) {
+    expect(model.calls).toHaveLength(1);
+    const response = await post("alice", path + "/resume", {
+      threadId: result.threadId, interruptId: state.interrupt.id, value: "yes",
+    });
+    expect(response.ok).toBe(false);
+  }
+});
+
 test("persisted Agent continuation checks scope before SSE without a selected Session", async () => {
   const ask = createTool({ name: "ask", description: "Choose", schema: z.object({}), resumeSchema: z.string(), execute: (_, context) => context.suspend({ question: "Choose" }) });
   const model = new ScriptedProvider([{ response: { message: MessageCodec.encode(new AssistantMessage([{ type: "tool-call", name: "ask", toolCallId: "persisted-call", arguments: {} }])) } }, { text: "resumed" }]);
@@ -80,4 +109,44 @@ test("idle Thread signals use core scope checks without restoring a Session", as
   expect((await post("alice", path, { threadId: thread.id, content: "own" })).status).toBe(204);
   await expect.poll(() => model.calls.length).toBe(1);
   expect(restore).not.toHaveBeenCalled();
+});
+
+test("leaves Session-owned work to the Session abort route", async () => {
+  const gate = Promise.withResolvers<void>();
+  const model = new ScriptedProvider([{ gate: gate.promise, text: "finished" }]);
+  const agent = new Agent({ id: crypto.randomUUID(), model });
+  const controller = new Controller({ id: crypto.randomUUID(), agent });
+  await controller.initialize();
+  const session = await controller.createSession({ scope: { userId: "alice" } });
+  const thread = await session.thread.create();
+  host = await start({ controllers: [controller], server: { auth } });
+  try {
+    await session.followUp("work");
+    await expect.poll(() => model.calls.length).toBe(1);
+    const { activeStreamId: streamId } = await thread.snapshot();
+    expect(streamId).toBeTruthy();
+    const response = await post("alice", `/api/agents/${agent.id}/streams/${streamId}/abort`, {});
+    expect(response.status).toBe(404);
+    await session.abort();
+    expect(session.state.get().status).toBe("cancelled");
+  } finally { gate.resolve(); }
+});
+
+test("lets a suspended hook request abort without waiting for itself", async () => {
+  const ask = createTool({ name: "ask", description: "Choose", schema: z.object({}), resumeSchema: z.string(), execute: (_, context) => context.suspend({ question: "Choose" }) });
+  const model = new ScriptedProvider([{ response: { message: MessageCodec.encode(new AssistantMessage([{ type: "tool-call", name: "ask", toolCallId: "call", arguments: {} }])) } }]);
+  const agent = new Agent({ id: crypto.randomUUID(), model, tools: { ask } });
+  const controller = new Controller({ id: crypto.randomUUID(), agent, plugins: [{
+    id: "cancel-on-suspend",
+    setup(context) {
+      context.hook(stream.suspended, async event => {
+        await agent.abort(event.streamId!);
+      });
+    },
+  }] });
+  host = await start({ controllers: [controller], server: { auth } });
+  const result = await agent.generate("choose");
+  const session = await controller.createSession();
+  const thread = (await session.thread.get(result.threadId))!;
+  await expect.poll(async () => (await thread.getStream(result.streamId))?.status).toBe("cancelled");
 });

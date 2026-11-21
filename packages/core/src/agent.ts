@@ -76,13 +76,18 @@ import {
   resumeAgent,
   cancelRetained,
   closeStandalone,
+  abortStandalone,
 } from "./engine/continuation.js";
 
 const ERROR_CODE = {
   INVALID_CONFIGURATION: "InvalidConfiguration",
   DISPOSED: "Disposed",
   THREAD_NOT_FOUND: "ThreadNotFound",
+  STREAM_NOT_FOUND: "StreamNotFound",
 } as const;
+const SUSPENDED_STATUS = "suspended";
+const DEFAULT_CANCEL_REASON = "Cancelled";
+const STREAM_NOT_FOUND_MESSAGE = "Execution is not active or waiting";
 
 export type ModelSelection = ModelAdapter | Model | ModelRef;
 export type AgentInput = string | MessageData | readonly MessageData[];
@@ -248,6 +253,30 @@ export class Agent<M extends ModelSelection = ModelSelection> {
     if (this.closed) fail(ERROR_CODE.DISPOSED, "Agent closed");
     return resumeAgent(this, options, this.controller);
   }
+  async abort(streamId: string, { reason = DEFAULT_CANCEL_REASON, scope }: { reason?: string; scope?: Scope } = {}): Promise<void> {
+    const box = findSignalTarget(this, { streamId });
+    if (!box || box.sessionOwned || (scope !== undefined && box.scope !== undefined && !matchesScope(box.scope, scope)))
+      fail(ERROR_CODE.STREAM_NOT_FOUND, STREAM_NOT_FOUND_MESSAGE);
+    if (scope !== undefined && box.scope === undefined)
+      await box.runtime.queries.requireThread(box.threadId, { scope });
+    await box.ready;
+    await box.detaching;
+    const owns = () => !box.sessionOwned && findSignalTarget(this, { streamId }) === box;
+    if (!owns()) fail(ERROR_CODE.STREAM_NOT_FOUND, STREAM_NOT_FOUND_MESSAGE);
+    const frame = this.active.get(streamId);
+    if (frame && frame.request.threadId === box.threadId) {
+      frame.sink.stream.abort(reason);
+      if (this.controller && frame.stream.status === SUSPENDED_STATUS) {
+        // A suspended hook can request abort while its own execution is still unwinding.
+        void this.outcomes.get(frame.sink.stream)?.then(async outcome => {
+          if (outcome.status === SUSPENDED_STATUS && owns() && !box.frame)
+            await this.cancel(box.threadId, streamId, reason);
+        }).catch(error => box.runtime.report(errorInfo(error)));
+      }
+      return;
+    }
+    await (abortStandalone(this, box.threadId, reason) ?? this.cancel(box.threadId, streamId, reason));
+  }
   async sendSignal(options: SendSignalOptions): Promise<void> {
     if (this.closed) fail(ERROR_CODE.DISPOSED, "Agent closed");
     this.signalCapacity.check(options);
@@ -309,7 +338,7 @@ export class Agent<M extends ModelSelection = ModelSelection> {
         );
         return;
       }
-      if (!box) fail("StreamNotFound", "Signal target is not active");
+      if (!box) fail(ERROR_CODE.STREAM_NOT_FOUND, "Signal target is not active");
       if (scope !== undefined) {
         if (box.scope === undefined) await box.runtime.queries.requireThread(box.threadId, { scope });
         else if (!matchesScope(box.scope, scope)) fail(ERROR_CODE.THREAD_NOT_FOUND, "Thread does not match query");
@@ -440,7 +469,7 @@ export class Agent<M extends ModelSelection = ModelSelection> {
           releaseSignals(this, sink.stream.id, result);
         if (
           (request.kind === "input" || result) &&
-          result?.status !== "suspended" &&
+          result?.status !== SUSPENDED_STATUS &&
           sink.stream.id
         )
           this.reservedStreamIds.delete(sink.stream.id);
@@ -488,7 +517,7 @@ export class Agent<M extends ModelSelection = ModelSelection> {
   /** @internal */ async cancel(
     threadId: string,
     streamId: string,
-    reason = "Cancelled",
+    reason = DEFAULT_CANCEL_REASON,
     target: DeliveryTarget = { kind: "observer", observe: () => { } },
     context: Pick<ExecutionRequest, "session" | "thread"> = {},
   ): Promise<void> {
