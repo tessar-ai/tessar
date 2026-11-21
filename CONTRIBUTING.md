@@ -142,11 +142,11 @@ dependencies. It also checks npm for an already published target version and
 compatible published internal dependencies before attempting publication.
 
 Publish changed dependencies first and wait for their release to succeed before
-tagging dependents. For the current release, publish `core@0.1.6` first, then
-RAG and server before database vector plugins and auth integrations respectively.
-Existing extensions use `plugins@0.1.6`, `openai@0.1.5`, `opentelemetry@0.1.2`,
-`libsql@0.1.4`, `postgresql@0.1.5` and `mongodb@0.1.5`.
-Packed extension Core peers use the compatible `^0.1.6` range.
+tagging dependents. For the audit fixes, publish `core@0.1.7` first, followed by
+`openai@0.1.6`, `server@0.1.1`, `postgresql@0.1.5` and `mongodb@0.1.5`.
+The PostgreSQL and MongoDB versions above have not previously been published.
+Client, CLI and the other packages have no distribution changes requiring a new
+release. Packed Core peers for the released extensions use `^0.1.7`.
 When releasing multiple versions of the same package, finish the earlier
 release first so the `latest` npm tag cannot race backwards.
 
