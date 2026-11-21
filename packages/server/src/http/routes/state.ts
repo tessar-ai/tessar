@@ -24,7 +24,7 @@ export function registerState(app: Hono, sessions: () => SessionRegistry, hub: T
           controllerId, agentId: session.agent.id, sessionId: session.id, scope: session.scope(), threadId: session.thread.getId() ?? undefined,
         }));
       }).catch(error => { console.error(error); end(); });
-      return () => { closed = true; off(); };
+      return () => { closed = true; off(); void sessions().prune().catch(error => console.error(error)); };
     });
   });
 }

@@ -6,7 +6,7 @@ import {
 } from "../events/type.js";
 import { StateView, type RuntimeState } from "../runtime-state.js";
 import { fail, errorInfo, type ErrorInfo } from "../errors.js";
-import { systemClock, type IdGenerator } from "../json.js";
+import { systemClock, type IdGenerator } from "../helpers/json.js";
 import {
   EventEnvelope,
   type AnyEvent,
@@ -14,6 +14,10 @@ import {
   type PayloadOf,
   type StreamEvent,
 } from "../events/definition.js";
+
+const MAX_BUFFERED_EVENTS = 512;
+const MAX_BUFFERED_BYTES = 4 * 1024 * 1024;
+const encoder = new TextEncoder();
 
 export interface Stream extends AsyncIterable<StreamEvent> {
   readonly id: string | null;
@@ -50,7 +54,7 @@ export function createDelivery(
   target: DeliveryTarget,
   external?: AbortSignal,
   diagnostics: (error: ErrorInfo, context?: EventContext) => void = () => {},
-  limits = { maxEvents: 512, maxBytes: 4 * 1024 * 1024 },
+  limits = { maxEvents: MAX_BUFFERED_EVENTS, maxBytes: MAX_BUFFERED_BYTES },
   initialId?: string,
   changed: (state: RuntimeState, context: EventContext) => void = () => {},
   failed: (
@@ -139,7 +143,12 @@ export function createDelivery(
       resolve({ value: event, done: false });
       return;
     }
-    const size = new TextEncoder().encode(JSON.stringify(event)).byteLength;
+    if (event.type === stateChanged) {
+      const pending = queue.findIndex(item => item.event.type === stateChanged);
+      if (pending !== -1) bytes -= queue.splice(pending, 1)[0]!.bytes;
+    }
+    // One latest snapshot references the state already held by the view, not a copied backlog.
+    const size = event.type === stateChanged ? 0 : encoder.encode(JSON.stringify(event)).byteLength;
     if (queue.length + 1 > limits.maxEvents || bytes + size > limits.maxBytes) {
       const error: ErrorInfo = {
         source: "tessar",

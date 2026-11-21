@@ -1,6 +1,7 @@
 import { fail, requireId } from "../errors.js";
 import { prepareStoredRecord, type StoredRecord } from "./records.js";
-import { immutable, systemClock, type Clock } from "../json.js";
+import { immutable, systemClock, type Clock } from "../helpers/json.js";
+import { freezeSnapshot, jsonSnapshots } from "../helpers/json-snapshot.js";
 import {
   canonicalJson,
   validateBatch,
@@ -38,6 +39,28 @@ const ERROR_CODE = {
   COMMIT_CONFLICT: "CommitConflict",
   THREAD_NOT_FOUND: "ThreadNotFound",
 } as const;
+
+function equalSnapshot(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (!left || !right || typeof left !== "object" || typeof right !== "object"
+    || Array.isArray(left) !== Array.isArray(right)) return false;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every(key => Object.hasOwn(right, key)
+    && equalSnapshot((left as Record<string, unknown>)[key], (right as Record<string, unknown>)[key]));
+}
+
+function reuse<T>(value: T, previous: T | undefined): T {
+  return value && typeof value === "object" && previous && typeof previous === "object"
+    && jsonSnapshots.has(value) && jsonSnapshots.has(previous)
+    && equalSnapshot(value, previous) ? previous : value;
+}
+
+function reuseRows<T extends object>(rows: readonly T[], previous: readonly T[], key: (row: T) => string): readonly T[] {
+  if (!jsonSnapshots.has(rows) || Object.keys(rows).length !== rows.length) return rows;
+  const saved = new Map(previous.map(row => [key(row), row]));
+  return freezeSnapshot(rows.map(row => reuse(row, saved.get(key(row)))), true);
+}
+
 export function createMemoryBackend(
   options: { clock?: Clock } = {},
 ): StorageBackend {
@@ -345,6 +368,21 @@ export function createMemoryBackend(
         guard();
         batch = immutable(batch);
         validateBatch(batch);
+        const cp = batch.checkpoint;
+        const previous = snapshots.get(cp.parentCheckpointId ?? "")?.state;
+        // Keep the boundary clone; only unchanged, proven JSON shares storage ownership.
+        batch = freezeSnapshot({
+          ...batch, checkpoint: {
+            ...cp, state: {
+              ...cp.state,
+              scope: reuse(cp.state.scope, previous?.scope),
+              metadata: reuse(cp.state.metadata, previous?.metadata),
+              instructions: reuse(cp.state.instructions, previous?.instructions),
+              messages: reuseRows(cp.state.messages, previous?.messages ?? [], row => row.id),
+              pluginStates: reuseRows(cp.state.pluginStates, previous?.pluginStates ?? [], ownerKey),
+            }
+          }, records: reuseRows(batch.records, currentRecords(batch.threadId), row => row.kind + ":" + row.id)
+        }, true);
         const hash = await commitFingerprint(batch);
         guard();
         if (fingerprints.has(batch.commitId)) {
@@ -431,7 +469,9 @@ export function createMemoryBackend(
           checkpointId: cp.id,
         });
         snapshots.set(cp.id, cp);
-        records.set(cp.id, immutable([...merged.values()]));
+        const entries = [...merged.values()];
+        records.set(cp.id, entries.every(entry => jsonSnapshots.has(entry))
+          ? freezeSnapshot(entries, true) : immutable(entries));
         heads.set(batch.threadId, info);
         if (info.deleted)
           for (const [id, session] of sessions)
@@ -498,6 +538,8 @@ export function createMemoryBackend(
     close: async () => {
       closed = true;
       sessions.clear();
+      ownedStates.clear();
+      fences.clear();
       independentRecords.clear();
       fingerprints.clear();
       stagedFingerprints.clear();

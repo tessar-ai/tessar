@@ -5,7 +5,7 @@ import {
   type IdGenerator,
   type Clock,
   type JsonObject,
-} from "../json.js";
+} from "../helpers/json.js";
 import {
   normalizeInstruction,
   type Instruction,

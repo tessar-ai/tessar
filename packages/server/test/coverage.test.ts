@@ -36,6 +36,8 @@ test("route inventory covers the reviewed public SDK runtime surface", () => {
   expect(documented.sort()).toEqual(expected.sort());
   const signals = document.paths["/tessar/api/agents/{agentId}/signals"]!.post as { responses: Record<string, unknown> };
   expect(signals.responses["204"]).toEqual({ description: "No content" });
+  expect(signals.responses["413"]).toMatchObject({ description: "Request body too large" });
+  expect(signals.responses["429"]).toMatchObject({ description: "Pending input capacity exceeded" });
   const records = document.paths["/tessar/api/controllers/{controllerId}/records/{namespace}"]!.post as {
     requestBody: { content: { "application/json": { schema: { required: string[] } } } };
   };

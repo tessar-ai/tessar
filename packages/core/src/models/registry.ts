@@ -1,5 +1,5 @@
 import { fail } from "../errors.js";
-import { immutable, type Clock } from "../json.js";
+import { immutable, type Clock } from "../helpers/json.js";
 import type { Model } from "./profile.js";
 import type {
   ModelAdapter,
@@ -45,6 +45,7 @@ export class ModelRegistry {
     return () => {
       if (this.providers.get(provider.id) !== registration) return;
       this.providers.delete(provider.id);
+      this.resolver.remove(registration);
       for (const [key, handle] of this.handles)
         if (handle.ref.providerId === provider.id) this.handles.delete(key);
       for (const [key, adapter] of this.connections)
@@ -186,6 +187,8 @@ export class ModelRegistry {
   }
   dispose(): void {
     this.shutdown.abort();
+    this.providers.clear();
+    this.handles.clear();
     this.connections.clear();
     this.resolver.clear();
   }

@@ -1,5 +1,5 @@
 import { fail } from "../errors.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
 import type { Scope } from "./schema.js";
 export function normalizeScope(value: Scope = {}): Scope {
   if (!value || typeof value !== "object" || Array.isArray(value))

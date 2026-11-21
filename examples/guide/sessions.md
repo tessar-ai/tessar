@@ -37,6 +37,15 @@ create or select a Thread before calling `followUp()`.
 Await thread/model control operations before submitting a follow-up. Input submitted
 while a control operation is pending is rejected with `SessionBusy`, so it cannot
 be admitted against a thread selection that is changing.
+`resume()` and `recover()` also hold this control lock until execution is admitted
+or rejected. Await their receipts before changing the selected Thread or model.
+Thread/model changes still require an idle Session.
+
+Pending input is bounded to 100 admissions and 4 MiB of encoded data per Session,
+including admissions still waiting for storage reads.
+Admission fails with `TessarError` code `InputQueueFull` when either limit is reached;
+rejected input is not queued. Capacity is released when queued input starts or is discarded.
+`isIdle()` also accounts for pending input admission, control operations and signal admission.
 
 ## Render snapshots
 
@@ -185,6 +194,12 @@ A suspended Thread retains pending input until explicit `session.resume()`;
 signal does not answer its interruption or approve a tool. Committed pending input
 survives restart with a persistent backend: restore the Session first, then resume.
 `persist: false` input lasts only for that execution in this process.
+Each execution's signal mailbox also has a 100-message / 4 MiB capacity. Durable
+signals release pending capacity when applied to history; transient signals still
+retained in execution context count until that execution ends. Overflow rejects
+the new signal with `InputQueueFull` without dropping previously accepted input.
+An Agent also limits concurrent signal admissions awaiting scope/storage checks
+to 100 messages / 4 MiB; failed checks release their reservation.
 
 An idle target needs an unambiguous live Session handle. Multiple live handles
 selecting the same Thread are rejected; dispose unused handles. Stale Session

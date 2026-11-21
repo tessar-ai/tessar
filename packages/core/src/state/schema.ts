@@ -1,5 +1,5 @@
 import type { Instruction } from "../instructions/instruction.js";
-import type { JsonObject, JsonValue } from "../json.js";
+import type { JsonObject, JsonValue } from "../helpers/json.js";
 import type { MessageData } from "../messages/message.js";
 import type {
   ModelRef,

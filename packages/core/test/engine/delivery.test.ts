@@ -4,30 +4,60 @@ import {
   message as messageHooks,
   stream as streamHooks,
   turn as turnHooks,
+  stateChanged,
 } from "../../src/events/type.js";
 import { z } from "zod";
 import { expect, it } from "vitest";
 import { createDelivery } from "../../src/engine/delivery.js";
 
-import { randomIds } from "../../src/json.js";
+import { randomIds } from "../../src/helpers/json.js";
 import { AgentHarness } from "../../src/testing/harness.js";
 import { defineInterruption } from "../../src/engine/interrupt.js";
 import { ToolDecision } from "../../src/events/type.js";
 import { AssistantMessage, HumanMessage } from "../../src/messages/message.js";
 import { MessageCodec } from "../../src/messages/codec.js";
 import { createTool } from "../../src/tools/tool.js";
+
+it("delivers large history to a waiting reader without reporting a slow consumer", async () => {
+  const delivery = createDelivery("t", randomIds, { kind: "iterator" });
+  delivery.seedState({ messages: [MessageCodec.encode(new HumanMessage("x".repeat(4 * 1024 * 1024)))] });
+  const iterator = delivery.stream[Symbol.asyncIterator]();
+  const first = iterator.next();
+  delivery.emit(streamHooks.started, { modelRef: { providerId: "test", modelId: "m" }, checkpointId: "cp", startedAt: new Date().toISOString() }, {});
+  expect((await first).value.type).toBe(streamHooks.started);
+  const snapshot = (await iterator.next()).value;
+  expect(snapshot.type).toBe(stateChanged);
+  expect(snapshot.payload.state.messages).toHaveLength(1);
+  expect(snapshot.payload.state.messages[0].content[0].text.length).toBe(4 * 1024 * 1024);
+  delivery.close(); await iterator.return!();
+});
+
+it("keeps only the latest queued snapshot while preserving ordinary event order", async () => {
+  const delivery = createDelivery("t", randomIds, { kind: "iterator" });
+  for (let index = 0; index < 3; index++)
+    delivery.emit(streamHooks.started, { modelRef: { providerId: "test", modelId: "m" }, checkpointId: "cp", startedAt: new Date(index).toISOString() }, { sequence: index });
+  delivery.close();
+  const events = [];
+  for await (const event of delivery.stream) events.push(event);
+  expect(events.filter(event => event.type === streamHooks.started).map(event => event.sequence)).toEqual([0, 1, 2]);
+  expect(events.filter(event => event.type === stateChanged).map(event => event.sequence)).toEqual([2]);
+});
 it("retains a detached plugin until its asynchronous consumer-error hook settles", async () => {
   let release!: () => void, ended!: () => void, disposed = false;
   const gate = new Promise<void>((resolve) => { release = resolve; });
   const done = new Promise<void>((resolve) => { ended = resolve; });
-  const h = await AgentHarness.create({ plugins: [{ id: "watch", setup(tessar) {
-    tessar.hook("stream.error", async () => { await gate; });
-    tessar.hook("stream.end", () => ended());
-    tessar.defer(() => { disposed = true; });
-  } }] });
+  const h = await AgentHarness.create({
+    plugins: [{
+      id: "watch", setup(tessar) {
+        tessar.hook("stream.error", async () => { await gate; });
+        tessar.hook("stream.end", () => ended());
+        tessar.defer(() => { disposed = true; });
+      }
+    }]
+  });
   h.provider.stream = async function* () {
     yield start("answer");
-    for (let index = 0; index < 600; index++) yield delta("answer", "x" , "text", "text");
+    for (let index = 0; index < 600; index++) yield delta("answer", "x", "text", "text");
     yield end("answer", "x".repeat(600));
     yield { type: "response", response: { message: MessageCodec.encode(new AssistantMessage("answer", { id: "answer" })) } };
   };
@@ -45,13 +75,17 @@ it("publishes consumer overflow to hooks without cancelling its execution", asyn
   const failures: import("../../src/events/definition.js").StreamEvent[] = [];
   let ended!: () => void;
   const done = new Promise<void>((resolve) => { ended = resolve; });
-  const h = await AgentHarness.create({ modelScripts: [{ text: "x".repeat(600) }], plugins: [{ id: "watch", setup(tessar) {
-    tessar.hook("stream.error", (event) => { failures.push(event); });
-    tessar.hook("stream.end", () => ended());
-  } }] });
+  const h = await AgentHarness.create({
+    modelScripts: [{ text: "x".repeat(600) }], plugins: [{
+      id: "watch", setup(tessar) {
+        tessar.hook("stream.error", (event) => { failures.push(event); });
+        tessar.hook("stream.end", () => ended());
+      }
+    }]
+  });
   h.provider.stream = async function* () {
     yield start("answer");
-    for (let index = 0; index < 600; index++) yield delta("answer", "x" , "text", "text");
+    for (let index = 0; index < 600; index++) yield delta("answer", "x", "text", "text");
     yield end("answer", "x".repeat(600));
     yield { type: "response", response: { message: MessageCodec.encode(new AssistantMessage("answer", { id: "answer" })) } };
   };

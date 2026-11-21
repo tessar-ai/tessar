@@ -279,6 +279,14 @@ connection, protocol and effective endpoint; reusing the ID with a different
 endpoint/protocol is rejected. API keys and transport headers are not included
 in the descriptor. Unspecified connection IDs remain random and isolated.
 
+Endpoints containing URL userinfo, a query or a fragment are stored as a SHA-256
+fingerprint in connection descriptors and Responses continuity. HTTP still uses
+the original SDK URL; ordinary endpoints retain their existing representation.
+Existing checkpoints containing a raw URL with userinfo, a query or a fragment
+are not rewritten and no longer match the new fingerprint. Handle that saved
+binding explicitly when restoring it, and rotate any credentials previously
+stored there; Tessar does not migrate or erase it.
+
 Legacy native state has only its old connection ID. An application may explicitly
 reuse that saved ID after verifying the original endpoint/protocol itself; Tessar
 cannot infer or attest that binding during SQLite migration. Neither the

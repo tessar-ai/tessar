@@ -1,5 +1,5 @@
 import { fail } from "./errors.js";
-import { immutable, type JsonObject, type JsonValue } from "./json.js";
+import { immutable, type JsonObject, type JsonValue } from "./helpers/json.js";
 import { inputMessages } from "./messages/codec.js";
 import type { Controller } from "./controller.js";
 import type { Model } from "./models/profile.js";

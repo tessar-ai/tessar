@@ -327,4 +327,6 @@ Tokens: in=694, out=325 (reasoning: 269), total=1019
 
 Listen for `state_changed` and render `event.payload.state`. `messages` contains committed messages plus the same live draft as `currentMessage`. Draft content parts have `partId`, `partIndex` and a UI-only `status`: `streaming`, `completed` or `interrupted`. Tool-call drafts may not yet have a name, ID or arguments. Do not pass a draft to a provider or save it as canonical history. Committed messages replace the draft and clear `currentMessage`.
 
+Iterator delivery keeps only the latest pending `state_changed` snapshot. Ordinary events retain their order, with a buffer limit of 512 events / 4 MiB; a slow consumer receives `ConsumerTooSlow` without cancelling the execution. A snapshot references the current rendering state and does not count its entire history again toward the byte budget.
+
 Text and reasoning may interleave; text starting does not imply reasoning ended. `boundary: "provider"` marks a native protocol boundary; `"observed"` marks an adapter/runtime observation. Open parts end as interrupted on cancellation/error. Auxiliary part events have `purpose: "auxiliary"` and do not enter the main chat snapshot.

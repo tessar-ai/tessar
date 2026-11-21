@@ -31,7 +31,7 @@ test("HTTP errors preserve origin and safe upstream status without exposing secr
   try {
     const provider = Object.assign(new Error("secret api key"), { status: 401 });
     errorInfo(provider, { source: "provider", providerId: "test" });
-    const cases = [[provider, 502], [new TessarError("SessionBusy", "busy"), 409],
+    const cases = [[provider, 502], [new TessarError("SessionBusy", "busy"), 409], [new TessarError("InputQueueFull", "full"), 429],
     [new TessarError("CommitConflict", "stale"), 409], [new TessarError("ThreadNotFound", "missing"), 404],
     [new TessarError("InvalidCursor", "bad"), 400], [new Error("secret password"), 500]] as const;
     for (const [error, expected] of cases) {

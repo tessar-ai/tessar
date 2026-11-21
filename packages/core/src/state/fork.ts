@@ -1,5 +1,5 @@
 import { fail, requireId } from "../errors.js";
-import { randomIds, type JsonObject } from "../json.js";
+import { randomIds, type JsonObject } from "../helpers/json.js";
 import type { StorageBackend } from "./storage-ports.js";
 import type { StateQuery, ThreadInfo } from "./schema.js";
 import { StateQueries, checkpointSafety } from "./queries.js";

@@ -9,7 +9,7 @@ import type {
 import { HumanMessage } from "../messages/message.js";
 import { inputMessages } from "../messages/codec.js";
 import { fail, requireId, errorInfo } from "../errors.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
 import { isModelAdapter, matchingAdapter } from "../models/stream.js";
 import {
   snapshotModelOptions,

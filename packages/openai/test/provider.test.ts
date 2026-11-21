@@ -4,6 +4,32 @@ import { Agent, Controller, HumanMessage, normalizeInstruction } from "@tessar/c
 import OpenAI from "openai";
 import { OpenAIChat, OpenAIPlugin } from "../src/index.js";
 
+it.each(["responses", "chat-completions"] as const)("keeps credential-bearing endpoints out of %s connection descriptors", api => {
+  const options = { api, apiKey: "test", model: "fixture", connectionId: "private-gateway",
+    baseURL: "https://demo-user:demo-password@gateway.test/v1?api_key=demo-query" };
+  const model = new OpenAIChat(options);
+  expect(model.connection!.endpoint).toMatch(/^sha256:[a-f0-9]{64}$/);
+  expect(JSON.stringify(model.connection)).not.toMatch(/demo-user|demo-password|demo-query/);
+  expect(new OpenAIChat(options).connection).toEqual(model.connection);
+  expect(model.withModel("other-model").connection).toEqual(model.connection);
+  expect(new OpenAIChat({ ...options, baseURL: options.baseURL + "-changed" }).connection).not.toEqual(model.connection);
+  expect(new OpenAIChat({ ...options, baseURL: "https://gateway.test/v1" }).connection!.endpoint).toBe("https://gateway.test/v1");
+});
+
+it("uses the original gateway URL for HTTP without copying its secret into persisted output", async () => {
+  const urls: string[] = [];
+  const model = new OpenAIChat({ apiKey: "test", model: "fixture", baseURL: "https://gateway.test/v1?api_key=demo-query",
+    fetch: async url => { urls.push(String(url)); return completed(); } });
+  const agent = new Agent({ id: randomUUID(), model });
+  try {
+    const result = await agent.generate("hello");
+    expect(urls.some(url => url.includes("demo-query"))).toBe(true);
+    expect(result.output).toHaveLength(1);
+    expect(result.output[0]!.providerState).toBeDefined();
+    expect(JSON.stringify(result.output)).not.toContain("demo-query");
+  } finally { await agent.shutdown(); }
+});
+
 it.each(["responses", "chat-completions"] as const)("builds the same native %s connection through OpenAIPlugin", async (api) => {
   const calls: { url: string; body: any }[] = [];
   let registration!: import("@tessar/core").ModelProviderRegistration;

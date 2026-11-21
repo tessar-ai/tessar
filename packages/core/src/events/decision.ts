@@ -1,5 +1,5 @@
 import { fail } from "../errors.js";
-import { assertJson } from "../json.js";
+import { assertJson } from "../helpers/json.js";
 
 const INVALID_HOOK_RESULT = "InvalidHookResult";
 

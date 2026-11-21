@@ -5,7 +5,7 @@ import {
   randomIds,
   type JsonObject,
   type JsonValue,
-} from "../json.js";
+} from "../helpers/json.js";
 import type { ContentPart } from "./parts.js";
 
 const INVALID_MESSAGE = "InvalidMessage";
@@ -24,7 +24,8 @@ export interface MessageData {
   readonly providerState?: JsonValue;
   readonly toolCallId?: string;
 }
-export function normalizeContent(
+/** @internal Validate parts without copying already owned content. */
+export function validateContent(
   content: string | readonly ContentPart[],
 ): readonly ContentPart[] {
   const parts =
@@ -75,7 +76,10 @@ export function normalizeContent(
         fail(INVALID_MESSAGE, "Unknown content part");
     }
   }
-  return immutable(parts);
+  return parts;
+}
+export function normalizeContent(content: string | readonly ContentPart[]): readonly ContentPart[] {
+  return immutable(validateContent(content));
 }
 export abstract class Message implements MessageData {
   readonly schemaVersion = 1 as const;

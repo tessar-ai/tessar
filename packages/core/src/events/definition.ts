@@ -1,4 +1,4 @@
-import { immutable, systemClock, type JsonObject } from "../json.js";
+import { immutable, systemClock, type JsonObject } from "../helpers/json.js";
 import type { HookContext } from "../plugins/context.js";
 export type EventKind =
   | "notification"

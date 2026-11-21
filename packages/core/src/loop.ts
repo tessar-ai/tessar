@@ -6,7 +6,7 @@ import {
 } from "./events/type.js";
 import type { ExecutionFrame } from "./engine/frame.js";
 import { TessarError, errorInfo, fail } from "./errors.js";
-import { immutable, type Clock, type IdGenerator } from "./json.js";
+import { immutable, type Clock, type IdGenerator } from "./helpers/json.js";
 
 import type { AnyEvent, PayloadOf, ResultOf } from "./events/definition.js";
 import type { MessageData } from "./messages/message.js";
@@ -130,7 +130,6 @@ export async function loop(
         frame.turnStartedAt === undefined
           ? null
           : Math.max(0, performance.now() - frame.turnStartedAt);
-      await context.updateUsage(frame);
       await context.commit(frame, EXECUTION_TRANSITION);
       await context.hook(frame, turnHooks.end, {
         turnId: turn.id,

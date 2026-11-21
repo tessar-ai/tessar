@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { assertJson, deepFreeze, immutable } from "../src/json.js";
+import { assertJson, deepFreeze, immutable } from "../src/helpers/json.js";
 
 it("does not traverse Tessar's validated immutable snapshots again", () => {
   const snapshot = immutable({ history: [{ text: "previous", metadata: { project: "one" } }] });

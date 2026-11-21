@@ -1,7 +1,7 @@
 import type { Agent } from "../agent.js";
 import type { ExecutionRuntime } from "./runtime.js";
 import { errorInfo, type ErrorInfo } from "../errors.js";
-import type { JsonObject, JsonValue } from "../json.js";
+import type { JsonObject, JsonValue } from "../helpers/json.js";
 import type { MessageData } from "../messages/message.js";
 import type { ModelAdapter, ModelRef } from "../models/contract.js";
 import type { RegistryLease } from "../plugins/registry.js";
@@ -13,6 +13,7 @@ import type { Lease } from "../state/storage-ports.js";
 import type { Checkpoint, RecordEntry, Scope, StreamLimits } from "../state/schema.js";
 import type { StreamRecord } from "../trace/records.js";
 import { stateTool } from "../runtime-state.js";
+import { freezeSnapshot } from "../helpers/json-snapshot.js";
 import type { LoopContext } from "../loop.js";
 import type { Attachment } from "./delivery.js";
 import type {
@@ -22,22 +23,22 @@ import type {
 
 export type ExecutionRequest = (
   | {
-      kind: "input";
-      id?: string;
-      threadId: string;
-      input: readonly MessageData[];
-      model: ModelRef;
-      context?: JsonObject;
-      limits?: Partial<StreamLimits>;
-      initialSignal?: { persist: boolean };
-    }
+    kind: "input";
+    id?: string;
+    threadId: string;
+    input: readonly MessageData[];
+    model: ModelRef;
+    context?: JsonObject;
+    limits?: Partial<StreamLimits>;
+    initialSignal?: { persist: boolean };
+  }
   | {
-      kind: "resume";
-      threadId: string;
-      interruptId: string;
-      value: JsonValue;
-      model?: ModelRef;
-    }
+    kind: "resume";
+    threadId: string;
+    interruptId: string;
+    value: JsonValue;
+    model?: ModelRef;
+  }
   | { kind: "recover"; threadId: string; streamId: string; model?: ModelRef }
 ) & {
   scope?: Scope;
@@ -136,6 +137,8 @@ export function createFrame(
     | "admitted"
   >,
 ): ExecutionFrame {
+  // Admission and recovery loaders have detached this checkpoint from storage.
+  options.cp.state = freezeSnapshot(options.cp.state, true);
   if (options.request.adapter)
     execution.pendingModels.set(
       options.request.threadId,
@@ -183,13 +186,13 @@ export function createFrame(
     status: options.stream.status,
     tools: [...options.records.values()].flatMap((record) =>
       record.kind === "tool_executions" &&
-      record.data.streamId === options.stream.id
+        record.data.streamId === options.stream.id
         ? [stateTool(record.data)]
         : [],
     ),
     interrupt: interruptId
       ? ((options.records.get("interrupts:" + interruptId)
-          ?.data as import("../state/schema.js").InterruptRecord) ?? null)
+        ?.data as import("../state/schema.js").InterruptRecord) ?? null)
       : null,
   });
   return frame;

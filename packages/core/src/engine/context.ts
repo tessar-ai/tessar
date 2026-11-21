@@ -2,7 +2,7 @@ import {
   buildInstruction,
   type Instruction,
 } from "../instructions/instruction.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
 import type {
   ModelRef,
   ModelRequest,

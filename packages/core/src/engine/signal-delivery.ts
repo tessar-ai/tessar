@@ -11,6 +11,7 @@ import type { ExecutionRuntime } from "./runtime.js";
 import { CommitCoordinator } from "../state/commit.js";
 import type { Scope } from "../state/schema.js";
 import { normalizeScope } from "../state/scope.js";
+import { InputCapacity } from "../helpers/input-capacity.js";
 
 const ALREADY_TERMINAL = "AlreadyTerminal";
 
@@ -19,6 +20,8 @@ interface TransientMessage {
   message: MessageData;
 }
 interface Mailbox {
+  capacity: InputCapacity;
+  reservations: Map<string, () => void>;
   scope?: Scope;
   id: string;
   threadId: string;
@@ -60,6 +63,8 @@ function reserveTarget(
   const { promise: ready, resolve, reject } = Promise.withResolvers<void>();
   void ready.catch(() => { });
   const box: Mailbox = {
+    capacity: new InputCapacity(),
+    reservations: new Map(),
     id,
     threadId,
     runtime,
@@ -154,6 +159,8 @@ export function deliverSignal(
 ): void {
   if (!box.accepting)
     fail(ALREADY_TERMINAL, "Execution is no longer accepting signals");
+  const release = box.capacity.reserve(message);
+  box.reservations.set(message.id, release);
   box.order.push(message.id);
   const detaching = box.detaching;
   const operation = (async () => {
@@ -174,6 +181,8 @@ export function deliverSignal(
       await next;
     }
   })().catch((error) => {
+    release();
+    box.reservations.delete(message.id);
     box.order = box.order.filter((id) => id !== message.id);
     const info = errorInfo(error);
     if (info.code !== "Cancelled") {
@@ -352,6 +361,10 @@ export async function applySignals(
   });
   box.applied.push(...temporary);
   box.pending.splice(0, transient.length);
+  for (const id of ids) {
+    box.reservations.get(id)?.();
+    box.reservations.delete(id);
+  }
   box.order = box.order.filter((id) => !values.has(id));
   for (const message of prepared)
     await context.hook(frame, "message.committed", {

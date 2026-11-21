@@ -14,7 +14,7 @@ import type { StorageBackend } from "../state/storage-ports.js";
 import type { RecordStore } from "../state/records.js";
 import type { PluginStateDefinition } from "../state/plugin-state.js";
 import type { PluginStateContext } from "../state/plugin-state.js";
-import type { JsonValue } from "../json.js";
+import type { JsonValue } from "../helpers/json.js";
 import type { Session } from "../session.js";
 import type { Thread } from "../thread.js";
 import type { Agent } from "../agent.js";

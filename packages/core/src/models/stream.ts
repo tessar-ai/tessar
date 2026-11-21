@@ -12,7 +12,7 @@ import type {
   ModelPartChunk,
 } from "./contract.js";
 import { PartLifecycle } from "./parts.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
 
 export function isModelAdapter(value: unknown): value is ModelAdapter {
   return (

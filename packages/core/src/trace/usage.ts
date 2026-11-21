@@ -1,5 +1,5 @@
 import { fail } from "../errors.js";
-import { immutable, type JsonValue } from "../json.js";
+import { immutable, type JsonValue } from "../helpers/json.js";
 export const tokenMetrics = [
   "inputTokens",
   "uncachedInputTokens",

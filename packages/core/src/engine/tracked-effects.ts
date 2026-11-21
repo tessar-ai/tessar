@@ -11,7 +11,7 @@ import {
   immutable,
   type JsonValue,
   type JsonObject,
-} from "../json.js";
+} from "../helpers/json.js";
 import type { InputDefinition } from "../tools/input-definition.js";
 import type { ModelChunk, ModelRequest } from "../models/contract.js";
 import type { AnyEvent, PayloadOf } from "../events/definition.js";

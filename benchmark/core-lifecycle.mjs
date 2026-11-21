@@ -73,7 +73,9 @@ async function registrations(count) {
   const started = performance.now();
   try {
     await controller.initialize();
-    return performance.now() - started;
+    const elapsedMs = performance.now() - started;
+    assert.equal(controller.hooks.registrations().filter(value => value.kind === "fixture").length, count);
+    return elapsedMs;
   } finally { await controller.dispose(); }
 }
 

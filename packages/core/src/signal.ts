@@ -6,7 +6,7 @@ import {
 } from "./messages/message.js";
 import { MessageCodec } from "./messages/codec.js";
 import type { ContentPart } from "./messages/parts.js";
-import type { JsonObject } from "./json.js";
+import type { JsonObject } from "./helpers/json.js";
 import type { Scope } from "./state/schema.js";
 
 const INVALID_CONFIGURATION = "InvalidConfiguration";
