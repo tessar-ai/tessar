@@ -1,4 +1,4 @@
-import { fail } from "./errors.js";
+import { fail } from "../errors.js";
 import { freezeSnapshot, jsonSnapshots } from "./json-snapshot.js";
 
 const INVALID_DATA = "InvalidData";

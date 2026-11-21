@@ -17,7 +17,8 @@ export class RuntimeContext {
   private disposal?: Promise<void>;
   constructor(options: TessarOptions<any>) {
     this.registry = new RuntimeRegistry(options);
-    this.sessions = new SessionRegistry(this.registry, (id, session) => this.hub.attach(id, session), session => this.hub.remove(session));
+    this.sessions = new SessionRegistry(this.registry, (id, session) => this.hub.attach(id, session),
+      session => this.hub.remove(session), session => !this.hub.hasSubscribers(session));
     this.initialization = this.initialize();
     void this.initialization.catch(() => { });
   }
@@ -43,7 +44,8 @@ export class RuntimeContext {
     return this.disposal ??= (async () => {
       await this.initialization.catch(() => { });
       this.hub.close();
-      await this.registry.dispose();
+      try { await this.registry.dispose(); }
+      finally { this.sessions.clear(); }
     })();
   }
 }

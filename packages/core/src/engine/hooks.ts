@@ -1,7 +1,7 @@
 import { ExecutionPhase } from "../state/schema.js";
 import { stream as streamHooks } from "../events/type.js";
 import { fail } from "../errors.js";
-import { immutable, type JsonValue } from "../json.js";
+import { immutable, type JsonValue } from "../helpers/json.js";
 import {
   type ControlDecision,
   type ResolvedDecision,

@@ -5,13 +5,13 @@ import { decodeOutput } from "../src/codec.js";
 import { decodeChatMessage } from "../src/chat-codec.js";
 
 for (const api of ["responses", "chat-completions"] as const) {
-  it(`${api} restores a stable binding but rejects a changed endpoint`, () => {
+  it.each(["https://one.test/v1", "https://one.test/v1?api_key=private-token"])(`${api} restores a stable binding but rejects a changed endpoint (%s)`, baseURL => {
     const options = {
       apiKey: "secret",
       model: "test",
       api,
       connectionId: "primary",
-      baseURL: "https://one.test/v1",
+      baseURL,
     };
     const a = new OpenAIChat(options),
       b = new OpenAIChat(options);

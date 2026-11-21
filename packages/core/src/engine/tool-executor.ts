@@ -10,7 +10,7 @@ import type { ExecutionFrame } from "./frame.js";
 import type { LoopContext } from "../loop.js";
 import { type ToolPreparation } from "../events/type.js";
 import { MessageCodec } from "../messages/codec.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
 import type { ToolExecutionRecord } from "../trace/records.js";
 import { TessarError, errorInfo } from "../errors.js";
 import { abortable } from "./abort.js";
@@ -28,7 +28,7 @@ export async function executeTool(
   tool: Tool,
   input: unknown,
   context: ToolExecutionContext,
-  response?: { value: import("../json.js").JsonValue },
+  response?: { value: import("../helpers/json.js").JsonValue },
 ): Promise<ToolMessage | ToolSuspension> {
   if (context.signal.aborted)
     throw new TessarError(ERROR_CODE.CANCELLED, "Tool cancelled before dispatch");

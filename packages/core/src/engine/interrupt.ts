@@ -1,5 +1,5 @@
 import { fail, requireId } from "../errors.js";
-import type { JsonValue } from "../json.js";
+import type { JsonValue } from "../helpers/json.js";
 import type { InputDefinition } from "../tools/input-definition.js";
 import type {
   ControlDecision,

@@ -167,11 +167,26 @@ Thread see its admitted execution state. SSE sends `event: state_changed` with
 an EventEnvelope containing `payload.state`, followed by current updates.
 Reconnect receives a fresh snapshot; event IDs are observation markers, not replay
 cursors. Disconnecting never aborts/replays execution. Explicit abort is separate.
+Idle Session handles use a least-recently-used cache capped at 100 handles and
+16 MiB of estimated serialized state/metadata. Requests, SSE viewers, unfinished
+executions, interruptions and queued input keep their handles pinned. Eviction
+disposes the local handle; persisted Session/Thread data remains available for restoration.
+These are idle-cache limits, not a total memory limit for active work or storage.
 Slow viewers retain only one pending latest snapshot. Direct Agent SSE keeps
 draining the SDK iterator after the viewer disconnects.
 If the SDK iterator exceeds its event buffer, SSE ends with a viewer-local
 `failed` state containing `ConsumerTooSlow`. This does not abort the execution or
 change its persisted status; a Session can still read its actual state/result.
+Pending input capacity errors return HTTP 429 with code `InputQueueFull`; rejected
+input is not admitted. Tessar shutdown clears cached handles and ends Session viewers.
+
+Built-in JSON endpoints limit request bodies to 16 MiB of UTF-8 bytes and return
+HTTP 413 with code `PayloadTooLarge` above that limit. Streaming reads enforce the
+limit even without Content-Length or when its value understates the body size.
+The counting boundary is installed before Tessar middleware/auth, including request
+clones read by auth callbacks. This is separate from the 4 MiB pending-input budget.
+Express or developer middleware that parses a body before entering Tessar must
+enforce its own read limit; custom routes remain developer-owned.
 
 Memory storage is lost on restart. Durable storage restores persisted data;
 unfinished work requires explicit resume/recover. HTTP accepts JSON model IDs/refs,

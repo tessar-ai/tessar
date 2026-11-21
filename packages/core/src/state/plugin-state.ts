@@ -1,5 +1,5 @@
 import { fail, requireId } from "../errors.js";
-import { immutable, type JsonValue } from "../json.js";
+import { immutable, type JsonValue } from "../helpers/json.js";
 import type { PluginStateSnapshot } from "./schema.js";
 import type { StorageBackend } from "./storage-ports.js";
 

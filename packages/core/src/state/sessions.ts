@@ -1,5 +1,5 @@
 import { fail, requireId } from "../errors.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
 import { canonicalJson } from "./commit.js";
 import { matchesScope, normalizeScope } from "./scope.js";
 import type { SessionRecord, ThreadInfo } from "./schema.js";

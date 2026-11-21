@@ -1,4 +1,4 @@
-import type { JsonObject, JsonValue } from "../json.js";
+import type { JsonObject, JsonValue } from "../helpers/json.js";
 export type ContentPart = (
   | { readonly type: "text"; readonly text: string }
   | {

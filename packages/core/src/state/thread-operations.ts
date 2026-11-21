@@ -2,7 +2,7 @@ import type { Controller } from "../controller.js";
 import { Thread } from "../thread.js";
 import { thread as threadHooks } from "../events/type.js";
 import { fail } from "../errors.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
 import { matchesScope } from "./scope.js";
 import { canonicalJson } from "./commit.js";
 import { ThreadService, type CreateThreadOptions } from "./threads.js";

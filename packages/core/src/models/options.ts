@@ -1,5 +1,5 @@
 import { fail } from "../errors.js";
-import { immutable, type JsonObject } from "../json.js";
+import { immutable, type JsonObject } from "../helpers/json.js";
 
 /** Runtime/connection fields belong outside per-request model options. */
 export function validateModelOptions(value: unknown): void {

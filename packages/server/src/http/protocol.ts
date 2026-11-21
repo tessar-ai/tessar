@@ -12,6 +12,8 @@ export const HTTP_STATUS = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
+  PAYLOAD_TOO_LARGE: 413,
+  TOO_MANY_REQUESTS: 429,
   INTERNAL_SERVER_ERROR: 500,
   BAD_GATEWAY: 502,
   SERVICE_UNAVAILABLE: 503,
@@ -21,6 +23,9 @@ export const HTTP_ERROR_CODE = {
   INVALID_REQUEST: "InvalidRequest",
   NOT_FOUND: "NotFound",
   COMMIT_CONFLICT: "CommitConflict",
+  INPUT_QUEUE_FULL: "InputQueueFull",
+  SESSION_BUSY: "SessionBusy",
+  PAYLOAD_TOO_LARGE: "PayloadTooLarge",
 } as const;
 
 export const HTTP_ERROR_MESSAGE = {
@@ -48,9 +53,14 @@ export const SCOPED_PAGE_QUERY_FIELDS = ["scope", ...PAGE_QUERY_FIELDS] as const
 const STRING_FIELDS = ["id", "threadId", "interruptId", "streamId", "modelId", "level", "atCheckpointId", "atMessageId", "reason", "title", "tagName"];
 const EMPTY_STRING_FIELDS = ["reason", "title"];
 const OBJECT_FIELDS = ["metadata", "scope", "options", "modelOptions", "context", "limits", "attributes"];
+const MAX_REQUEST_BODY_BYTES = 16 * 1024 * 1024;
+const CONTENT_LENGTH_HEADER = "content-length";
+const BODY_LIMIT_CONTEXT_KEY = "tessar.body.limited";
 const ERROR_STATUS_BY_CODE = new Map<string, ContentfulStatusCode>([
   [SERVER_ERROR_CODE.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED],
   [SERVER_ERROR_CODE.FORBIDDEN, HTTP_STATUS.FORBIDDEN],
+  [HTTP_ERROR_CODE.INPUT_QUEUE_FULL, HTTP_STATUS.TOO_MANY_REQUESTS],
+  [HTTP_ERROR_CODE.PAYLOAD_TOO_LARGE, HTTP_STATUS.PAYLOAD_TOO_LARGE],
   ...[
     HTTP_ERROR_CODE.INVALID_REQUEST, "InvalidConfiguration", "InvalidCursor", "InvalidData", "InvalidEvent",
     "InvalidMessage", "InvalidResumeResponse", "InvalidUsage", "SchemaIncompatible", "UnknownTool",
@@ -64,7 +74,7 @@ const ERROR_STATUS_BY_CODE = new Map<string, ContentfulStatusCode>([
     HTTP_ERROR_CODE.COMMIT_CONFLICT, "AgentAlreadyBound", "AlreadyResumed", "AlreadyTerminal", "Cancelled",
     "ConsumerAlreadyAttached", "InvalidTransition", "ModelContextIncompatible", "OperationDenied", "OwnerActive",
     "OwnershipLost", "PluginStateIncompatible", "RecoveryRequired", "RegistrationConflict", "ResumeIncompatible",
-    "SessionAgentMismatch", "SessionBusy", "StreamLimit", "ThreadBusy", "ThreadNotDeleted", "ThreadNotSelected",
+    "SessionAgentMismatch", HTTP_ERROR_CODE.SESSION_BUSY, "StreamLimit", "ThreadBusy", "ThreadNotDeleted", "ThreadNotSelected",
     "ThreadReferenced", "ThreadScopeMismatch", "UnsafeForkPoint",
   ].map(code => [code, HTTP_STATUS.CONFLICT] as const),
   ...[
@@ -77,9 +87,38 @@ export function required<T>(value: T | null | undefined): T {
   if (value == null) throw new TessarServerError(HTTP_ERROR_CODE.NOT_FOUND, HTTP_ERROR_MESSAGE.NOT_FOUND);
   return value;
 }
+export async function limitBody(c: Context): Promise<void> {
+  if (c.get(BODY_LIMIT_CONTEXT_KEY)) return;
+  const request = c.req.raw;
+  const overflow = () => new TessarServerError(HTTP_ERROR_CODE.PAYLOAD_TOO_LARGE, `Request body exceeds ${MAX_REQUEST_BODY_BYTES} bytes`);
+  if (Number(request.headers.get(CONTENT_LENGTH_HEADER)) > MAX_REQUEST_BODY_BYTES) {
+    if (request.body && !request.body.locked) void request.body.cancel().catch(() => { });
+    throw overflow();
+  }
+  if (request.body && !request.bodyUsed) {
+    let bytes = 0;
+    const limited = request.body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        bytes += chunk.byteLength;
+        if (bytes > MAX_REQUEST_BODY_BYTES) throw overflow();
+        controller.enqueue(chunk);
+      },
+    }));
+    c.req.raw = new Request(request, { body: limited, duplex: "half" } as RequestInit);
+  } else if (request.bodyUsed) {
+    // Host middleware may already have cached the body; its own read limit still applies.
+    if (new TextEncoder().encode(await c.req.text()).byteLength > MAX_REQUEST_BODY_BYTES) throw overflow();
+  }
+  c.set(BODY_LIMIT_CONTEXT_KEY, true);
+}
 export async function body(c: Context, allowed: readonly string[]): Promise<Record<string, any>> {
+  await limitBody(c);
   let value: unknown;
-  try { value = await c.req.json(); } catch { return bad("Expected JSON object"); }
+  try { value = await c.req.json(); }
+  catch (error) {
+    if (TessarServerError.isInstance(error) && error.code === HTTP_ERROR_CODE.PAYLOAD_TOO_LARGE) throw error;
+    return bad("Expected JSON object");
+  }
   if (!value || typeof value !== "object" || Array.isArray(value) ||
     Object.keys(value).some(key => !allowed.includes(key))) bad("Unexpected request fields");
   const data = value as Record<string, any>;

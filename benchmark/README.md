@@ -1,6 +1,7 @@
 # Core performance benchmarks
 
 Measure Tessar's TypeScript execution overhead before considering native code.
+See [Memory lifecycle](memory-lifecycle.md) for retained-heap measurements and cache/queue limits.
 The fixed in-memory provider has no network, timers, request cloning or variable
 model decisions. Every tool returns the same in-memory result. The benchmark
 uses the real Agent, Controller, memory backend, checkpoints and stream iterator.
@@ -79,3 +80,41 @@ For lifecycle work outside the execution loop, run `node --expose-gc
 benchmark/core-lifecycle.mjs` and see [core-lifecycle.md](core-lifecycle.md). This
 inspects core storage-call counts and synthetic capability registration; it does
 not benchmark built-in plugins or backend drivers.
+
+Additional lifecycle probes, also described in that report:
+
+```powershell
+node benchmark/session-hydration.mjs
+node --expose-gc benchmark/message-input.mjs
+```
+
+The hydration probe records returned tool rows/JSON bytes after real scripted
+executions. The input benchmark isolates core normalization through its built
+internal module; it does not introduce a public API.
+
+For checkpoint/commit preparation, run `node --expose-gc
+benchmark/commit-pipeline.mjs` and read [commit-pipeline.md](commit-pipeline.md).
+It records repeated work in real executions, then measures individual operations
+separately. Instrumented execution time is not used as a latency benchmark.
+
+## PostgreSQL execution comparison
+
+Set `TESSAR_BENCH_POSTGRES_URL` to a developer-provided test connection string;
+the benchmark creates a fresh `tessar_bench_<uuid>` schema per run and **keeps
+those schemas and data**. The pool closes even when setup fails. It does not
+install extensions, drop schemas or change server settings.
+
+```powershell
+$env:TESSAR_BENCH_POSTGRES_URL = $env:TESSAR_TEST_POSTGRES_URL
+$env:TESSAR_BENCH_CASES = "tools-history,session-tools-history,stream-history"
+$env:TESSAR_BENCH_CORE = "benchmark/results/commit-before-core/dist/index.js"
+node --expose-gc benchmark/agent-loop.mjs | Set-Content -Encoding utf8 benchmark/results/postgresql-before-loop.json
+Remove-Item Env:\TESSAR_BENCH_CORE
+node --expose-gc benchmark/agent-loop.mjs | Set-Content -Encoding utf8 benchmark/results/postgresql-after-loop.json
+```
+
+When a baseline build is selected, the runner also resolves every adapter's
+`@tessar/core` import to that same build. This prevents comparing a baseline
+Agent against storage validation helpers from a newer core. With no PostgreSQL
+URL the runner continues using memory storage. `TESSAR_BENCH_CASES` optionally
+selects comma-separated existing workloads; otherwise all seven run.

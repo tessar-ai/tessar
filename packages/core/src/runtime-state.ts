@@ -1,7 +1,7 @@
 import { stream as streamEvents, input as inputEvents, model as modelEvents, text as textEvents, reasoning as reasoningEvents, tool as toolEvents, message as messageEvents } from "./events/type.js";
 import type { ErrorInfo } from "./errors.js";
-import { immutable, type JsonValue } from "./json.js";
-import { freezeSnapshot, jsonSnapshots } from "./json-snapshot.js";
+import { immutable, type JsonValue } from "./helpers/json.js";
+import { freezeSnapshot, jsonSnapshots } from "./helpers/json-snapshot.js";
 import type { ContentPart } from "./messages/parts.js";
 import type { MessageData } from "./messages/message.js";
 export type RuntimePart = {
@@ -16,7 +16,7 @@ export type RuntimePart = {
       readonly type: "tool-call";
       readonly toolCallId?: string;
       readonly name?: string;
-      readonly arguments?: import("./json.js").JsonObject;
+      readonly arguments?: import("./helpers/json.js").JsonObject;
     }
   );
 export type RuntimeDraft = Omit<MessageData, "content"> & {

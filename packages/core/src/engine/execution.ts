@@ -34,7 +34,7 @@ import {
   attachSignals,
   signalMessages,
 } from "./signal-delivery.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
 
 export async function execute(
   execution: ExecutionContext,

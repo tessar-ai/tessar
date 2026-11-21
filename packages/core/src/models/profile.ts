@@ -1,4 +1,4 @@
-import type { JsonValue } from "../json.js";
+import type { JsonValue } from "../helpers/json.js";
 import type { ModelRef } from "./contract.js";
 export interface ModelPricing {
   currency: string;

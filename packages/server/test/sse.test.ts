@@ -56,7 +56,7 @@ test("Agent stream returns state envelopes and completes with one model call", a
   expect(model.calls).toHaveLength(1);
 });
 
-test("Agent SSE reports consumer overflow without failing the stored execution", async () => {
+test("Agent SSE delivers large snapshots without failing a fast viewer or the stored execution", async () => {
   const model = new ScriptedProvider([{ text: "x".repeat(4 * 1024 * 1024 + 1024) }]);
   const agent = new Agent({ id: crypto.randomUUID(), model });
   const host = await start({ controllers: [new Controller({ id: agent.id, agent })] }); server = host.server;
@@ -66,7 +66,8 @@ test("Agent SSE reports consumer overflow without failing the stored execution",
   const frames = (await response.text()).split("\n").filter(line => line.startsWith("data: "))
     .map(line => JSON.parse(line.slice(6)));
   const final = frames.at(-1)!;
-  expect(final.payload.state).toMatchObject({ status: "failed", error: { code: "ConsumerTooSlow", source: "tessar" } });
+  expect(final.payload.state).toMatchObject({ status: "completed", error: null });
+  expect(final.payload.state.messages.at(-1).content[0].text.length).toBe(4 * 1024 * 1024 + 1024);
   const c = `/api/controllers/${agent.id}`;
   const { data: session } = await host.request(c + "/sessions", "POST", {});
   const path = c + `/sessions/${session.id}/threads/${final.threadId}/streams`;

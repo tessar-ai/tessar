@@ -1,6 +1,6 @@
 import { fail, errorInfo } from "../errors.js";
-import { assertJson } from "../json.js";
-import { MessageCodec } from "../messages/codec.js";
+import { assertJson } from "../helpers/json.js";
+import { validateMessage } from "../messages/codec.js";
 import type { ThreadInfo } from "./schema.js";
 import type { StreamRecord } from "../trace/records.js";
 import type {
@@ -77,7 +77,7 @@ export function validateBatch(batch: CommitBatch): void {
     pending = new Set<string>(),
     resolved = new Set<string>();
   for (const wire of cp.state.messages) {
-    const message = MessageCodec.decode(wire);
+    const message = validateMessage(wire);
     if (ids.has(message.id)) fail(INVALID_MESSAGE, "Duplicate message ID");
     ids.add(message.id);
     for (const part of message.content)

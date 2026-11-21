@@ -2,12 +2,23 @@ import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { registerHooks } from "node:module";
 import { setImmediate } from "node:timers/promises";
 import { z } from "zod";
 
 const corePath = process.env.TESSAR_BENCH_CORE;
+const coreImport = corePath ? pathToFileURL(resolve(corePath)).href : "@tessar/core";
+// Storage adapters must use the same core build as the Agent in baseline runs.
+if (corePath) registerHooks({ resolve(specifier, context, next) {
+  return next(specifier === "@tessar/core" ? coreImport : specifier, context);
+} });
 const { Agent, AssistantMessage, Controller, HumanMessage, MessageCodec, createMemoryBackend, createTool, stateChanged, text } =
-  await import(corePath ? pathToFileURL(resolve(corePath)).href : "@tessar/core");
+  await import(coreImport);
+const postgresUrl = process.env.TESSAR_BENCH_POSTGRES_URL;
+const postgres = postgresUrl ? { ...await import("pg"), ...await import("@tessar/postgresql") } : undefined;
+const retainedSchemas = [];
+const CONNECTION_TIMEOUT_MS = 5000;
+const POSTGRES_SCHEMA_PREFIX = "tessar_bench_";
 
 const WARMUPS = 2;
 const SAMPLES = 5;
@@ -57,7 +68,12 @@ async function run(configuration) {
   // Construct fixtures outside the measured execution; the fake provider only yields fixed chunks.
   const scripts = responses(configuration);
   let modelCalls = 0, toolCalls = 0, hookCalls = 0, snapshots = 0, commits = 0;
-  const backend = createMemoryBackend();
+  const pool = postgres ? new postgres.Pool({ connectionString: postgresUrl, connectionTimeoutMillis: CONNECTION_TIMEOUT_MS }) : undefined;
+  const schema = pool ? POSTGRES_SCHEMA_PREFIX + crypto.randomUUID().replaceAll("-", "") : undefined;
+  const backend = pool
+    ? await postgres.createPostgresqlBackend({ pool, schema }).catch(async error => { await pool.end(); throw error; })
+    : createMemoryBackend();
+  if (schema) retainedSchemas.push(schema);
   const stage = backend.commits.stage.bind(backend.commits);
   backend.commits.stage = async batch => { commits++; return stage(batch); };
   const model = {
@@ -87,21 +103,21 @@ async function run(configuration) {
       })),
     ],
   });
-  await controller.initialize();
-  const input = Array.from({ length: configuration.history }, (_, index) => MessageCodec.encode(
-    index % 2 === 0
-      ? new HumanMessage("h".repeat(HISTORY_TEXT_SIZE), { id: "history-" + index })
-      : new AssistantMessage("a".repeat(HISTORY_TEXT_SIZE), { id: "history-" + index }),
-  ));
-  const prompt = MessageCodec.encode(new HumanMessage("Run the fixed task", { id: "prompt" }));
-  const session = configuration.session ? await controller.createSession() : undefined;
-  if (session) { await session.thread.create({ messages: input }); commits = 0; }
-  else input.push(prompt);
-  globalThis.gc?.();
-  const cpu = process.cpuUsage();
-  const started = performance.now();
-  let final;
   try {
+    await controller.initialize();
+    const input = Array.from({ length: configuration.history }, (_, index) => MessageCodec.encode(
+      index % 2 === 0
+        ? new HumanMessage("h".repeat(HISTORY_TEXT_SIZE), { id: "history-" + index })
+        : new AssistantMessage("a".repeat(HISTORY_TEXT_SIZE), { id: "history-" + index }),
+    ));
+    const prompt = MessageCodec.encode(new HumanMessage("Run the fixed task", { id: "prompt" }));
+    const session = configuration.session ? await controller.createSession() : undefined;
+    if (session) { await session.thread.create({ messages: input }); commits = 0; }
+    else input.push(prompt);
+    globalThis.gc?.();
+    const cpu = process.cpuUsage();
+    const started = performance.now();
+    let final;
     if (session) {
       const done = Promise.withResolvers();
       const unsubscribe = session.subscribe(event => {
@@ -127,15 +143,22 @@ async function run(configuration) {
     assert.equal(hookCalls, configuration.plugins * configuration.deltas);
     assert.equal(final.messages.at(-1).content[0].text, DELTA_TEXT.repeat(configuration.deltas));
     return { elapsedMs, cpuMs: (used.user + used.system) / 1000, modelCalls, toolCalls, hookCalls, snapshots, commits };
-  } finally { await controller.dispose(); await backend.close(); }
+  } finally {
+    try { await controller.dispose(); await backend.close(); }
+    finally { await pool?.end(); }
+  }
 }
 
+const selectedCases = process.env.TESSAR_BENCH_CASES?.split(",");
+if (selectedCases) for (const name of selectedCases) assert.ok(CASES.some(item => item.name === name), "Unknown benchmark case: " + name);
 const results = [];
-for (const configuration of CASES) {
+for (const configuration of CASES.filter(item => !selectedCases || selectedCases.includes(item.name))) {
   for (let iteration = 0; iteration < WARMUPS; iteration++) await run(configuration);
   const samples = [];
   for (let iteration = 0; iteration < SAMPLES; iteration++) samples.push(await run(configuration));
   const times = samples.map(sample => sample.elapsedMs).sort((a, b) => a - b);
   results.push({ ...configuration, medianMs: times[Math.floor(times.length / 2)], samples });
 }
-console.log(JSON.stringify({ node: process.version, platform: process.platform, arch: process.arch, core: corePath ?? "workspace", warmups: WARMUPS, results }, null, 2));
+console.log(JSON.stringify({ node: process.version, platform: process.platform, arch: process.arch,
+  core: corePath ?? "workspace", storage: postgres ? "postgresql" : "memory", retainedSchemas,
+  warmups: WARMUPS, results }, null, 2));

@@ -4,6 +4,7 @@ import {
   thread as threadHooks,
   stream as streamHooks,
   model as modelHooks,
+  diagnostic,
 } from "../src/index.js";
 import { expect, it } from "vitest";
 import {
@@ -24,6 +25,74 @@ function boundary(session: import("../src/session.js").Session, type: string) {
     });
   });
 }
+it.each(["resume", "recover"] as const)("holds Session controls while %s reads its checkpoint", async operation => {
+  const backend = createMemoryBackend();
+  const entered = Promise.withResolvers<void>();
+  const gate = Promise.withResolvers<void>();
+  const pause = defineInterruption({
+    id: "control-pause", version: 1,
+    response: { jsonSchema: { type: "boolean" }, parse: value => value },
+    resolve: () => ToolDecision.allow(),
+  });
+  const { controller } = await fixture([{ text: "answer A" }], [{
+    id: "pause", setup(tessar) {
+      tessar.storage.register(backend);
+      tessar.interruptions.register(pause);
+      tessar.hook(streamHooks.before, (_, context) => context.suspend(pause, {}));
+    },
+  }]);
+  let continuing: Promise<unknown> | undefined;
+  try {
+    const session = await controller.createSession();
+    const other = await session.thread.create();
+    const selected = await session.thread.create();
+    const suspended = boundary(session, streamHooks.suspended);
+    await session.followUp("question A");
+    const event = await suspended;
+    await new Promise<void>(resolve => setImmediate(resolve));
+    const read = backend.checkpoints.get.bind(backend.checkpoints);
+    let hold = true;
+    backend.checkpoints.get = async id => {
+      const checkpoint = await read(id);
+      if (hold) { hold = false; entered.resolve(); await gate.promise; }
+      return checkpoint;
+    };
+    continuing = operation === "resume"
+      ? session.resume({ interruptId: event.payload.interrupt.id, value: true })
+      : session.recover({ streamId: event.streamId });
+    await entered.promise;
+    try {
+      await expect(session.thread.switch(other.id).then(() => undefined)).rejects.toMatchObject({ code: "SessionBusy" });
+      await expect(session.dispose()).rejects.toMatchObject({ code: "SessionBusy" });
+      await expect(session.followUp("wrong thread")).rejects.toMatchObject({ code: "SessionBusy" });
+    } finally { gate.resolve(); }
+    await continuing;
+    expect(session.thread.getId()).toBe(selected.id);
+    expect(session.state.get().messages[0]!.content).toEqual([{ type: "text", text: "question A" }]);
+  } finally { gate.resolve(); await continuing; await controller.dispose(); }
+});
+
+it("bounds retained diagnostics while delivering every diagnostic event", async () => {
+  const seen: string[] = [];
+  const { controller } = await fixture([], [{
+    id: "diagnostics", setup(tessar) {
+      tessar.hook(diagnostic, event => { seen.push(event.payload.error.message); });
+    },
+  }]);
+  try {
+    const session = await controller.createSession();
+    let count = 0;
+    session.subscribe(threadHooks.started, () => { throw Error("failure-" + count++); });
+    for (let index = 0; index < 120; index++) await session.thread.create();
+    expect(seen).toHaveLength(120);
+    expect(seen[0]).toBe("failure-0");
+    expect(seen.at(-1)).toBe("failure-119");
+    expect(controller.diagnostics).toHaveLength(100);
+    expect(controller.diagnostics[0]!.message).toBe("failure-20");
+    expect(controller.diagnostics.at(-1)!.message).toBe("failure-119");
+  } finally { await controller.dispose(); }
+});
+
 it.each([false, true])("rejects follow-up racing with a pending thread switch (admission already reading: %s)", async reading => {
   const backend = createMemoryBackend();
   const write = backend.sessions.compareAndSet.bind(backend.sessions);
@@ -312,7 +381,7 @@ it("accepts a follow-up from a terminal observer after releasing the prior lease
         }
       });
     });
-    void done.catch(() => {});
+    void done.catch(() => { });
     await session.followUp(new HumanMessage("one"));
     await reached;
     await new Promise((r) => setImmediate(r));

@@ -1,4 +1,4 @@
-import { immutable, type Clock, systemClock } from "../json.js";
+import { immutable, type Clock, systemClock } from "../helpers/json.js";
 import type { ModelProfile, ProfilePatch } from "./profile.js";
 import type { ModelRef, ModelProviderRegistration } from "./contract.js";
 import { bundledCatalog, type CatalogSnapshot } from "./catalog.js";
@@ -67,11 +67,11 @@ export function applyPatch(
       known === 0
         ? "unavailable"
         : next.name !== null &&
-            next.contextWindow !== null &&
-            next.maxInputTokens !== null &&
-            next.maxOutputTokens !== null &&
-            next.pricing !== null &&
-            Object.values(next.capabilities).every((v) => v !== null)
+          next.contextWindow !== null &&
+          next.maxInputTokens !== null &&
+          next.maxOutputTokens !== null &&
+          next.pricing !== null &&
+          Object.values(next.capabilities).every((v) => v !== null)
           ? "complete"
           : "partial",
     freshness: known ? (retainedOldFields ? "stale" : "fresh") : "unknown",
@@ -87,14 +87,17 @@ export function applyPatch(
   return immutable(next);
 }
 const PROFILE_TTL_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_METADATA_PARTITION = "registration";
 
 export class ProfileResolver {
   /** @internal */ catalog: CatalogSnapshot;
   /** @internal */ readonly cache = new Map<
-    string,
-    { profile: ModelProfile; fetchedAt: number }
-  >();
+  string,
+  { profile: ModelProfile; fetchedAt: number }
+>();
   private readonly pending = new Map<string, Promise<ModelProfile>>();
+  private readonly detached = new WeakSet<ModelProviderRegistration>();
+  private generation = 0;
   constructor(
     private readonly options: { catalog?: CatalogSnapshot; clock?: Clock } = {},
   ) {
@@ -107,8 +110,9 @@ export class ProfileResolver {
     return JSON.stringify([
       ref.providerId,
       ref.modelId,
+      ref.connectionId ?? null,
       provider.endpoint ?? "",
-      provider.metadataPartition ?? "registration",
+      provider.metadataPartition ?? DEFAULT_METADATA_PARTITION,
     ]);
   }
   needsRefresh(ref: ModelRef, provider: ModelProviderRegistration): boolean {
@@ -122,9 +126,9 @@ export class ProfileResolver {
     if (cached) {
       return Date.parse(this.now()) - cached.fetchedAt >= PROFILE_TTL_MS
         ? immutable({
-            ...cached.profile,
-            metadata: { ...cached.profile.metadata, freshness: "stale" },
-          })
+          ...cached.profile,
+          metadata: { ...cached.profile.metadata, freshness: "stale" },
+        })
         : cached.profile;
     }
     let profile = emptyProfile(ref);
@@ -160,6 +164,7 @@ export class ProfileResolver {
     const key = this.key(provider, ref),
       active = this.pending.get(key);
     if (active) return active;
+    const generation = this.generation;
     const promise = (async () => {
       let profile = this.current(ref, provider);
       if (provider.metadata) {
@@ -184,14 +189,27 @@ export class ProfileResolver {
           });
         }
       }
-      this.cache.set(key, { profile, fetchedAt: Date.parse(this.now()) });
+      if (!this.detached.has(provider) && !signal?.aborted && generation === this.generation)
+        this.cache.set(key, { profile, fetchedAt: Date.parse(this.now()) });
       return profile;
     })();
     this.pending.set(key, promise);
-    void promise.finally(() => this.pending.delete(key));
+    void promise.finally(() => {
+      if (this.pending.get(key) === promise) this.pending.delete(key);
+    }).catch(() => { });
     return promise;
   }
+  remove(provider: ModelProviderRegistration): void {
+    this.detached.add(provider);
+    for (const map of [this.cache, this.pending]) for (const key of map.keys()) {
+      const [id, , , endpoint, partition] = JSON.parse(key) as unknown[];
+      if (id === provider.id && endpoint === (provider.endpoint ?? "") && partition === (provider.metadataPartition ?? DEFAULT_METADATA_PARTITION))
+        map.delete(key);
+    }
+  }
   clear() {
+    this.generation++;
     this.cache.clear();
+    this.pending.clear();
   }
 }

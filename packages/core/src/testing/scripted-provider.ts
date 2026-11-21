@@ -8,7 +8,7 @@ import type {
 } from "../models/contract.js";
 import { AssistantMessage } from "../messages/message.js";
 import { MessageCodec } from "../messages/codec.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
 import { normalizeUsage, type TokenCounts } from "../trace/usage.js";
 import { TessarError } from "../errors.js";
 export interface ModelScript {

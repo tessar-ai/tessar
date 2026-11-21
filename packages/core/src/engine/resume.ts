@@ -13,7 +13,7 @@ import {
 import { planRecovery } from "./recovery.js";
 import { recoverTools } from "./tool-executor.js";
 import { TessarError, fail } from "../errors.js";
-import { assertJson, immutable, type JsonValue } from "../json.js";
+import { assertJson, immutable, type JsonValue } from "../helpers/json.js";
 import type { Tool } from "../tools/tool.js";
 import { canonicalJson } from "../state/commit.js";
 import type { StorageBackend } from "../state/storage-ports.js";

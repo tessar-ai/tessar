@@ -14,12 +14,14 @@ interface SessionView {
 }
 
 export class ThreadStateHub {
+  private closed = false;
   private readonly threads = new Map<string, ThreadView>();
   private readonly sessions = new Map<Session, SessionView>();
   private sequence = 0;
   private key(controllerId: string, threadId: string) { return JSON.stringify([controllerId, threadId]); }
 
   observe(event: EventEnvelope): void {
+    if (this.closed) return;
     if (!event.controllerId || !event.threadId) return;
     if (event.type !== stateChanged && event.type !== thread.deleted && !LIFECYCLE_EVENTS.has(event.type)) return;
     if (event.type === stream.error && event.payload.target === "consumer") return;
@@ -59,6 +61,7 @@ export class ThreadStateHub {
   }
 
   attach(controllerId: string, session: Session): void {
+    if (this.closed) return;
     if (session.isDisposed() || this.sessions.has(session)) return;
     const slot: SessionView = { controllerId, session, listeners: new Map(), detach: () => { } };
     this.sessions.set(session, slot);
@@ -83,6 +86,7 @@ export class ThreadStateHub {
     this.sessions.delete(session);
     this.prune();
   }
+  hasSubscribers(session: Session): boolean { return (this.sessions.get(session)?.listeners.size ?? 0) > 0; }
   private compose(controllerId: string, session: Session): RuntimeState {
     const own = session.state.get();
     const id = session.thread.getId();
@@ -126,7 +130,11 @@ export class ThreadStateHub {
     for (const [key, view] of this.threads) if (!view.active && !interested.has(key)) this.threads.delete(key);
   }
   close(): void {
-    for (const slot of this.sessions.values()) slot.detach();
+    this.closed = true;
+    for (const slot of this.sessions.values()) {
+      for (const close of slot.listeners.values()) close();
+      slot.detach();
+    }
     this.sessions.clear(); this.threads.clear();
   }
 }

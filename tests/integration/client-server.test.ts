@@ -39,12 +39,14 @@ test("client supports direct Agents without inventing Controllers and preserves 
   await expect(client.getAgent("missing").info()).rejects.toMatchObject({ status: 404, remote: { code: "NotFound" } });
 });
 
-test("client receives ConsumerTooSlow as a terminal state when the Agent iterator overflows", async () => {
-  const agent = new Agent({ id: "overflow", model: new ScriptedProvider([{ text: "x".repeat(4 * 1024 * 1024 + 1024) }]) });
+test("client receives a complete large answer without a false slow-consumer failure", async () => {
+  const agent = new Agent({ id: "large-answer", model: new ScriptedProvider([{ text: "x".repeat(4 * 1024 * 1024 + 1024) }]) });
   const host = await start({ agents: [agent] }); server = host.server;
   const client = new TessarClient({ baseURL: host.url });
   const result = await last(await client.getAgent(agent.id).stream("question"));
-  expect(result.payload.state).toMatchObject({ status: "failed", error: { code: "ConsumerTooSlow", source: "tessar" } });
+  expect(result.payload.state).toMatchObject({ status: "completed", error: null });
+  const answer = result.payload.state.messages.at(-1)?.content.find(part => part.type === "text");
+  expect(answer?.text.length).toBe(4 * 1024 * 1024 + 1024);
 });
 
 test("prefixed server enforces headers on JSON and SSE", async () => {

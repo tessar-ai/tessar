@@ -1,6 +1,6 @@
 import { model as modelHooks } from "../events/type.js";
 import { errorInfo, fail } from "../errors.js";
-import { immutable } from "../json.js";
+import { immutable } from "../helpers/json.js";
 
 import type {
   ModelChunk,

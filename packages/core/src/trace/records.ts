@@ -1,5 +1,5 @@
 import type { ErrorInfo } from "../errors.js";
-import type { JsonObject, JsonValue, Clock, IdGenerator } from "../json.js";
+import type { JsonObject, JsonValue, Clock, IdGenerator } from "../helpers/json.js";
 import type { MessageData } from "../messages/message.js";
 import { normalizeUsage, type ModelUsage, type UsageSummary } from "./usage.js";
 import type { Checkpoint } from "../state/schema.js";

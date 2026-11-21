@@ -1,4 +1,4 @@
-import { assertJson, immutable, systemClock } from "../json.js";
+import { assertJson, immutable, systemClock } from "../helpers/json.js";
 import { fail } from "../errors.js";
 import type { ModelChunk, ModelPartChunk } from "./contract.js";
 
