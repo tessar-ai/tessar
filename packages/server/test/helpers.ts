@@ -28,8 +28,9 @@ export async function start<User = unknown>(options: TessarOptions<User> = {}, b
   return { server, url, request };
 }
 
-export async function startServer(tessar: Tessar<any>) {
+export async function startServer(tessar: Tessar<any>, configure?: (app: Hono) => void) {
   const app = new Hono();
+  configure?.(app);
   const hostname = "127.0.0.1";
   let adapter: TessarServer | undefined;
   const listener = createAdaptorServer({ fetch: app.fetch, overrideGlobalObjects: false }) as Server;

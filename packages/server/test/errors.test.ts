@@ -1,8 +1,12 @@
 import { expect, test, vi } from "vitest";
-import { Hono } from "hono";
 import { TessarError, errorInfo } from "@tessar/core";
-import { bad, required, httpError } from "../src/http/protocol.js";
-import { TessarServerError, registerRoute } from "../src/index.js";
+import { bad, required, describeHttpError } from "../src/http/protocol.js";
+import { TessarServerError } from "../src/index.js";
+
+function httpError(error: unknown): Response {
+  const { status, payload } = describeHttpError(error);
+  return Response.json(payload, { status });
+}
 
 test("server-owned errors use the public subclass and preserve cause and serialization", () => {
   const cause = new Error("original");
@@ -12,15 +16,11 @@ test("server-owned errors use the public subclass and preserve cause and seriali
   expect(error.toJSON()).toMatchObject({ name: "TessarServerError", code: "InvalidRequest", source: "tessar" });
   expect(() => bad("bad request")).toThrow(TessarServerError);
   expect(() => required(null)).toThrow(TessarServerError);
-  expect(() => registerRoute("invalid", { method: "GET", handler: () => new Response() })).toThrow(TessarServerError);
 });
 
 test("HTTP responses identify server-owned exceptions", async () => {
-  const app = new Hono(); app.onError(httpError);
-  app.get("/invalid", () => bad("bad request"));
-  app.get("/missing", () => required<Response>(null));
-  for (const [path, status, code] of [["/invalid", 400, "InvalidRequest"], ["/missing", 404, "NotFound"]] as const) {
-    const response = await app.request(path);
+  for (const [status, code] of [[400, "InvalidRequest"], [404, "NotFound"]] as const) {
+    const response = httpError(new TessarServerError(code, "test"));
     expect(response.status).toBe(status);
     expect((await response.json()).error).toMatchObject({ name: "TessarServerError", code, source: "tessar" });
   }
@@ -35,8 +35,7 @@ test("HTTP errors preserve origin and safe upstream status without exposing secr
     [new TessarError("CommitConflict", "stale"), 409], [new TessarError("ThreadNotFound", "missing"), 404],
     [new TessarError("InvalidCursor", "bad"), 400], [new Error("secret password"), 500]] as const;
     for (const [error, expected] of cases) {
-      const app = new Hono(); app.onError(httpError); app.get("/", () => { throw error; });
-      const response = await app.request("/");
+      const response = httpError(error);
       expect(response.status).toBe(expected);
       const json = await response.json();
       expect(JSON.stringify(json)).not.toContain("secret");
@@ -52,22 +51,18 @@ test("provider and application codes cannot impersonate local SDK errors", async
     for (const code of ["NotFoundError", "InvalidApiKey"]) {
       const error = Object.assign(new Error("sentinel secret"), { code, status: 401 });
       errorInfo(error, { source: "provider" });
-      const app = new Hono(); app.onError(httpError); app.get("/", () => { throw error; });
-      const response = await app.request("/");
+      const response = httpError(error);
       expect(response.status).toBe(502); expect(await response.text()).not.toContain("sentinel secret");
     }
     const error = Object.assign(new Error("sentinel secret"), { code: "InvalidRequest" });
     errorInfo(error, { source: "application" });
-    const app = new Hono(); app.onError(httpError); app.get("/", () => { throw error; });
-    const response = await app.request("/"); expect(response.status).toBe(500);
+    const response = httpError(error); expect(response.status).toBe(500);
     expect(await response.text()).not.toContain("sentinel secret");
   } finally { log.mockRestore(); }
 });
 
 test.each(["ThreadNotDeleted", "ThreadReferenced", "RecoveryRequired", "InvalidTransition"])("maps %s to a state conflict", async code => {
-  const app = new Hono(); app.onError(httpError);
-  app.get("/", () => { throw new TessarError(code, "Resolve the current state first"); });
-  const response = await app.request("/");
+  const response = httpError(new TessarError(code, "Resolve the current state first"));
   expect(response.status).toBe(409);
   expect((await response.json()).error.code).toBe(code);
 });

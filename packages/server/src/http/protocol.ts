@@ -1,7 +1,5 @@
 import { TessarError, errorInfo, MessageCodec, normalizeContent, normalizeScope, type ErrorInfo, type RuntimeState } from "@tessar/core";
-import type { Context } from "hono";
 import type { EndpointRequest } from "./endpoint.js";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { TessarServerError, SERVER_ERROR_CODE } from "../errors.js";
 
 export const HTTP_STATUS = {
@@ -61,8 +59,7 @@ const EMPTY_STRING_FIELDS = ["reason", "title"];
 const OBJECT_FIELDS = ["metadata", "scope", "options", "modelOptions", "context", "limits", "attributes"];
 export const MAX_REQUEST_BODY_BYTES = 16 * 1024 * 1024;
 const CONTENT_LENGTH_HEADER = "content-length";
-const BODY_LIMIT_CONTEXT_KEY = "tessar.body.limited";
-const ERROR_STATUS_BY_CODE = new Map<string, ContentfulStatusCode>([
+const ERROR_STATUS_BY_CODE = new Map<string, number>([
   [SERVER_ERROR_CODE.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED],
   [SERVER_ERROR_CODE.FORBIDDEN, HTTP_STATUS.FORBIDDEN],
   [HTTP_ERROR_CODE.INPUT_QUEUE_FULL, HTTP_STATUS.TOO_MANY_REQUESTS],
@@ -93,9 +90,7 @@ export function required<T>(value: T | null | undefined): T {
   if (value == null) throw new TessarServerError(HTTP_ERROR_CODE.NOT_FOUND, HTTP_ERROR_MESSAGE.NOT_FOUND);
   return value;
 }
-export async function limitBody(c: Context): Promise<void> {
-  if (c.get(BODY_LIMIT_CONTEXT_KEY)) return;
-  const request = c.req.raw;
+export function limitBody(request: Request): Request {
   const overflow = () => payloadTooLarge(MAX_REQUEST_BODY_BYTES);
   if (Number(request.headers.get(CONTENT_LENGTH_HEADER)) > MAX_REQUEST_BODY_BYTES) {
     if (request.body && !request.body.locked) void request.body.cancel().catch(() => { });
@@ -110,16 +105,9 @@ export async function limitBody(c: Context): Promise<void> {
         controller.enqueue(chunk);
       },
     }));
-    c.req.raw = new Request(request, { body: limited, duplex: "half" } as RequestInit);
-  } else if (request.bodyUsed) {
-    // Host middleware may already have cached the body; its own read limit still applies.
-    if (new TextEncoder().encode(await c.req.text()).byteLength > MAX_REQUEST_BODY_BYTES) throw overflow();
+    return new Request(request, { body: limited, duplex: "half" } as RequestInit);
   }
-  c.set(BODY_LIMIT_CONTEXT_KEY, true);
-}
-export async function readHonoJson(c: Context): Promise<unknown> {
-  await limitBody(c);
-  return c.req.json();
+  return request;
 }
 
 export async function body(request: Pick<EndpointRequest, "readJson">, allowed: readonly string[]): Promise<Record<string, any>> {
@@ -172,7 +160,7 @@ export function query(request: EndpointRequest, allowed: readonly string[]): Rec
 }
 export function describeHttpError(error: unknown) {
   const info = errorInfo(error);
-  let status: ContentfulStatusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR;
+  let status: number = HTTP_STATUS.INTERNAL_SERVER_ERROR;
   if (info.source === "provider") status = HTTP_STATUS.BAD_GATEWAY;
   else if (info.source === "storage") status = HTTP_STATUS.SERVICE_UNAVAILABLE;
   else if (info.source === "tessar" && TessarError.isInstance(error)) {
@@ -180,10 +168,6 @@ export function describeHttpError(error: unknown) {
   }
   if (status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) console.error(error);
   return { status, payload: { error: safeError(info, status < HTTP_STATUS.INTERNAL_SERVER_ERROR) } };
-}
-export function httpError(error: unknown, c: Context): Response {
-  const { status, payload } = describeHttpError(error);
-  return c.json(payload, status);
 }
 export function safeError(info: ErrorInfo | null, exposeMessage = false): ErrorInfo | null {
   if (!info) return null;

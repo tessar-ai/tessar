@@ -8,7 +8,7 @@ import { z } from "zod";
 import { Agent, Controller, AssistantMessage, MessageCodec, createTool, defineInterruption, ToolDecision, turn } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { LibsqlStoragePlugin } from "@tessar/libsql";
-import { Tessar, registerRoute } from "@tessar/server";
+import { Tessar } from "@tessar/server";
 
 const database = process.env.TESSAR_FIXTURE_DB ? new Database(process.env.TESSAR_FIXTURE_DB) : undefined;
 const model = new ScriptedProvider(process.env.TESSAR_FIXTURE_SUSPEND && !process.env.TESSAR_FIXTURE_RESUMED ? [{ response: {
@@ -31,10 +31,10 @@ const controller = new Controller({ id: "fixture", agent: new Agent({ id: "assis
 });
 const tessar = new Tessar({ controllers: [controller], server: {
   port: Number(process.env.TESSAR_FIXTURE_PORT ?? 0),
-  routes: [registerRoute("/calls", { method: "GET", handler: c => c.json({ count: model.calls.length }) })],
 } });
 
 const app = new Hono();
+app.get("/calls", c => c.json({ count: model.calls.length }));
 const adapter = new TessarServer({ app, tessar });
 let listener: Server | undefined;
 try {

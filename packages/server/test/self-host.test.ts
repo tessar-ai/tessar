@@ -4,7 +4,7 @@ import { request as httpRequest } from "node:http";
 import { connect } from "node:http2";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { TessarClient } from "@tessar/client";
-import { Tessar, registerRoute } from "../src/index.js";
+import { Tessar } from "../src/index.js";
 import { startSelfHost } from "../src/framework/self-host.js";
 
 test("serves Fastify plugins and Tessar routes in the configured prefix", async () => {
@@ -89,15 +89,6 @@ test("preserves request bytes for auth and the established JSON/body error contr
     expect(oversized.status).toBe(413);
     expect(JSON.parse(oversized.body)).toMatchObject({ error: { code: "PayloadTooLarge" } });
   } finally { await host.shutdown(); }
-});
-
-test("reports how to migrate Hono routes in a self-hosted project", async () => {
-  const tessar = new Tessar({
-    agents: [new Agent({ id: "assistant", model: new ScriptedProvider([]) })],
-    server: { routes: [registerRoute("/health", { method: "GET", handler: c => c.text("ok") })] },
-  });
-  try { await expect(startSelfHost(tessar)).rejects.toThrow("server.configure"); }
-  finally { await tessar.shutdown(); }
 });
 
 test("disconnect detaches a viewer, while shutdown closes an open SSE connection", async () => {

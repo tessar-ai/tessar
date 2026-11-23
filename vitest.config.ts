@@ -11,6 +11,7 @@ export default defineConfig({
     { find: "@tessar/client", replacement: path("./packages/client/src/index.ts") },
     { find: "@tessar/server/hono", replacement: path("./packages/server/src/framework/hono.ts") },
     { find: "@tessar/server/express", replacement: path("./packages/server/src/framework/express.ts") },
+    { find: "@tessar/server/fastify", replacement: path("./packages/server/src/framework/fastify.ts") },
     { find: "@tessar/server", replacement: path("./packages/server/src/index.ts") },
     { find: "@tessar/rag", replacement: path("./packages/rag/src/index.ts") },
     { find: "@tessar/plugins/logger", replacement: path("./packages/plugins/src/build-in/logger.ts") },
