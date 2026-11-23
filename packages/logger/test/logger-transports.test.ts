@@ -13,7 +13,7 @@ import {
   type LogEntry,
   type LoggerOptions,
   type LogTransport,
-} from "@tessar/plugins/logger";
+} from "@tessar/logger";
 
 async function directory(): Promise<string> {
   const path = await mkdtemp(join(tmpdir(), "tessar-logger-"));

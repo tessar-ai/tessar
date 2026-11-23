@@ -12,7 +12,6 @@
   "dependencies": {
     "@tessar/core": "workspace:*",
     "@tessar/openai": "workspace:*",
-    "@tessar/plugins": "workspace:*",
     "@tessar/libsql": "workspace:*",
     "zod": "^4.6.7",
     "libsql": "0.5.29"

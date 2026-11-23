@@ -114,14 +114,15 @@ The release workflow discovers the selected package under
 `integrations/auth/*/package.json`, validates its version, builds the workspace, and
 packs/publishes only that package. Adding a package does not require editing a
 publish list. Legacy `v*` tags no longer trigger publication.
-Stable tags use npm `latest`; prereleases such as `plugins@0.2.0-beta.1` use `next`.
+Stable tags use npm `latest`; prereleases such as `logger@0.2.0-beta.1` use `next`.
 The CLI package `@tessar/cli` remains in `packages/cli` and uses tags such as
 `cli@0.1.0`, producing `tessar-cli-0.1.0.tgz`. Its executable remains `tessar`.
 
 Extensions that use the application's Core runtime declare `@tessar/core` as a
 required `peerDependency: "workspace:^"`, with `devDependency: "workspace:*"` for
 workspace builds/tests. This includes OpenAI, storage backends, OpenTelemetry,
-RAG, TypeSafe and server. The plugins package keeps its optional Core peer.
+RAG, TypeSafe and server. The standalone logger keeps an optional Core peer so
+`PluginManager` can supply the host's Core when loading it into a managed environment.
 Use one compatible application Core version; do not bypass incompatible peer
 requirements with force/override settings. Peer declarations do not make these
 packages independent of Core or guarantee one copy for an incompatible graph.

@@ -20,10 +20,10 @@
   "devDependencies": {
     "@tessar/client": "workspace:*",
     "@tessar/core": "workspace:*",
+    "@tessar/logger": "workspace:*",
     "@tessar/mongodb": "workspace:*",
     "@tessar/openai": "workspace:*",
     "@tessar/opentelemetry": "workspace:*",
-    "@tessar/plugins": "workspace:*",
     "@tessar/postgresql": "workspace:*",
     "@tessar/rag": "workspace:*",
     "@tessar/server": "workspace:*",

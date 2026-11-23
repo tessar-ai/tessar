@@ -18,6 +18,8 @@ const core = files(resolve(root, "packages/core/src")).filter(
     !path.includes("/testing/") &&
     !path.includes("\\testing\\"),
 );
+const nodePlugins = resolve(root, "packages/core/src/plugins/node");
+const isNodePlugin = (file) => dirname(file) === nodePlugins;
 for (const file of core) {
   const text = readFileSync(file, "utf8"),
     imports = [
@@ -27,7 +29,7 @@ for (const file of core) {
     ].map((match) => match[1]);
   for (const specifier of imports)
     if (
-      specifier.startsWith("node:") ||
+      (specifier.startsWith("node:") && !isNodePlugin(file)) ||
       specifier.startsWith("@tessar/") ||
       specifier === "openai" ||
       specifier === "vitest"
@@ -35,13 +37,13 @@ for (const file of core) {
       errors.push(
         relative(root, file) + ": forbidden core import " + specifier,
       );
-  graph.set(
-    file,
-    imports
-      .filter((name) => name.startsWith("."))
-      .map((name) => resolve(dirname(file), name.replace(/\.js$/, ".ts")))
-      .filter((path) => existsSync(path) && path.endsWith(".ts")),
-  );
+  const dependencies = imports
+    .filter((name) => name.startsWith("."))
+    .map((name) => resolve(dirname(file), name.replace(/\.js$/, ".ts")))
+    .filter((path) => existsSync(path) && path.endsWith(".ts"));
+  if (!isNodePlugin(file) && dependencies.some(isNodePlugin))
+    errors.push(relative(root, file) + ": forbidden Node plugin import");
+  graph.set(file, dependencies);
   if (/\b(?:AgentEngine|RuntimePort|bindRuntime|apiVersion)\b/.test(text))
     errors.push(relative(root, file) + ": obsolete runtime abstraction");
 }

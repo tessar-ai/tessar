@@ -25,6 +25,10 @@
       "types": "./dist/tools/index.d.ts",
       "import": "./dist/tools/index.js"
     },
+    "./plugin": {
+      "types": "./dist/plugins/node/index.d.ts",
+      "import": "./dist/plugins/node/index.js"
+    },
     "./testing/storage-conformance": {
       "types": "./dist/testing/storage-conformance.d.ts",
       "import": "./dist/testing/storage-conformance.js"

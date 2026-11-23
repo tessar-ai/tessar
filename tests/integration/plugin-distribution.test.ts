@@ -170,9 +170,6 @@ it("runs a packed installed CLI from another project and discovers a plugin adde
     const coreVersion = JSON.parse(
       await readFile(resolve("packages/core/package.json"), "utf8"),
     ).version;
-    const pluginsVersion = JSON.parse(
-      await readFile(resolve("packages/plugins/package.json"), "utf8"),
-    ).version;
     await writeFile(
       join(fixture, "package.json"),
       JSON.stringify({
@@ -182,7 +179,6 @@ it("runs a packed installed CLI from another project and discovers a plugin adde
         bin: { "test-host": "main.mjs" },
         dependencies: {
           "@tessar/core": coreVersion,
-          "@tessar/plugins": pluginsVersion,
         },
       }),
     );
@@ -191,7 +187,7 @@ it("runs a packed installed CLI from another project and discovers a plugin adde
       `#!/usr/bin/env node
    import {Agent,Controller,HumanMessage} from '@tessar/core';
    import {ScriptedProvider} from '@tessar/core/testing';
-   import {PluginManager} from '@tessar/plugins';
+   import {PluginManager} from '@tessar/core/plugin';
    import {resolve} from 'node:path';
    const manager=new PluginManager({directory:resolve('.tessar'),hostUrl:import.meta.url});let controller;
    try{if(process.argv[2]==='plugins'){console.log(JSON.stringify(await manager.discover()));}
@@ -203,22 +199,14 @@ it("runs a packed installed CLI from another project and discovers a plugin adde
    }}finally{try{await controller?.dispose();}finally{manager.dispose();}}
   `,
     );
-    const results = await Promise.allSettled(
-      ["packages/core", "packages/plugins"].map(async (path) => {
-        const packed = await command(
-          "pnpm",
-          // prepack would rewrite shared dist while other process tests import it.
-          ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", packs],
-          resolve(path),
-          cache,
-        );
-        return resolve(packs, JSON.parse(packed.stdout).filename);
-      }),
+    const packedCore = await command(
+      "pnpm",
+      // prepack would rewrite shared dist while other process tests import it.
+      ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", packs],
+      resolve("packages/core"),
+      cache,
     );
-    const tarballs = results.map((result) => {
-      if (result.status === "rejected") throw result.reason;
-      return result.value;
-    });
+    const tarballs = [resolve(packs, JSON.parse(packedCore.stdout).filename)];
     const zodFixture = join(root, "zod");
     await cp(resolve("node_modules/zod"), zodFixture, {
       recursive: true,
@@ -335,7 +323,7 @@ it("runs a packed installed CLI from another project and discovers a plugin adde
     });
   }
 }, INSTALLED_CLI_TIMEOUT_MS);
-it("loads the packed logger subpath using the host SDK without installing core in the plugin environment", async () => {
+it("loads the independently packed logger using the host SDK without installing core in the plugin environment", async () => {
   const root = await mkdtemp(join(tmpdir(), "tessar logger "));
   try {
     const managed = join(root, "managed"),
@@ -344,7 +332,7 @@ it("loads the packed logger subpath using the host SDK without installing core i
     await mkdir(npmDirectory, { recursive: true });
     await writeFile(
       join(managed, "plugins.json"),
-      JSON.stringify({ packages: ["@tessar/plugins/logger"] }),
+      JSON.stringify({ packages: ["@tessar/logger"] }),
     );
     await writeFile(
       join(npmDirectory, "package.json"),
@@ -353,7 +341,7 @@ it("loads the packed logger subpath using the host SDK without installing core i
     const packed = await command(
       "pnpm",
       ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", root],
-      resolve("packages/plugins"),
+      resolve("packages/logger"),
       cache,
     );
     const tarball = resolve(root, JSON.parse(packed.stdout).filename);
@@ -377,7 +365,7 @@ it("loads the packed logger subpath using the host SDK without installing core i
       existsSync(
         join(
           npmDirectory,
-          "node_modules/@tessar/plugins/node_modules/@tessar/core",
+          "node_modules/@tessar/logger/node_modules/@tessar/core",
         ),
       ),
     ).toBe(false);
@@ -390,7 +378,7 @@ it("loads the packed logger subpath using the host SDK without installing core i
    import assert from 'node:assert/strict';
    import { Agent, Controller, HumanMessage, stream as streamHooks } from '@tessar/core';
    import {ScriptedProvider} from '@tessar/core/testing';
-   import {PluginManager} from '@tessar/plugins';
+   import {PluginManager} from '@tessar/core/plugin';
    const manager=new PluginManager({directory:process.argv[1],hostUrl:import.meta.url});
    const original=console.error,logs=[];let controller;
    console.error=line=>{logs.push(JSON.parse(line));};
@@ -480,7 +468,7 @@ it("validates a tarball's actual package name before activating an existing help
     assert.equal((await manager.load())[0].id,'tar-plugin');
    }finally{manager.dispose();}
   `,
-        pathToFileURL(resolve("packages/plugins/dist/index.js")).href,
+        pathToFileURL(resolve("packages/core/dist/plugins/node/index.js")).href,
         managed,
         tarball,
       ],

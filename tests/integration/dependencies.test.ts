@@ -28,7 +28,10 @@ test("test runner and feature-specific peers do not install by default", () => {
   expect(core.peerDependencies.vitest).toBe("^5.0.4");
   expect(core.peerDependenciesMeta.vitest.optional).toBe(true);
   expect(core.dependencies?.vitest).toBeUndefined();
-  expect(manifest("plugins").peerDependenciesMeta["@tessar/core"].optional).toBe(true);
+  const logger = manifest("logger");
+  expect(logger.dependencies?.["@tessar/core"]).toBeUndefined();
+  expect(logger.peerDependencies["@tessar/core"]).toBe("workspace:^");
+  expect(logger.peerDependenciesMeta["@tessar/core"].optional).toBe(true);
   for (const [name, driver] of [["libsql", "libsql"], ["postgresql", "pg"], ["mongodb", "mongodb"]]) {
     const pkg = manifest(name!);
     expect(pkg.peerDependenciesMeta[driver!].optional).toBe(true);

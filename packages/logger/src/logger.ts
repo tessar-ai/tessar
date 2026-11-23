@@ -18,14 +18,6 @@ import {
   type PluginContext,
 } from "@tessar/core";
 import { ConsoleTransport, type LogTransport } from "./logger-transports.js";
-export {
-  ConsoleTransport,
-  FileTransport,
-  logGroup,
-  type LogTransport,
-  type LogGroup,
-  type FileTransportOptions,
-} from "./logger-transports.js";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 export interface LogEntry extends EventContext {

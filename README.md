@@ -151,7 +151,8 @@ Install the packages your application uses:
 | [`@tessar/cli`](packages/cli/README.md)              | Project and file scaffolding with `tessar new` and `tessar generate` |
 | [`@tessar/openai`](packages/openai/README.md)         | OpenAI Responses, Chat Completions and embedding adapters                       |
 | [`@tessar/typesafe`](packages/typesafe/README.md)     | Typed TypeSafe calls for classification, routing and application decisions, with optional persistence |
-| [`@tessar/plugins`](packages/plugins/README.md)       | Plugin discovery/loading, npm plugin management and the `/logger` plugin       |
+| [`@tessar/core/plugin`](examples/guide/plugins.md#load-plugins-after-packaging-your-cli) | Optional Node entry for plugin discovery, loading and npm management |
+| [`@tessar/logger`](packages/logger/README.md) | Standalone structured logging plugin with console and file transports |
 | [`@tessar/rag`](packages/rag/README.md)               | Independent document reading and structure-aware chunking                      |
 | [`@tessar/opentelemetry`](packages/opentelemetry/README.md)     | OTLP tracing with Langfuse and Laminar adapters                 |
 | [`@tessar/libsql`](plugins/database/libsql/README.md)         | State/checkpoint storage using a borrowed libSQL database; optional `/vector` entry for vector/BM25 search                 |

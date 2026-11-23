@@ -595,7 +595,7 @@ Tessar không yêu cầu plugin tự tạo payload theo từng provider.
 | `controller.plugins.attach(plugin)` | `Plugin` → `Promise<void>`; Controller phải ready |
 | `controller.plugins.detach(id)` | Plugin ID `string` → `Promise<void>` |
 | `controller.dispose()` | → `Promise<void>`; đóng Session, Agent và plugin resources |
-| `new PluginManager(options)` | `{ directory: string; hostUrl?: string }`, từ `@tessar/plugins` |
+| `new PluginManager(options)` | `{ directory: string; hostUrl?: string }`, từ `@tessar/core/plugin` |
 | `manager.discover()` | → `Promise<string[]>` |
 | `manager.load(sources?)` | `readonly string[]?` → `Promise<Plugin[]>`; không tự attach/setup |
 | `manager.install(source, options?)` | `string`, `{ name?: string }?` → `Promise<string>` tên package |
@@ -611,7 +611,7 @@ khi release. Storage plugin không được detach lúc Controller ready.
 
 ```ts
 import { resolve } from "node:path";
-import { PluginManager } from "@tessar/plugins";
+import { PluginManager } from "@tessar/core/plugin";
 
 // Bên trong host đã có agent:
 // const manager = new PluginManager({ directory: resolve(".my-cli"), hostUrl: import.meta.url });

@@ -7,7 +7,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 const execute = promisify(execFile);
 const managerUrl = pathToFileURL(
-  resolve("packages/plugins/dist/index.js"),
+  resolve("packages/core/dist/plugins/node/index.js"),
 ).href;
 const hostUrl = pathToFileURL(resolve("package.json")).href;
 async function file(root: string, path: string, text: string) {

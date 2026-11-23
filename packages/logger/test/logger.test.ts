@@ -11,7 +11,7 @@ import {
   type Plugin,
 } from "@tessar/core";
 import { AgentHarness } from "@tessar/core/testing";
-import { LoggerPlugin, type LogEntry } from "@tessar/plugins/logger";
+import { LoggerPlugin, type LogEntry } from "@tessar/logger";
 
 it("logs provider errors with execution identity and persists their source", async () => {
   const entries: LogEntry[] = [];

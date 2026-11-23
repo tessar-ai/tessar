@@ -145,6 +145,10 @@ through Controller plugins. Applications supply and own the native database
 connections for durable adapters; dispose the Controller before closing those
 connections.
 
+Node applications can import `PluginManager` from `@tessar/core/plugin` to
+discover local plugins and manage npm plugins. See the
+[plugin guide](../../examples/guide/plugins.md#load-plugins-after-packaging-your-cli).
+
 All hooks share `tessar.hook` and one typed EventMap. Import event groups directly:
 
 ```ts
