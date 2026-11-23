@@ -5,6 +5,8 @@ import { loadSource, snapshotSource } from "./source.js";
 import { keys, object } from "./validation.js";
 import type { Content, ReadInput, ReadOptions, ReadTask } from "./types.js";
 
+const INVALID_CONFIGURATION = "InvalidConfiguration";
+
 export class DocumentReader {
   readonly #active = new Set<string>();
 
@@ -20,8 +22,11 @@ export class DocumentReader {
     object(input, "input");
     keys(input, ["id", "source"]);
     object(options, "options");
-    keys(options, ["metadata"]);
-    const source = snapshotSource(input.source);
+    keys(options, ["metadata", "maxBytes"]);
+    const { maxBytes } = options;
+    if (maxBytes !== undefined && (typeof maxBytes !== "number" || !Number.isSafeInteger(maxBytes) || maxBytes < 1))
+      throw new TessarRagError(INVALID_CONFIGURATION, "maxBytes must be a positive safe integer");
+    const source = snapshotSource(input.source, maxBytes);
     const suppliedMetadata =
       options.metadata === undefined ? {} : options.metadata;
     object(suppliedMetadata, "metadata");
@@ -46,7 +51,7 @@ export class DocumentReader {
     const work = Promise.resolve()
       .then(async () => {
         controller.signal.throwIfAborted();
-        const loaded = await loadSource(source, controller.signal);
+        const loaded = await loadSource(source, controller.signal, maxBytes);
         const contents = await extract(loaded, controller.signal);
         controller.signal.throwIfAborted();
         return immutable(
@@ -77,7 +82,7 @@ export class DocumentReader {
         if (settled) return;
         if (reason !== undefined && typeof reason !== "string")
           throw new TessarRagError(
-            "InvalidConfiguration",
+            INVALID_CONFIGURATION,
             "Cancellation reason must be a string",
           );
         const error = new TessarRagError(

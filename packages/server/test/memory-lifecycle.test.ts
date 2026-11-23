@@ -1,6 +1,5 @@
 import { expect, test, vi } from "vitest";
-import { queryObjects } from "node:v8";
-import { Agent, Controller, Session, defineInterruption, ToolDecision, stream, type Plugin } from "@tessar/core";
+import { Agent, Controller, defineInterruption, ToolDecision, stream, type Plugin, type Session } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { Tessar } from "../src/index.js";
 import { runtimeFor } from "../src/runtime/context.js";
@@ -108,6 +107,20 @@ test("does not evict SSE viewers and permits eviction after disconnection", asyn
   } finally { await response?.body?.cancel().catch(() => { }); await h.close(); }
 });
 
+test("opens Session SSE with one selected Thread lookup", async () => {
+  const h = await host();
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  try {
+    const session = await h.create();
+    const get = vi.spyOn(session.thread, "get");
+    const response = await h.application.app.request(h.base + "/" + session.id + "/state/stream");
+    expect(response.status).toBe(200);
+    reader = response.body!.getReader();
+    expect((await reader.read()).done).toBe(false);
+    expect(get).toHaveBeenCalledOnce();
+  } finally { await reader?.cancel(); await h.close(); }
+});
+
 test("evicts a completed Session only after its active work ends", async () => {
   const gate = Promise.withResolvers<void>();
   const model = new ScriptedProvider([{ text: "done", gate: gate.promise }]);
@@ -127,11 +140,13 @@ test("evicts a completed Session only after its active work ends", async () => {
 
 test("shutdown releases cached handles even when Tessar remains referenced", async () => {
   const h = await host();
-  async function reference() { const session = await h.create(); return new WeakRef(session); }
-  const weak = await reference(); h.handles.clear(); vi.clearAllMocks();
+  const session = await h.create();
+  const runtime = runtimeFor(h.tessar);
+  const caches = [Reflect.get(runtime.sessions, "sessions"), Reflect.get(runtime.hub, "sessions")];
+  for (const cache of caches) expect(cache.size).toBe(1);
   await h.close();
-  await new Promise<void>(resolve => setImmediate(resolve)); queryObjects(Session);
-  expect(weak.deref() === undefined).toBe(true);
+  expect(session.isDisposed()).toBe(true);
+  for (const cache of caches) expect(cache.size).toBe(0);
   expect(h.tessar.getController(h.controller.id)).toBe(h.controller);
 });
 

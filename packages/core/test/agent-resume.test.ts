@@ -1,17 +1,40 @@
 import { randomUUID } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 import { expect, it } from "vitest";
 import { z } from "zod";
 import {
   Agent,
+  Controller,
   AssistantMessage,
   MessageCodec,
   createTool,
   errorFromInfo,
+  input,
   stream as events,
   type Stream,
 } from "../src/index.js";
 import { ScriptedProvider } from "../src/testing/scripted-provider.js";
 import { standaloneFor } from "../src/engine/continuation.js";
+
+it("rejects abort before admission without blocking input.prepare", async () => {
+  const agent = new Agent({ id: randomUUID(), model: new ScriptedProvider([{ text: "done" }]) });
+  let early: unknown;
+  const controller = new Controller({ id: randomUUID(), agent, plugins: [{
+    id: "early-abort",
+    setup(plugin) {
+      plugin.hook(input.prepare, async event => {
+        early = await Promise.race([agent.abort(event.streamId!).catch(error => error), delay(250, "pending")]);
+        return event.payload;
+      });
+    },
+  }] });
+  try {
+    await controller.initialize();
+    const result = await agent.generate("work");
+    expect(early).toMatchObject({ code: "InvalidTransition" });
+    expect(result.status).toBe("completed");
+  } finally { await controller.dispose(); }
+});
 
 async function collect(stream: Stream) {
   const result = [];

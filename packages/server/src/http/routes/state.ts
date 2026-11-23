@@ -15,16 +15,14 @@ export function registerState(app: Hono, sessions: () => SessionRegistry, hub: T
     const session = await sessions().get(controllerId, c.req.param(ROUTE_PARAM.SESSION_ID)!, authScope(c));
     await hub.getSnapshot(controllerId, session);
     return transport.response(c, (push, end) => {
-      let version = 0;
-      let closed = false;
-      const off = hub.subscribe(controllerId, session, event => { version++; push(event); }, end);
-      const initialVersion = version;
-      void hub.getSnapshot(controllerId, session).then(state => {
-        if (!closed && version === initialVersion) push(new EventEnvelope(stateChanged, { state }, {
+      const off = hub.subscribe(controllerId, session, push, end);
+      try {
+        const state = hub.snapshot(controllerId, session);
+        push(new EventEnvelope(stateChanged, { state }, {
           controllerId, agentId: session.agent.id, sessionId: session.id, scope: session.scope(), threadId: session.thread.getId() ?? undefined,
         }));
-      }).catch(error => { console.error(error); end(); });
-      return () => { closed = true; off(); void sessions().prune().catch(error => console.error(error)); };
+      } catch (error) { console.error(error); end(); }
+      return () => { off(); void sessions().prune().catch(error => console.error(error)); };
     });
   });
 }

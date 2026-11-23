@@ -53,6 +53,8 @@ Paths resolve on the application machine. Files use extensions to select an
 extractor. URLs use a supported response Content-Type, falling back to the URL
 extension only when that header is absent or `application/octet-stream`. Byte
 input requires a MIME type; inline text defaults to `text/plain`.
+Set `{ maxBytes: 10 * 1024 * 1024 }` as the second argument to cap source reads
+at 10 MiB before extraction.
 
 Supported formats are plain text, Markdown, HTML, JSON, CSV, native PDF text,
 DOCX and XLSX. HTML becomes Markdown and CSV becomes an escaped Markdown table.
@@ -64,7 +66,7 @@ sheet, with its name included in the text. OCR and model-based extraction are
 not invoked.
 
 `content.format` describes the returned text representation. `content.source`
-can hold the absolute file URI or final HTTP URL, plus a page only when the
+can hold an absolute file URI or the final HTTP origin and path, plus a page only when the
 reader knows an actual source page. Metadata is a separate JSON object copied
 from the caller; it defaults to `{}`. The reader does not assign page numbers
 to formats without fixed pages or turn extraction units into chunks.
@@ -570,6 +572,8 @@ provider's rerank score as `score`; an original search score stays inside
 `document.score`. Results are sorted descending. `topK` defaults to 5 and is
 capped at the candidate count. Threshold is optional and uses the provider's
 score scale; it is not necessarily cosine similarity or a probability.
+Pass `{ signal: context.signal }` in these options when calling inside a tool
+to cancel the rerank HTTP request with the calling execution.
 
 For native Cohere, use `https://api.cohere.com/v2/rerank` with its API key/model.
 The endpoint must implement this protocol; Tessar does not infer it from model

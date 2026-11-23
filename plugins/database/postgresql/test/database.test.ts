@@ -41,6 +41,7 @@ it("releases a client on rollback and preserves the driver's error when rollback
   })).rejects.toBe(error);
   expect(f.query).toHaveBeenLastCalledWith("ROLLBACK");
   expect(f.release).toHaveBeenCalledOnce();
+  expect(f.release).toHaveBeenCalledWith(expect.objectContaining({ message: "rollback failed" }));
   expect(f.end).not.toHaveBeenCalled();
 });
 

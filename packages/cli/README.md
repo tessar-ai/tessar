@@ -116,7 +116,9 @@ runtime hosting, watch mode and an interactive chat interface are outside its sc
 Editable source templates live in `templates/`: a project directory and separate
 agent, tool, controller, session and plugin templates. `.tpl` files contain ordinary output
 text with `{{name}}`, `{{className}}`, `{{variableName}}`, `{{event}}` or dependency
-version placeholders. Missing placeholder values fail before writing output.
+version placeholders. Generated projects use a compatible Core range so the
+selected backend's peer requirement can pick a newer Core patch. Missing
+placeholder values fail before writing output.
 
 `_gitignore.tpl` and `_env.example.tpl` become `.gitignore` and `.env.example`.
 The starter reuses the agent generator for its assistant. Hook transformations

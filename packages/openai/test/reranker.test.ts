@@ -2,6 +2,13 @@ import { expect, it, vi } from "vitest";
 import * as sdk from "../src/index.js";
 import { TessarError } from "@tessar/core";
 
+it("passes the calling execution's signal to rerank fetch", async () => {
+  const { reranker, fetch } = fixture();
+  const { signal } = new AbortController();
+  await reranker.rerank("query", ["one", "two"], { signal });
+  expect(fetch.mock.calls[0]?.[1]?.signal).toBe(signal);
+});
+
 function fixture(results: unknown = [{ index: 1, relevance_score: 0.9 }, { index: 0, relevance_score: 0.2 }]) {
   const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json({ results }));
   const reranker = new sdk.OpenAIReranker({ endpoint: "https://rerank.test/v1/rerank", apiKey: "test", model: "fixture", fetch });

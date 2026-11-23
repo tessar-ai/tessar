@@ -43,6 +43,7 @@ type ReadSource =
 
 interface ReadOptions {
   metadata?: JsonObject;
+  maxBytes?: number;
 }
 
 declare class DocumentReader {
@@ -60,6 +61,11 @@ interface ReadTask {
 one source variant. Text defaults to `text/plain`; byte input requires a MIME
 type. A path is resolved on the machine running the SDK. Paths and URLs are
 loaded and extracted through the same public operation.
+
+`maxBytes` optionally caps the source before parsing. Inline text uses UTF-8
+byte length. Files and HTTP responses are counted while being read. The limit
+does not constrain parser expansion. HTTP provenance keeps the final origin and
+path and drops query parameters, credentials and fragments.
 
 ## Execution identity and cancellation
 

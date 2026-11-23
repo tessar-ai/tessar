@@ -78,6 +78,8 @@ it("returns real file provenance and preserves native filesystem errors", async 
   expect(await reader.load({ source: { path: file } }).result()).toEqual([
     { text: "# Local guide", format: "markdown", source: { uri: pathToFileURL(file).href }, metadata: {} },
   ]);
+  await expect(reader.load({ source: { path: file } }, { maxBytes: 4 }).result()).rejects.toMatchObject({ code: "SourceTooLarge" });
+  expect((await reader.load({ source: { path: file } }, { maxBytes: 13 }).result())[0]?.text).toBe("# Local guide");
   await expect(reader.load({ source: { path: join(directory, "missing.txt") } }).result()).rejects.toMatchObject({ code: "ENOENT" });
 });
 
@@ -113,22 +115,34 @@ it("rejects unsupported MIME and invalid UTF-8 without disguising them as empty 
 
 it("uses HTTP MIME, final redirect URI and extension fallback", async () => {
   const url = await server((req, res) => {
-    if (req.url === "/start") { res.writeHead(302, { location: "/guide.md" }).end(); return; }
+    if (req.url === "/start") { res.writeHead(302, { location: "/guide.md?preview=1" }).end(); return; }
     res.end("# Remote guide");
   });
   const result = await new DocumentReader().load({ source: { url: url + "/start" } }).result();
   expect(result).toEqual([{ text: "# Remote guide", format: "markdown", source: { uri: url + "/guide.md" }, metadata: {} }]);
 });
 
+it("enforces maxBytes in UTF-8 and while reading chunked HTTP bodies", async () => {
+  const reader = new DocumentReader();
+  expect(() => reader.load({ source: { text: "é" } }, { maxBytes: 1 })).toThrow(expect.objectContaining({ code: "SourceTooLarge" }));
+  expect((await reader.load({ source: { text: "é" } }, { maxBytes: 2 }).result())[0]?.text).toBe("é");
+  const url = await server((_req, res) => {
+    res.writeHead(200, { "content-type": "text/plain" });
+    res.write("over limit");
+    // Keep the connection open. The reader must reject without waiting for EOF.
+  });
+  await expect(reader.load({ source: { url } }, { maxBytes: 3 }).result()).rejects.toMatchObject({ code: "SourceTooLarge" });
+});
+
 it("rejects HTTP errors and explicit unsupported content types", async () => {
   const url = await server((req, res) => {
-    if (req.url === "/missing") res.writeHead(404).end("missing");
+    if (req.url?.startsWith("/missing")) res.writeHead(404).end("missing");
     else res.writeHead(200, { "content-type": "image/png" }).end("not text");
   });
   const reader = new DocumentReader();
-  const error: unknown = await reader.load({ source: { url: url + "/missing" } }).result().catch(error => error);
+  const error: unknown = await reader.load({ source: { url: url + "/missing?preview=1" } }).result().catch(error => error);
   expect(TessarRagError.isInstance(error)).toBe(true);
-  expect(error).toMatchObject({ code: "SourceReadFailed", source: "provider", details: { status: 404 } });
+  expect(error).toMatchObject({ code: "SourceReadFailed", source: "provider", details: { status: 404, url: url + "/missing" } });
   await expect(reader.load({ source: { url: url + "/image.txt" } }).result()).rejects.toMatchObject({ code: "UnsupportedFormat" });
 });
 

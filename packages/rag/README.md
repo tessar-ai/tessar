@@ -40,7 +40,12 @@ one source form:
 | `{ text: string, mimeType?: string }` | Read inline text; MIME type defaults to `text/plain` |
 | `{ data: Uint8Array, mimeType: string }` | Extract from bytes using the required MIME type |
 
-The optional second argument accepts only application `metadata`, a JSON object.
+The optional second argument accepts application `metadata` and `maxBytes`.
+Set `maxBytes` to a positive safe integer to bound the source before extraction.
+It counts UTF-8 bytes for inline text and bytes as read for files and HTTP
+responses. An oversized source raises `SourceTooLarge`. Inline inputs are
+checked during `load()` and streamed reads can reject through `result()`.
+Omitting it keeps the source unbounded. It does not cap expanded parser output.
 The reader copies input bytes and metadata so caller changes after `load()` do
 not change the admitted read. Empty inline text is valid. HTTP(S) URLs must not
 contain embedded credentials. Binary formats require byte, file or URL input.
@@ -68,7 +73,9 @@ interface Content {
 `JsonObject` is the JSON-compatible object type from `@tessar/core`. Metadata
 defaults to `{}` and contains only caller-supplied values. Source provenance is
 separate: local paths become absolute file URLs and HTTP sources use the final
-response URL. Inline sources have no invented URI.
+response origin and path. Credentials, query parameters and fragments are
+excluded from the returned HTTP URI and HTTP status errors. Inline sources have
+no invented URI.
 
 | Input | Supported extensions | Supported MIME types | Output |
 | --- | --- | --- | --- |

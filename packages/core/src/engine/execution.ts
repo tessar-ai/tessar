@@ -3,12 +3,15 @@ import {
   stream as streamHooks,
   model as modelHooks,
   input as inputHooks,
+  stateChanged,
 } from "../events/type.js";
 import { TessarError, errorInfo, errorFromInfo, fail } from "../errors.js";
 
 import type { RegistryLease } from "../plugins/registry.js";
 import type { Lease } from "../state/storage-ports.js";
 import type { ModelAttemptRecord, StreamRecord } from "../trace/records.js";
+import type { EventContext } from "../events/definition.js";
+import type { RuntimeState } from "../runtime-state.js";
 import { aggregateUsage } from "../trace/usage.js";
 import { bindExecutionModel } from "../models/stream.js";
 import { loop } from "../loop.js";
@@ -358,6 +361,7 @@ export async function cancel(
     active.sink.controller.abort(reason);
     return;
   }
+  let snapshot: { state: RuntimeState; context: EventContext } | undefined;
   const registry = execution.runtime.hooks.capture(),
     sink = createDelivery(
       threadId,
@@ -365,6 +369,9 @@ export async function cancel(
       target,
       undefined,
       execution.runtime.report,
+      undefined,
+      undefined,
+      (state, context) => { snapshot = { state, context }; },
     );
   let frame: ExecutionFrame | undefined;
   try {
@@ -397,6 +404,13 @@ export async function cancel(
       }
     await execution.hook(frame, streamHooks.cancel, { reason });
     await execution.finish(frame, "cancelled", reason);
+    if (snapshot)
+      await execution.runtime.hooks.dispatch(
+        stateChanged,
+        { state: snapshot.state },
+        { ...snapshot.context, ...context },
+        registry,
+      ).catch(error => execution.runtime.report(errorInfo(error)));
     execution.pendingModels.delete(threadId);
   } finally {
     if (frame) {

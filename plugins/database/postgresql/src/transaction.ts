@@ -8,6 +8,7 @@ export async function transaction<T>(
   keys?: readonly string[],
 ): Promise<T> {
   const client = await db.pool.connect();
+  let discard: Error | true | undefined;
   try {
     await client.query(
       keys ? "BEGIN" : "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY",
@@ -24,12 +25,12 @@ export async function transaction<T>(
   } catch (error) {
     try {
       await client.query("ROLLBACK");
-    } catch {
-      /* Preserve the original driver error. */
+    } catch (rollbackError) {
+      discard = rollbackError instanceof Error ? rollbackError : true;
     }
     throw error;
   } finally {
-    client.release();
+    client.release(discard);
   }
 }
 
