@@ -341,7 +341,7 @@ it("loads the independently packed logger using the host SDK without installing 
     const packed = await command(
       "pnpm",
       ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", root],
-      resolve("packages/logger"),
+      resolve("plugins/logger"),
       cache,
     );
     const tarball = resolve(root, JSON.parse(packed.stdout).filename);
@@ -361,6 +361,11 @@ it("loads the independently packed logger using the host SDK without installing 
     expect(existsSync(join(npmDirectory, "node_modules/@tessar/core"))).toBe(
       false,
     );
+    expect(existsSync(join(
+      npmDirectory,
+      "node_modules/@tessar/logger/dist/bin",
+      `${process.platform}-${process.arch}.node`,
+    ))).toBe(true);
     expect(
       existsSync(
         join(

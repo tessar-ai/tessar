@@ -89,14 +89,14 @@ it("defaults to one named file and drains concurrent writes before closing", asy
     entry({ payload: { index, text: "x".repeat(100_000) } }),
   );
   const writing = entries.map((value) => transport.write(value));
-  await transport.close();
-  await Promise.all(writing);
+  await Promise.all([transport.close(), transport.close()]);
   expect(
     (await readFile(path, "utf8"))
       .trimEnd()
       .split("\n")
       .map((line) => JSON.parse(line)),
   ).toEqual(entries);
+  await Promise.all(writing);
   await transport.close();
   await expect(transport.write(entry())).rejects.toThrow(/closed/i);
 });

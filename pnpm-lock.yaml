@@ -19,7 +19,7 @@ importers:
         version: link:plugins/database/libsql
       '@tessar/logger':
         specifier: workspace:*
-        version: link:packages/logger
+        version: link:plugins/logger
       '@tessar/mongodb':
         specifier: workspace:*
         version: link:plugins/database/mongodb
@@ -140,12 +140,6 @@ importers:
       zod:
         specifier: ^4.6.7
         version: 4.6.7
-
-  packages/logger:
-    devDependencies:
-      '@tessar/core':
-        specifier: workspace:*
-        version: link:../core
 
   packages/openai:
     dependencies:
@@ -270,6 +264,12 @@ importers:
       pg:
         specifier: ^8.16.3
         version: 8.16.3
+
+  plugins/logger:
+    devDependencies:
+      '@tessar/core':
+        specifier: workspace:*
+        version: link:../../packages/core
 
   tests/fixtures/apps/cli:
     dependencies:

@@ -3028,7 +3028,7 @@ export interface PluginManagerOptions {
 
 ### Logger types
 
-Nguồn: [entry của logger](../packages/logger/src/index.ts).
+Nguồn: [entry của logger](../plugins/logger/src/index.ts).
 
 ```ts
 export type LogLevel = "debug" | "info" | "warn" | "error";

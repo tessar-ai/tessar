@@ -10,6 +10,8 @@ docs/superpowers
 .env
 .env.storage
 /packages/*/LICENSE
+/plugins/*/LICENSE
+/plugins/logger/target/
 /plugins/database/*/LICENSE
 /integrations/auth/*/LICENSE
 .pnpm-store

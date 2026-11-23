@@ -8,16 +8,20 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tessar-ai/tessar.git",
-    "directory": "packages/logger"
+    "directory": "plugins/logger"
   },
   "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
   "exports": {
     ".": {"types": "./dist/index.d.ts", "import": "./dist/index.js"}
   },
-  "files": ["dist"],
+  "files": ["dist/index.*", "dist/logger.*", "dist/bin/*.node"],
   "engines": {"node": ">=24.22.1"},
   "peerDependencies": {"@tessar/core": "workspace:^"},
   "peerDependenciesMeta": {"@tessar/core": {"optional": true}},
   "devDependencies": {"@tessar/core": "workspace:*"},
-  "scripts": {"build": "tsc -p tsconfig.json", "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs", "typecheck": "tsc --noEmit -p tsconfig.json"}
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/build-addon.mjs",
+    "prepack": "tsc -p tsconfig.json && node scripts/build-addon.mjs && node ../../scripts/copy-license.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
 }

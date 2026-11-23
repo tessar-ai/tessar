@@ -2,10 +2,10 @@ import { expect, test } from "vitest";
 import { readFileSync } from "node:fs";
 
 const DATABASE_PACKAGES = ["libsql", "postgresql", "mongodb"];
-const manifest = (name: string) => {
-  const directory = DATABASE_PACKAGES.includes(name) ? "plugins/database" : "packages";
-  return JSON.parse(readFileSync(new URL(`../../${directory}/${name}/package.json`, import.meta.url), "utf8"));
-};
+const manifest = (
+  name: string,
+  directory = DATABASE_PACKAGES.includes(name) ? "plugins/database" : "packages",
+) => JSON.parse(readFileSync(new URL(`../../${directory}/${name}/package.json`, import.meta.url), "utf8"));
 const EXTENSIONS = ["openai", "libsql", "postgresql", "mongodb", "opentelemetry", "rag", "typesafe", "server"];
 
 test.each(EXTENSIONS)("%s shares a compatible application core instead of pinning a private core", name => {
@@ -28,7 +28,7 @@ test("test runner and feature-specific peers do not install by default", () => {
   expect(core.peerDependencies.vitest).toBe("^5.0.4");
   expect(core.peerDependenciesMeta.vitest.optional).toBe(true);
   expect(core.dependencies?.vitest).toBeUndefined();
-  const logger = manifest("logger");
+  const logger = manifest("logger", "plugins");
   expect(logger.dependencies?.["@tessar/core"]).toBeUndefined();
   expect(logger.peerDependencies["@tessar/core"]).toBe("workspace:^");
   expect(logger.peerDependenciesMeta["@tessar/core"].optional).toBe(true);

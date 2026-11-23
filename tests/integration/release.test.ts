@@ -74,6 +74,7 @@ const files = [
 
 it.each([
   ["integrations/auth", "jwt", "auth-jwt"],
+  ["plugins", "compaction", "compaction"],
   ["plugins/database", "libsql", "libsql"],
 ])("discovers scoped packages nested under %s", (parent, leaf, name) => {
   const root = fixture();

@@ -1,5 +1,10 @@
 # Core performance benchmarks
 
+Run `node benchmark/logger.mjs [logger-entry] [json-report-path]` to compare logger
+builds on the same machine. It checks ordered JSON Lines output and measures
+sequential writes, concurrent writes and an agent with a scripted model. The
+elapsed time includes disposal. See [Logger benchmark](logger.md) for the Rust port.
+
 For the self-host migration, run `node benchmark/server-self-host.mjs hono` on the
 Hono build and `node benchmark/server-self-host.mjs fastify` on the Fastify build.
 Each run starts the actual CLI with the same scripted model and tool, exercises

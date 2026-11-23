@@ -5,8 +5,9 @@ Tessar in an application, start with the [developer guides](examples/guide/READM
 
 ## Local development
 
-Requires Node.js >=24.22.1 and pnpm 11.5.3.
+Requires Node.js >=24.22.1, pnpm 11.5.3 and a Rust toolchain for the logger addon.
 
+Standalone plugins live in `plugins/<name>` and publish as `@tessar/<name>`.
 Database plugins live in `plugins/database/<backend>` and keep the package names
 `@tessar/libsql`, `@tessar/postgresql` and `@tessar/mongodb`.
 Authentication integrations live in `integrations/auth/<provider>` and publish as
@@ -110,13 +111,15 @@ missing, pending or unsuccessful CI run blocks publication; after CI succeeds,
 re-run the failed release workflow without moving the tag.
 
 The release workflow discovers the selected package under
-`packages/*/package.json`, `plugins/database/*/package.json` and
+`packages/*/package.json`, `plugins/*/package.json`, `plugins/database/*/package.json` and
 `integrations/auth/*/package.json`, validates its version, builds the workspace, and
 packs/publishes only that package. Adding a package does not require editing a
 publish list. Legacy `v*` tags no longer trigger publication.
 Stable tags use npm `latest`; prereleases such as `logger@0.2.0-beta.1` use `next`.
 The CLI package `@tessar/cli` remains in `packages/cli` and uses tags such as
 `cli@0.1.0`, producing `tessar-cli-0.1.0.tgz`. Its executable remains `tessar`.
+Logger tags assemble the Node-API binaries on Linux, macOS and Windows before
+packing `@tessar/logger`. A local logger pack builds for the current platform.
 
 Extensions that use the application's Core runtime declare `@tessar/core` as a
 required `peerDependency: "workspace:^"`, with `devDependency: "workspace:*"` for
