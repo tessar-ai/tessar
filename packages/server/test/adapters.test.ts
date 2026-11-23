@@ -5,6 +5,7 @@ import { ScriptedProvider } from "@tessar/core/testing";
 import { Tessar } from "../src/index.js";
 import { TessarServer } from "../src/framework/hono.js";
 import express from "express";
+import { request as httpRequest } from "node:http";
 import { TessarServer as ExpressServer } from "../src/framework/express.js";
 import { TessarServerAdapter, type TessarRequestHandler } from "../src/index.js";
 
@@ -63,6 +64,16 @@ test("Express handles parsed JSON, unparsed JSON and streaming without owning th
     expect(await response.text()).toContain("stream answer");
     expect(await (await fetch(url + "/business")).json()).toEqual({ business: true });
     expect(seen.length).toBe(3);
+    if (!parsed) {
+      const status = await new Promise((resolve, reject) => {
+        const request = httpRequest(`${url}/tessar/api/agents/${agent.id}/generate`, {
+          method: "POST", headers: { "content-length": 17 * 1024 * 1024 },
+        }, response => { response.resume(); resolve(response.statusCode); });
+        request.once("error", reject);
+        request.end();
+      });
+      expect(status).toBe(413);
+    }
     await adapter.shutdown();
     expect((await fetch(url + "/tessar/api/agents")).status).toBe(503);
     expect((await fetch(url + "/business")).status).toBe(200);

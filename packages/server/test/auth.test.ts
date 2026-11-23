@@ -1,9 +1,9 @@
 import { afterEach, expect, test, vi, expectTypeOf } from "vitest";
 import { Agent, Controller } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
-import { Tessar, registerRoute, registerMiddleware } from "../src/index.js";
+import { Tessar } from "../src/index.js";
 import type { AuthProvider } from "../src/index.js";
-import { start } from "./helpers.js";
+import { start, startServer } from "./helpers.js";
 
 type User = { id: string; role: string };
 const provider: AuthProvider<User> = {
@@ -16,7 +16,9 @@ let host: Awaited<ReturnType<typeof start>> | undefined;
 afterEach(async () => { await host?.server.shutdown(); host = undefined; });
 
 test("auth is optional and custom routes/middleware remain developer-owned", async () => {
-  host = await start({ server: { auth: { provider }, routes: [registerRoute("/auth/login", { method: "POST", handler: c => c.json({ token: "issued-by-dev" }) })] } });
+  host = await start({ server: { auth: { provider } } }, tessar => startServer(tessar, app => {
+    app.post("/auth/login", c => c.json({ token: "issued-by-dev" }));
+  }));
   expect((await host.request("/api/agents")).status).toBe(401);
   expect((await host.request("/auth/login", "POST", {})).status).toBe(200);
   expect((await host.request("/openapi.json")).status).toBe(200);
@@ -48,14 +50,12 @@ test("authorization sees the inferred identity and request before runtime/SSE wo
 
 test("middleware runs before auth; failed providers and invalid policy results fail closed", async () => {
   const authenticate = vi.fn().mockRejectedValue(new Error("identity unavailable"));
-  host = await start({
-    server: {
-      auth: { provider: { authenticate } }, middlewares: [registerMiddleware("*", async (c, next) => {
-        if (c.req.header("x-block")) return c.text("blocked", 403);
-        await next();
-      })]
-    }
-  });
+  host = await start({ server: { auth: { provider: { authenticate } } } }, tessar => startServer(tessar, app => {
+    app.use("*", async (c, next) => {
+      if (c.req.header("x-block")) return c.text("blocked", 403);
+      await next();
+    });
+  }));
   expect((await fetch(host.url + "/api/agents", { headers: { "x-block": "yes" } })).status).toBe(403);
   expect(authenticate).not.toHaveBeenCalled();
   expect((await fetch(host.url + "/api/agents")).status).toBe(500);

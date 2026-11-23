@@ -1,8 +1,7 @@
-import { startServer } from "./helpers.js";
 import { afterEach, expect, test } from "vitest";
 import { Agent } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
-import { Tessar, registerMiddleware, registerRoute } from "../src/index.js";
+import * as server from "../src/index.js";
 
 const agents: Agent[] = [];
 afterEach(async () => { for (const agent of agents) await agent.shutdown(); });
@@ -13,26 +12,19 @@ function agent() {
 }
 
 test("rejects empty runtimes and invalid configuration before bootstrap", () => {
-  expect(() => new Tessar({})).toThrow();
-  expect(() => new Tessar({ agents: [agent()], server: { port: -1 } })).toThrow();
-  expect(() => new Tessar({ agents: [agent()], surprise: true } as never)).toThrow();
+  expect(() => new server.Tessar({})).toThrow();
+  expect(() => new server.Tessar({ agents: [agent()], server: { port: -1 } })).toThrow();
+  expect(() => new server.Tessar({ agents: [agent()], surprise: true } as never)).toThrow();
 });
 
-test("validates declarations and prevents duplicate runtime registration", () => {
-  expect(() => registerRoute("health", { method: "GET", handler: c => c.text("ok") })).toThrow();
-  expect(() => registerRoute("/health", { method: "BOGUS", handler: () => new Response("ok") } as never)).toThrow();
-  expect(() => registerMiddleware("bad", async (_, next) => next())).toThrow();
+test("hosts register their own application routes and middleware", () => {
+  expect(server).not.toHaveProperty("registerRoute");
+  expect(server).not.toHaveProperty("registerMiddleware");
+  for (const name of ["routes", "middlewares"])
+    expect(() => new server.Tessar({ agents: [agent()], server: { [name]: [] } })).toThrow("Unexpected configuration fields");
+});
+
+test("prevents duplicate runtime registration", () => {
   const value = agent();
-  expect(() => new Tessar({ agents: [value, value] })).toThrow();
-});
-
-test("rejects collisions with built-in endpoints before listening", async () => {
-  const tessar = new Tessar({
-    agents: [agent()], server: {
-      routes: [
-        registerRoute("/api/agents", { method: "GET", handler: c => c.text("override") }),
-      ]
-    }
-  });
-  await expect(startServer(tessar)).rejects.toThrow();
+  expect(() => new server.Tessar({ agents: [value, value] })).toThrow();
 });

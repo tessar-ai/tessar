@@ -15,11 +15,12 @@ async function host(model = new ScriptedProvider([]), plugins: Plugin[] = []) {
   const tessar = new Tessar({ controllers: [controller] });
   await runtimeFor(tessar).ready();
   const application = new ServerApplication(runtimeFor(tessar));
+  const request = (path: string, init?: RequestInit) => application.fetch(new Request("http://test" + path, init));
   const base = "/api/controllers/" + controller.id + "/sessions";
   return {
-    tessar, controller, handles, application, base,
+    tessar, controller, handles, request, base,
     async create(options: Record<string, unknown> = {}) {
-      const response = await application.app.request(base, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ threadId: crypto.randomUUID(), ...options }) });
+      const response = await request(base, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ threadId: crypto.randomUUID(), ...options }) });
       expect(response.status).toBe(201);
       const data = await response.json() as { id: string };
       return handles.get(data.id)!;
@@ -34,7 +35,7 @@ test("evicts old idle handles while preserving stored Session selection", async 
     const first = await h.create(); const selected = first.thread.getId();
     for (let index = 0; index < 100; index++) await h.create();
     expect(first.isDisposed()).toBe(true);
-    const response = await h.application.app.request(h.base + "/" + first.id);
+    const response = await h.request(h.base + "/" + first.id);
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ selectedThreadId: selected, disposed: false });
   } finally { await h.close(); }
@@ -63,13 +64,13 @@ test("keeps pending interruptions available through cache pressure", async () =>
   }]);
   try {
     const session = await h.create();
-    await h.application.app.request(h.base + "/" + session.id + "/follow-up", {
+    await h.request(h.base + "/" + session.id + "/follow-up", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: "pause" }),
     });
     await vi.waitFor(() => expect(session.state.get().status).toBe("suspended"));
     for (let index = 0; index < 100; index++) await h.create();
     expect(session.isDisposed()).toBe(false);
-    const result = await h.application.app.request(h.base + "/" + session.id + "/resume", {
+    const result = await h.request(h.base + "/" + session.id + "/resume", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ interruptId: session.state.get().interrupt!.id, value: true }),
     });
@@ -84,7 +85,7 @@ test("keeps a Session pinned until its HTTP handler finishes", async () => {
     const first = await h.create();
     const read = first.thread.list;
     vi.spyOn(first.thread, "list").mockImplementation(async options => { reached.resolve(); await gate.promise; return read(options); });
-    const request = h.application.app.request(h.base + "/" + first.id + "/threads");
+    const request = h.request(h.base + "/" + first.id + "/threads");
     await reached.promise;
     for (let index = 0; index < 101; index++) await h.create();
     expect(first.isDisposed()).toBe(false);
@@ -97,7 +98,7 @@ test("does not evict SSE viewers and permits eviction after disconnection", asyn
   let response: Response | undefined;
   try {
     const first = await h.create();
-    response = await h.application.app.request(h.base + "/" + first.id + "/state/stream");
+    response = await h.request(h.base + "/" + first.id + "/state/stream");
     expect(response.status).toBe(200);
     for (let index = 0; index < 101; index++) await h.create();
     expect(first.isDisposed()).toBe(false);
@@ -113,7 +114,7 @@ test("opens Session SSE with one selected Thread lookup", async () => {
   try {
     const session = await h.create();
     const get = vi.spyOn(session.thread, "get");
-    const response = await h.application.app.request(h.base + "/" + session.id + "/state/stream");
+    const response = await h.request(h.base + "/" + session.id + "/state/stream");
     expect(response.status).toBe(200);
     reader = response.body!.getReader();
     expect((await reader.read()).done).toBe(false);
@@ -127,7 +128,7 @@ test("evicts a completed Session only after its active work ends", async () => {
   const h = await host(model);
   try {
     const first = await h.create();
-    await h.application.app.request(h.base + "/" + first.id + "/follow-up", {
+    await h.request(h.base + "/" + first.id + "/follow-up", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: "work" }),
     });
     await vi.waitFor(() => expect(model.calls).toHaveLength(1));
@@ -155,7 +156,7 @@ test("Tessar shutdown ends Session viewers before the HTTP adapter shuts down", 
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   try {
     const session = await h.create();
-    const response = await h.application.app.request(h.base + "/" + session.id + "/state/stream");
+    const response = await h.request(h.base + "/" + session.id + "/state/stream");
     reader = response.body!.getReader(); await reader.read();
     await h.tessar.shutdown();
     let ended = false;

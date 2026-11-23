@@ -29,6 +29,10 @@
     "./express": {
       "types": "./dist/framework/express.d.ts",
       "import": "./dist/framework/express.js"
+    },
+    "./fastify": {
+      "types": "./dist/framework/fastify.d.ts",
+      "import": "./dist/framework/fastify.js"
     }
   },
   "files": [
@@ -40,17 +44,18 @@
   "peerDependencies": {
     "@tessar/core": "workspace:^",
     "@types/express": ">=4 <6",
-    "express": ">=4 <6"
+    "express": ">=4 <6",
+    "hono": "^4.13.16"
   },
   "devDependencies": {
+    "@hono/node-server": "2.1.6",
     "@tessar/core": "workspace:*",
     "@types/express": "^5.0.6",
-    "express": "^5.3.0"
+    "express": "^5.3.0",
+    "hono": "4.13.16"
   },
   "dependencies": {
-    "@hono/node-server": "2.1.6",
-    "fastify": "5.12.8",
-    "hono": "4.13.16"
+    "fastify": "5.12.8"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -62,6 +67,9 @@
       "optional": true
     },
     "@types/express": {
+      "optional": true
+    },
+    "hono": {
       "optional": true
     }
   }

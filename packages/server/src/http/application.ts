@@ -1,80 +1,69 @@
-import { Hono, type Context } from "hono";
-import type { StatusCode } from "hono/utils/http-status";
-import type { Scope } from "@tessar/core";
+import { URLPattern } from "node:url";
 import { TessarServerError } from "../errors.js";
-import { registerMiddleware, registerRoute } from "./registration.js";
-import { fields, invalid } from "../runtime/validation.js";
-import { httpError, readHonoJson, limitBody, HTTP_STATUS, HTTP_ERROR_CODE, HTTP_ERROR_MESSAGE } from "./protocol.js";
-import { SSE_HEADERS, SseTransport } from "./sse.js";
-import { endpoints, handleEndpoint } from "./endpoints.js";
-import { DEFAULT_OPENAPI_PATH } from "./paths.js";
-import { authenticate } from "./access.js";
-
-const ROUTE_METHOD = { ALL: "ALL", HEAD: "HEAD", GET: "GET" } as const;
-const AUTH_SCOPE_KEY = "tessar.auth.scope";
-type ApplicationEnv = { Variables: { [AUTH_SCOPE_KEY]: Scope | undefined } };
-
 import type { RuntimeContext } from "../runtime/context.js";
 import type { ServerOptions } from "../types.js";
+import { authenticate } from "./access.js";
+import { endpoints, handleEndpoint } from "./endpoints.js";
 import { openapiDocument } from "./openapi.js";
+import { DEFAULT_OPENAPI_PATH } from "./paths.js";
+import { bad, describeHttpError, limitBody, HTTP_STATUS, HTTP_ERROR_CODE, HTTP_ERROR_MESSAGE } from "./protocol.js";
+import { SSE_HEADERS, SseTransport } from "./sse.js";
+
+const METHOD = { GET: "GET", HEAD: "HEAD" } as const;
 
 export class ServerApplication {
-  readonly app: Hono<ApplicationEnv>;
+  private readonly routes;
+  private readonly openapiPath;
+  private readonly document;
   private readonly transport = new SseTransport();
-  constructor(runtime: RuntimeContext, config: ServerOptions<any> = {}) {
-    const app = new Hono<ApplicationEnv>();
-    app.use("*", (_c, next) => runtime.sessions.request(next));
-    app.onError(httpError);
-    app.notFound(c => httpError(new TessarServerError(HTTP_ERROR_CODE.NOT_FOUND, HTTP_ERROR_MESSAGE.NOT_FOUND), c));
-    let protectedRoutes: { method: string; pattern: RegExp }[] = [];
-    const builtIn = (c: Context) => {
-      const method = c.req.method === ROUTE_METHOD.HEAD ? ROUTE_METHOD.GET : c.req.method;
-      return protectedRoutes.some(route => route.method === method && route.pattern.test(c.req.path));
-    };
-    app.use("*", async (c, next) => {
-      if (builtIn(c)) await limitBody(c);
-      await next();
-    });
-    for (const middleware of config.middlewares ?? []) {
-      fields(middleware, ["path", "handler"]);
-      const entry = registerMiddleware(middleware.path, middleware.handler);
-      app.use(entry.path, entry.handler);
-    }
-    if (config.auth) app.use("*", async (c, next) => {
-      if (builtIn(c)) c.set(AUTH_SCOPE_KEY, await authenticate(c.req.raw, config.auth!));
-      await next();
-    });
-    for (const endpoint of endpoints(runtime)) app.on(endpoint.method, endpoint.path, async c => {
-      const result = await handleEndpoint(runtime, endpoint, {
-        scope: c.get(AUTH_SCOPE_KEY), param: name => c.req.param(name),
-        queries: () => c.req.queries(), readJson: () => readHonoJson(c),
-      });
-      if ("subscribe" in result) return c.body(this.transport.open(result.subscribe), HTTP_STATUS.OK, SSE_HEADERS);
-      if (result.status === HTTP_STATUS.NO_CONTENT) return c.body(null, HTTP_STATUS.NO_CONTENT);
-      return c.json(result.payload, result.status as Exclude<StatusCode, 101 | 204 | 205 | 304>);
-    });
-    protectedRoutes = app.routes.filter(route => route.method !== ROUTE_METHOD.ALL).map(route => ({
-      method: route.method,
-      pattern: new RegExp("^" + route.path.split("/").map(part => part.startsWith(":") ? "[^/]+" : part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("/") + "$"),
-    }));
-    const declarations = (config.routes ?? []).map(route => {
-      fields(route, ["path", "method", "handler"]);
-      return registerRoute(route.path, { method: route.method, handler: route.handler });
-    });
-    const seen = new Set(app.routes.map(route => `${route.method} ${route.path}`));
-    for (const route of declarations) {
-      const key = `${route.method} ${route.path}`;
-      if (seen.has(key)) invalid("Duplicate route: " + key);
-      seen.add(key);
-      app.on(route.method, route.path, route.handler);
-    }
 
-    const routes = app.routes.filter(route => route.method !== ROUTE_METHOD.ALL);
-    const openapiPath = config.openapiPath ?? DEFAULT_OPENAPI_PATH;
-    if (routes.some(route => route.path === openapiPath)) invalid("OpenAPI path conflicts with an API route");
-    const document = openapiDocument(routes, config.prefix ?? "");
-    app.get(openapiPath, c => c.json(document));
-    this.app = app;
+  constructor(private readonly runtime: RuntimeContext, private readonly config: ServerOptions<any> = {}) {
+    const routes = endpoints(runtime);
+    this.routes = routes.map(endpoint => ({ endpoint, pattern: new URLPattern({ pathname: endpoint.path }) }));
+    this.openapiPath = config.openapiPath ?? DEFAULT_OPENAPI_PATH;
+    this.document = openapiDocument(routes, config.prefix ?? "");
   }
+
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    const head = request.method === METHOD.HEAD;
+    const method = head ? METHOD.GET : request.method;
+    try {
+      if (method === METHOD.GET && url.pathname === this.openapiPath)
+        return head ? new Response(null) : Response.json(this.document);
+      for (const { endpoint, pattern } of this.routes) {
+        if (endpoint.method !== method) continue;
+        const match = pattern.exec({ pathname: url.pathname });
+        if (!match) continue;
+        const input = limitBody(request);
+        return await this.runtime.sessions.request(async () => {
+          const scope = this.config.auth ? await authenticate(input, this.config.auth) : undefined;
+          const result = await handleEndpoint(this.runtime, endpoint, {
+            scope,
+            param: name => {
+              const value = match.pathname.groups[name];
+              if (value === undefined) return;
+              try { return decodeURIComponent(value); } catch { return bad("Invalid route parameter"); }
+            },
+            queries: () => {
+              const values: Record<string, string[]> = Object.create(null);
+              for (const [key, value] of url.searchParams) (values[key] ??= []).push(value);
+              return values;
+            },
+            readJson: () => input.json(),
+          });
+          if ("subscribe" in result)
+            return new Response(head ? null : this.transport.open(result.subscribe), { headers: SSE_HEADERS });
+          const { status, payload } = result;
+          return head || status === HTTP_STATUS.NO_CONTENT ? new Response(null, { status }) : Response.json(payload, { status });
+        });
+      }
+      throw new TessarServerError(HTTP_ERROR_CODE.NOT_FOUND, HTTP_ERROR_MESSAGE.NOT_FOUND);
+    } catch (error) {
+      const { status, payload } = describeHttpError(error);
+      return head ? new Response(null, { status }) : Response.json(payload, { status });
+    }
+  }
+
   shutdown(): void { this.transport.close(); }
 }

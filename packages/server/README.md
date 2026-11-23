@@ -76,15 +76,32 @@ to built-in endpoints below that scope. Registered plugins use Fastify's own
 encapsulation rules. Install the Fastify plugins your project uses. The CLI
 owns listening and shutdown. See [Fastify Server](https://fastify.dev/docs/latest/Reference/Server/).
 
-Move existing self-host `server.routes` and `server.middlewares` into `configure`,
-using Fastify route and hook signatures. The Hono and Express adapters still accept
-the existing `registerRoute` and `registerMiddleware` handlers.
+Move old self-host `server.routes` and `server.middlewares` into `configure`,
+using Fastify route and hook signatures. Existing applications register custom
+routes and middleware with their framework.
 
 ## Existing applications
 
-Express and Hono adapters expose the same built-in API and OpenAPI JSON document.
+Fastify, Express and Hono adapters expose the same built-in API and OpenAPI JSON document.
 The application owns auth, middleware ordering, the HTTP listener and its port.
 Adapters never call `listen()` or change `process.exitCode`.
+
+```ts
+import Fastify from "fastify";
+import { TessarServer } from "@tessar/server/fastify";
+import { tessar } from "./tessar.js";
+
+const app = Fastify();
+// Register the application's hooks, plugins and routes here.
+const server = new TessarServer({ app, tessar, prefix: "/tessar" });
+await server.init();
+await app.listen({ port: 3000 });
+```
+
+The Fastify adapter registers the Tessar routes in a Fastify plugin under `prefix`.
+Call `init()` before the application boots. The parent Fastify scope supplies hooks
+and body limits. `app.close()` ends Tessar SSE through a Fastify lifecycle hook.
+Call `tessar.shutdown()` when the application is ready to dispose the runtime.
 
 ```ts
 import express from "express";
@@ -100,12 +117,12 @@ app.get("/health", (_, response) => response.json({ ok: true }));
 const listener = app.listen(3000);
 ```
 
-Install Express yourself. Importing the root package or Hono adapter does not load
-Express. For Hono use `TessarServer` from `@tessar/server/hono`, pass your Hono app,
+Your application supplies Express or Hono. Both frameworks are optional peers.
+For Hono use `TessarServer` from `@tessar/server/hono`, pass your Hono app,
 call `await server.init()`, then use your application's Hono serving mechanism.
-Run either application with its normal command, not `tessar dev`.
+Run the application with its normal command.
 
-`server.init()` registers one handler and resolves only after runtime initialization.
+`server.init()` registers routes or a request handler after runtime initialization.
 Repeated calls share initialization; failures reject. Shutdown is idempotent and
 prevents further requests through the adapter (503); it does not remove framework
 middleware, close the application listener, dispose shared runtime or abort SDK
@@ -143,23 +160,6 @@ body and cancellation, then response status/headers, streaming and backpressure.
 When JSON parsing middleware already consumed the body, rebuild it from the parsed
 value. The built-in Express bridge covers both parsed and raw request bodies.
 A client disconnect detaches an SSE viewer; it does not abort or replay execution.
-
-## Custom handlers for the Hono and Express adapters
-
-Keep composition and application logic in separate modules:
-
-```ts
-// handlers/health.ts
-import type { RouteHandler } from "@tessar/server";
-export const health: RouteHandler = c => c.json({ status: "ok" });
-```
-
-Handlers receive Hono's native context; import `RouteHandler` and
-`MiddlewareHandler` from this package. Routes accept GET, POST, PUT, PATCH, DELETE,
-OPTIONS and HEAD. Middleware matches its declared path, runs top to bottom, and
-unwinds after `await next()`. Returning a Response short-circuits later handlers.
-It applies to both SDK and custom routes. Built-in routes are registered first;
-custom exact method/path collisions are rejected before initialization.
 
 ## HTTP resources
 
