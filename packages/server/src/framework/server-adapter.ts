@@ -1,75 +1,32 @@
-import type { ServerApplication } from "../http/application.js";
+import { ServerApplication } from "../http/application.js";
+import { HTTP_STATUS } from "../http/protocol.js";
 import { runtimeFor } from "../runtime/context.js";
-import { fields, invalid } from "../runtime/validation.js";
-import { TessarServerError, SERVER_ERROR_CODE } from "../errors.js";
-import { DEFAULT_OPENAPI_PATH, validateServerPaths } from "../http/paths.js";
-import type { Tessar } from "../tessar.js";
-import type { TessarRequestHandler, TessarServerOptions } from "../types.js";
+import type { TessarRequestHandler } from "../types.js";
+import { ServerAdapter } from "./adapter.js";
 
-export abstract class TessarServerAdapter<App> {
-  protected readonly app: App;
-  protected readonly tessar: Tessar<any>;
-  private readonly prefix: string;
-  private readonly openapiPath: string;
+export abstract class TessarServerAdapter<App> extends ServerAdapter<App> {
   private application?: ServerApplication;
-  private initialization?: Promise<void>;
-  private disposal?: Promise<void>;
-  private closed = false;
-
-  constructor(options: TessarServerOptions<App>) {
-    fields(options, ["app", "tessar", "prefix", "openapiPath"]);
-    if (!options?.app) invalid("An application is required");
-    runtimeFor(options.tessar);
-    this.app = options.app;
-    this.tessar = options.tessar;
-    this.prefix = options.prefix ?? options.tessar.server.prefix ?? "";
-    this.openapiPath = options.openapiPath ?? options.tessar.server.openapiPath ?? DEFAULT_OPENAPI_PATH;
-    validateServerPaths(this.prefix, this.openapiPath);
-  }
 
   protected abstract registerHandler(handler: TessarRequestHandler): void | Promise<void>;
 
   protected accepts(pathname: string): boolean {
     if (this.prefix && !pathname.startsWith(this.prefix + "/")) return false;
     const path = pathname.slice(this.prefix.length);
-    return path === "/api" || path.startsWith("/api/") || path === this.openapiPath ||
-      (this.tessar.server.routes ?? []).some(route => {
-        const pattern = route.path.split("/").map(part => part === "*" ? ".*" : part.startsWith(":") ? "[^/]+" : part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("/");
-        return new RegExp("^" + pattern + "$").test(path);
-      });
+    return path === "/api" || path.startsWith("/api/") || path === this.openapiPath;
   }
 
-  init(): Promise<void> {
-    if (this.closed) return Promise.reject(new TessarServerError(SERVER_ERROR_CODE.DISPOSED, "Server adapter is shut down"));
-    return this.initialization ??= (async () => {
-      try {
-        await runtimeFor(this.tessar).ready();
-        const { ServerApplication } = await import("../http/application.js");
-        if (this.closed) throw new TessarServerError(SERVER_ERROR_CODE.DISPOSED, "Server adapter is shut down");
-        const application = this.application = new ServerApplication(runtimeFor(this.tessar), {
-          ...this.tessar.server, prefix: this.prefix, openapiPath: this.openapiPath,
-        });
-        await this.registerHandler(async request => {
-          if (this.closed) return Response.json({ error: new TessarServerError(SERVER_ERROR_CODE.DISPOSED, "Server adapter is shut down").toJSON() }, { status: 503 });
-          const url = new URL(request.url);
-          if (this.prefix && !url.pathname.startsWith(this.prefix + "/")) return new Response(null, { status: 404 });
-          url.pathname = url.pathname.slice(this.prefix.length);
-          return application.app.fetch(new Request(url, request));
-        });
-        if (this.closed) throw new TessarServerError(SERVER_ERROR_CODE.DISPOSED, "Server adapter is shut down");
-      } catch (error) {
-        this.closed = true;
-        this.application?.shutdown();
-        throw error;
-      }
-    })();
+  protected mount(): void | Promise<void> {
+    const application = this.application = new ServerApplication(runtimeFor(this.tessar), {
+      ...this.tessar.server, prefix: this.prefix, openapiPath: this.openapiPath,
+    });
+    return this.registerHandler(async request => {
+      if (this.closed) return Response.json({ error: this.disposed().toJSON() }, { status: HTTP_STATUS.SERVICE_UNAVAILABLE });
+      const url = new URL(request.url);
+      if (this.prefix && !url.pathname.startsWith(this.prefix + "/")) return new Response(null, { status: HTTP_STATUS.NOT_FOUND });
+      url.pathname = url.pathname.slice(this.prefix.length);
+      return application.fetch(new Request(url, request));
+    });
   }
 
-  shutdown(): Promise<void> {
-    this.closed = true;
-    return this.disposal ??= (async () => {
-      await this.initialization?.catch(() => { });
-      this.application?.shutdown();
-    })();
-  }
+  protected closeTransport(): void { this.application?.shutdown(); }
 }

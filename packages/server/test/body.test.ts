@@ -1,16 +1,21 @@
 import { expect, test } from "vitest";
-import { Hono } from "hono";
-import { body, httpError, readHonoJson } from "../src/http/protocol.js";
+import { body, describeHttpError, limitBody } from "../src/http/protocol.js";
 import { Agent } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { RuntimeContext } from "../src/runtime/context.js";
 import { ServerApplication } from "../src/http/application.js";
-import { start } from "./helpers.js";
+import { start, startServer } from "./helpers.js";
 
 function application() {
-  const app = new Hono(); app.onError(httpError);
-  app.post("/", async c => c.json(await body({ readJson: () => readHonoJson(c) }, ["input"])));
-  return app;
+  return { async request(path: string, init: RequestInit) {
+    try {
+      const request = limitBody(new Request("http://test" + path, init));
+      return Response.json(await body({ readJson: () => request.json() }, ["input"]));
+    } catch (error) {
+      const { status, payload } = describeHttpError(error);
+      return Response.json(payload, { status });
+    }
+  } };
 }
 
 test("rejects an oversized declared body before reading it", async () => {
@@ -53,11 +58,16 @@ test("counts UTF-8 bytes and preserves ordinary JSON and malformed-body errors",
 });
 
 test("supports a body already cached by a developer middleware", async () => {
-  const app = application();
-  app.use("/cached", async (c, next) => { await c.req.json(); await next(); });
-  app.post("/cached", async c => c.json(await body({ readJson: () => readHonoJson(c) }, ["input"])));
-  const response = await app.request("/cached", { method: "POST", body: JSON.stringify({ input: "cached" }) });
-  expect(response.status).toBe(200); expect(await response.json()).toEqual({ input: "cached" });
+  const agent = new Agent({ id: crypto.randomUUID(), model: new ScriptedProvider([{ text: "cached" }]) });
+  const path = `/api/agents/${agent.id}/generate`;
+  const host = await start({ agents: [agent] }, tessar => startServer(tessar, app => {
+    app.use(path, async (c, next) => {
+      expect(await c.req.json()).toEqual({ input: "cached" });
+      await next();
+    });
+  }));
+  try { expect(await host.request(path, "POST", { input: "cached" })).toMatchObject({ status: 200, data: { status: "completed" } }); }
+  finally { await host.server.shutdown(); }
 });
 
 test("bounds request clones inspected by authentication before the route handler", async () => {
@@ -83,9 +93,9 @@ test("bounds request clones inspected by authentication before the route handler
     },
   }, { highWaterMark: 0 });
   try {
-    const response = await application.app.request(`/api/agents/${agent.id}/generate`, {
+    const response = await application.fetch(new Request(`http://test/api/agents/${agent.id}/generate`, {
       method: "POST", headers: { "content-type": "application/json" }, body: stream, duplex: "half",
-    } as RequestInit);
+    } as RequestInit));
     expect(response.status).toBe(413);
     expect(reads).toBeLessThan(20); expect(authCalls).toBe(1); expect(model.calls).toHaveLength(0);
   } finally { application.shutdown(); await runtime.shutdown(); }

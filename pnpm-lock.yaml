@@ -206,16 +206,13 @@ importers:
 
   packages/server:
     dependencies:
-      '@hono/node-server':
-        specifier: 2.1.6
-        version: 2.1.6(hono@4.13.16)
       fastify:
         specifier: 5.12.8
         version: 5.12.8
-      hono:
-        specifier: 4.13.16
-        version: 4.13.16
     devDependencies:
+      '@hono/node-server':
+        specifier: 2.1.6
+        version: 2.1.6(hono@4.13.16)
       '@tessar/core':
         specifier: workspace:*
         version: link:../core
@@ -225,6 +222,9 @@ importers:
       express:
         specifier: ^5.3.0
         version: 5.3.0
+      hono:
+        specifier: 4.13.16
+        version: 4.13.16
 
   packages/typesafe:
     devDependencies:

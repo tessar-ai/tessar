@@ -2,9 +2,8 @@ import { afterEach, expect, test } from "vitest";
 import { Agent, Controller, createTool, AssistantMessage, MessageCodec } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { TessarClient, TessarClientError, type StateEvent, type StateStream } from "@tessar/client";
-import { registerMiddleware } from "@tessar/server";
 import { z } from "zod";
-import { start } from "../../packages/server/test/helpers.js";
+import { start, startServer } from "../../packages/server/test/helpers.js";
 
 let server: Awaited<ReturnType<typeof start>>["server"] | undefined;
 const observers: AbortController[] = [];
@@ -50,14 +49,12 @@ test("client receives a complete large answer without a false slow-consumer fail
 });
 
 test("prefixed server enforces headers on JSON and SSE", async () => {
-  const host = await start({
-    server: {
-      prefix: "/tessar", middlewares: [registerMiddleware("*", async (c, next) => {
-        if (c.req.header("authorization") !== "Bearer test") return c.json({ denied: true }, 401);
-        await next();
-      })]
-    }
-  }); server = host.server;
+  const host = await start({ server: { prefix: "/tessar" } }, tessar => startServer(tessar, app => {
+    app.use("/tessar/*", async (c, next) => {
+      if (c.req.header("authorization") !== "Bearer test") return c.json({ denied: true }, 401);
+      await next();
+    });
+  })); server = host.server;
   const baseURL = host.url + "/tessar";
   await expect(new TessarClient({ baseURL }).listAgents()).rejects.toMatchObject({ status: 401 });
   const client = new TessarClient({ baseURL, headers: { authorization: "Bearer test" } });

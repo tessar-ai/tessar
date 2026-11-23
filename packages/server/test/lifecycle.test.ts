@@ -2,33 +2,32 @@ import { startServer } from "./helpers.js";
 import { afterEach, expect, test, vi } from "vitest";
 import { Agent, Controller } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
-import { Tessar, registerMiddleware, registerRoute } from "../src/index.js";
+import { Tessar } from "../src/index.js";
+import type { Hono, MiddlewareHandler } from "hono";
 import Database from "libsql";
 import { LibsqlStoragePlugin } from "@tessar/libsql";
 
 const servers: { shutdown(): Promise<void> }[] = [];
 afterEach(async () => { await Promise.all(servers.map(server => server.shutdown())); vi.restoreAllMocks(); });
 
-export async function start(options: Partial<ConstructorParameters<typeof Tessar>[0]> = {}) {
+export async function start(options: Partial<ConstructorParameters<typeof Tessar>[0]> = {}, configure?: (app: Hono) => void) {
   const tessar = new Tessar({
     agents: [new Agent({ id: crypto.randomUUID(), model: new ScriptedProvider([]) })], ...options,
     server: { port: 0, ...options.server }
   });
-  const server = await startServer(tessar);
+  const server = await startServer(tessar, configure);
   servers.push(server);
   return { server, url: server.url };
 }
 
 test("auto boots and applies middleware in declaration order to built-in and custom routes", async () => {
   const order: string[] = [];
-  const middleware = (name: string) => registerMiddleware("*", async (_, next) => {
+  const middleware = (name: string): MiddlewareHandler => async (_, next) => {
     order.push(name); await next(); order.push("after " + name);
-  });
-  const { url, server } = await start({
-    server: {
-      middlewares: [middleware("one"), middleware("two")],
-      routes: [registerRoute("/health", { method: "GET", handler: c => c.json({ ok: true }) })]
-    }
+  };
+  const { url, server } = await start({}, app => {
+    app.use("*", middleware("one"), middleware("two"));
+    app.get("/health", c => c.json({ ok: true }));
   });
   expect(await (await fetch(url + "/health")).json()).toEqual({ ok: true });
   expect(order).toEqual(["one", "two", "after two", "after one"]);
@@ -40,7 +39,7 @@ test("auto boots and applies middleware in declaration order to built-in and cus
 });
 
 test("short circuit preserves developer response", async () => {
-  const { url } = await start({ server: { middlewares: [registerMiddleware("*", async c => c.text("private", 401))] } });
+  const { url } = await start({}, app => { app.use("*", async c => c.text("private", 401)); });
   const response = await fetch(url + "/api/agents");
   expect(response.status).toBe(401);
   expect(await response.text()).toBe("private");

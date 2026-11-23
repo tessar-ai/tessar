@@ -72,6 +72,11 @@ await server.init();
 const listener = app.listen(3000);
 ```
 
+For an existing Fastify app, import `TessarServer` from `@tessar/server/fastify`
+and pass the application's Fastify instance with the same options. Call `init()`
+before `app.listen()`. Fastify's `app.close()` also stops Tessar SSE, then the app
+can call `tessar.shutdown()` to dispose the runtime.
+
 Hono uses `TessarServer` from `@tessar/server/hono` with the application's Hono app.
 The application starts with its existing command and owns auth, middleware and
 listening. It shuts down adapter SSE, then its listener, then the runtime via
@@ -120,10 +125,9 @@ Reconnect never resubmits input or runs recovery. Persisted unfinished work need
 explicit `/resume` or `/recover`; memory storage disappears on restart. Disconnect
 only detaches the viewer. `/abort` explicitly cancels the selected execution.
 
-For the Hono and Express adapters, `registerRoute` and `registerMiddleware` are
-still available for Tessar-managed custom routes and middleware. The
-[package README](../../packages/server/README.md) documents registration, route
-inventory, lifecycle and errors. Application auth,
+Register routes and middleware for existing Fastify, Hono and Express apps with their
+native APIs. The [package README](../../packages/server/README.md) documents
+adapter registration, route inventory, lifecycle and errors. Application auth,
 authorization and UI remain developer choices. A packaged CLI can start this host
 locally and call HTTP/SSE, or use the SDK directly without a server.
 For typed remote access from a frontend or Node application, see the

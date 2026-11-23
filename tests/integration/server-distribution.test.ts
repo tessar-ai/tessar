@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { execFile, spawn } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -30,26 +30,27 @@ test("server tarball installs independently and public declarations compile", as
       archives.push(resolve(directory, JSON.parse(packed.stdout).filename));
     }
     const external: Record<string, string> = {};
-    for (const name of ["hono", "@hono/node-server", "zod"]) {
-      const source = name === "zod" ? resolve("node_modules", name) : resolve("packages/server/node_modules", name);
-      const packed = await command(["pack", "--config.ignore-scripts=true", "--config.manage-package-manager-versions=false", "--json", "--pack-destination", directory], realpathSync(source));
-      external[name] = `file:${resolve(directory, JSON.parse(packed.stdout).filename)}`;
-    }
+    const zodPack = await command(["pack", "--config.ignore-scripts=true", "--config.manage-package-manager-versions=false", "--json", "--pack-destination", directory], realpathSync(resolve("node_modules/zod")));
+    external.zod = `file:${resolve(directory, JSON.parse(zodPack.stdout).filename)}`;
     const project = join(directory, "application"); await mkdir(project);
+    const workspaceServer = JSON.parse(await readFile(resolve("packages/server/package.json"), "utf8"));
     await writeFile(join(project, "package.json"), JSON.stringify({
       private: true, type: "module", packageManager: "pnpm@11.5.3",
-      dependencies: { "@tessar/core": `file:${archives[0]}`, "@tessar/server": `file:${archives[1]}`, "@tessar/auth-api-key": `file:${archives[2]}`, "@tessar/cli": `file:${archives[3]}`, zod: external.zod }
+      dependencies: { "@tessar/core": `file:${archives[0]}`, "@tessar/server": `file:${archives[1]}`, "@tessar/auth-api-key": `file:${archives[2]}`, "@tessar/cli": `file:${archives[3]}`, fastify: workspaceServer.dependencies.fastify, zod: external.zod }
     }));
     await writeFile(join(project, "pnpm-workspace.yaml"), JSON.stringify({ overrides: external }));
     await command(["install", "--prefer-offline", "--ignore-scripts"], project);
     const manifest = JSON.parse(await readFile(join(project, "node_modules/@tessar/server/package.json"), "utf8"));
     expect(manifest.peerDependencies["@tessar/core"]).not.toContain("workspace:");
     expect(manifest.exports["./standalone"]).toBeUndefined();
-    for (const adapter of ["./hono", "./express", "./self-host"]) {
+    for (const adapter of ["./hono", "./express", "./fastify", "./self-host"]) {
       expect(existsSync(join(project, "node_modules/@tessar/server", manifest.exports[adapter].import))).toBe(true);
       expect(existsSync(join(project, "node_modules/@tessar/server", manifest.exports[adapter].types))).toBe(true);
     }
-    expect(Object.keys(manifest.dependencies).sort()).toEqual(["@hono/node-server", "fastify", "hono"]);
+    expect(Object.keys(manifest.dependencies)).toEqual(["fastify"]);
+    expect(manifest.peerDependenciesMeta.hono.optional).toBe(true);
+    const installed = await readdir(join(project, "node_modules/.pnpm"));
+    expect(installed.some(name => /^(?:hono|@hono\+node-server|express|@nestjs\+core)@/.test(name))).toBe(false);
     const authManifest = JSON.parse(await readFile(join(project, "node_modules/@tessar/auth-api-key/package.json"), "utf8"));
     expect(authManifest.peerDependencies["@tessar/server"]).not.toContain("workspace:");
     expect(existsSync(join(project, "node_modules/jose"))).toBe(false);
@@ -58,23 +59,27 @@ test("server tarball installs independently and public declarations compile", as
 import { Agent } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { ApiKeyAuth } from "@tessar/auth-api-key";
-import { Tessar, TessarServerAdapter, registerRoute, registerMiddleware, type RouteHandler, type MiddlewareHandler } from "@tessar/server";
+import { Tessar, TessarServerAdapter } from "@tessar/server";
+import Fastify from "fastify";
+import { TessarServer as FastifyServer } from "@tessar/server/fastify";
 import type { TessarRequestHandler } from "@tessar/server";
-const health: RouteHandler = c => c.json({ok:true});
-const middleware: MiddlewareHandler = async (_, next) => { await next(); };
 const tessar = new Tessar({ agents: [new Agent({id:"packed",model:new ScriptedProvider([])})], server:{port:0,
-  auth: { provider: new ApiKeyAuth({ key: "packed-key", identity: { id: "packed-user" } }), scope: user => ({ userId: user.id }) },
-  routes:[registerRoute("/health", {method:"GET",handler:health})], middlewares:[registerMiddleware("*",middleware)]} });
+  auth: { provider: new ApiKeyAuth({ key: "packed-key", identity: { id: "packed-user" } }), scope: user => ({ userId: user.id }) } } });
 class Adapter extends TessarServerAdapter<{ handler?: TessarRequestHandler }> {
   protected registerHandler(handler: TessarRequestHandler) { this.app.handler = handler; }
 }
 const app: { handler?: TessarRequestHandler } = {};
 const host = new Adapter({ app, tessar });
 await host.init();
-if ((await app.handler!(new Request("http://test/health"))).status !== 200) throw new Error("Route failed");
 if ((await app.handler!(new Request("http://test/api/agents"))).status !== 401) throw new Error("Auth bypass");
 if ((await app.handler!(new Request("http://test/api/agents", { headers: { authorization: "Bearer packed-key" } }))).status !== 200) throw new Error("Auth failed");
 await host.shutdown();
+const fastify = Fastify();
+const integrated = new FastifyServer({ app: fastify, tessar, prefix: "/tessar" });
+await integrated.init();
+const result = await fastify.inject({ url: "/tessar/api/agents", headers: { authorization: "Bearer packed-key" } });
+if (result.statusCode !== 200 || result.json()[0].id !== "packed") throw new Error("Fastify adapter failed");
+await fastify.close();
 await tessar.shutdown();
 `);
     await execute(process.execPath, [resolve("node_modules/typescript/bin/tsc"), "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2023", "--module", "NodeNext", "usage.ts"], { cwd: project, windowsHide: true });
