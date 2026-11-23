@@ -1,30 +1,30 @@
+import { json, noContent, type EndpointRequest, type EndpointRouter } from "../endpoint.js";
 import { EventEnvelope, stateChanged, stream as streamEvents, errorInfo, errorFromInfo, type StreamEvent } from "@tessar/core";
-import type { Context, Hono } from "hono";
 import { agentDescriptor } from "../descriptors.js";
 import { body, required, bad, safeError, validateFields, ROUTE_PARAM, HTTP_ERROR_MESSAGE, HTTP_STATUS, wireModel } from "../protocol.js";
 import type { RuntimeRegistry } from "../../runtime/runtime-registry.js";
-import type { SseTransport, StateEvent } from "../sse.js";
+import type { StateEvent, StateSubscription } from "../sse.js";
 import type { ThreadStateHub } from "../../runtime/thread-state-hub.js";
-import { authScope, scoped } from "../access.js";
+import { scoped } from "../access.js";
 
 const AGENTS_PATH = "/api/agents";
 const AGENT_PATH = AGENTS_PATH + "/:agentId";
 const CONSUMER_TARGET = "consumer";
 const FAILED_STATUS = "failed";
-export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, transport: SseTransport, hub: ThreadStateHub) {
-  const getAgent = (c: Context) => required(runtimes().agents.get(c.req.param(ROUTE_PARAM.AGENT_ID)!));
-  app.get(AGENTS_PATH, c => c.json([...runtimes().agents.values()].map(agent => agentDescriptor(agent, runtimes().agentControllers.get(agent.id)))));
-  app.get(AGENT_PATH, c => c.json(agentDescriptor(getAgent(c), runtimes().agentControllers.get(getAgent(c).id))));
-  app.get(AGENT_PATH + "/tools", c => c.json(getAgent(c).listTool().map(tool => ({
+export function registerAgents(app: EndpointRouter, runtimes: () => RuntimeRegistry, hub: ThreadStateHub) {
+  const getAgent = (c: EndpointRequest) => required(runtimes().agents.get(c.param(ROUTE_PARAM.AGENT_ID)!));
+  app.get(AGENTS_PATH, c => json([...runtimes().agents.values()].map(agent => agentDescriptor(agent, runtimes().agentControllers.get(agent.id)))));
+  app.get(AGENT_PATH, c => json(agentDescriptor(getAgent(c), runtimes().agentControllers.get(getAgent(c).id))));
+  app.get(AGENT_PATH + "/tools", c => json(getAgent(c).listTool().map(tool => ({
     name: tool.name, description: tool.description, inputSchema: tool.jsonSchema,
   }))));
   app.post(AGENT_PATH + "/generate", async c => {
     const { input, options } = await executionBody(c);
     const agent = getAgent(c);
     const result = await agent.generate(input, options);
-    return c.json({ ...result, error: safeError(result.error) });
+    return json({ ...result, error: safeError(result.error) });
   });
-  const deliver = (c: Context, events: AsyncIterable<StreamEvent>): Response => transport.response(c, (push, end) => {
+  const deliver = (events: AsyncIterable<StreamEvent>): StateSubscription => (push, end) => {
     let viewer: ((event: StateEvent) => void) | undefined = push;
     let last: StateEvent | undefined;
     void (async () => {
@@ -49,17 +49,17 @@ export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, trans
       }
     })();
     return () => { viewer = undefined; };
-  });
+  };
   app.post(AGENT_PATH + "/stream", async c => {
     const { input, options } = await executionBody(c);
     const agent = getAgent(c);
-    return deliver(c, agent.stream(input, options));
+    return { subscribe: deliver(agent.stream(input, options)) };
   });
   app.post(AGENT_PATH + "/resume", async c => {
     const value = await body(c, ["threadId", "interruptId", "value", "scope"]);
     if (!value.threadId || !value.interruptId || !("value" in value)) bad(HTTP_ERROR_MESSAGE.CONTINUATION_REQUIRED);
     const agent = getAgent(c);
-    value.scope = scoped(c, value.scope);
+    value.scope = scoped(c.scope, value.scope);
     const stream = agent.resume(value as Parameters<typeof agent.resume>[0]);
     const iterator = stream[Symbol.asyncIterator]();
     const first = await iterator.next();
@@ -71,24 +71,24 @@ export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, trans
       if (!first.done) yield first.value;
       for (let next = await iterator.next(); !next.done; next = await iterator.next()) yield next.value;
     } };
-    return deliver(c, events);
+    return { subscribe: deliver(events) };
   });
   app.post(AGENT_PATH + "/signals", async c => {
     const value = await body(c, ["streamId", "threadId", "content", "persist", "tagName", "attributes", "metadata"]);
     const agent = getAgent(c);
-    value.scope = authScope(c);
-    await agent.sendSignal(value as Parameters<typeof agent.sendSignal>[0]); return c.body(null, HTTP_STATUS.NO_CONTENT);
+    value.scope = c.scope;
+    await agent.sendSignal(value as Parameters<typeof agent.sendSignal>[0]); return noContent();
   });
   app.post(AGENT_PATH + "/streams/:streamId/abort", async c => {
     const { reason } = await body(c, ["reason"]);
     if (reason !== undefined && typeof reason !== "string") bad(HTTP_ERROR_MESSAGE.REASON_MUST_BE_STRING);
-    const agent = getAgent(c), streamId = c.req.param(ROUTE_PARAM.STREAM_ID)!;
-    await agent.abort(streamId, { reason, scope: authScope(c) });
-    return c.body(null, HTTP_STATUS.NO_CONTENT);
+    const agent = getAgent(c), streamId = c.param(ROUTE_PARAM.STREAM_ID)!;
+    await agent.abort(streamId, { reason, scope: c.scope });
+    return noContent();
   });
 }
 
-async function executionBody(c: Context) {
+async function executionBody(c: EndpointRequest) {
   const value = await body(c, ["input", "options"]);
   if (value.input === undefined) bad(HTTP_ERROR_MESSAGE.INPUT_REQUIRED);
   if (value.options !== undefined) {
@@ -98,7 +98,7 @@ async function executionBody(c: Context) {
     validateFields(value.options);
   }
   const options = value.options ?? {};
-  options.scope = scoped(c, options.scope);
+  options.scope = scoped(c.scope, options.scope);
   options.id ??= crypto.randomUUID();
   return { input: value.input, options };
 }

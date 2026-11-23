@@ -24,8 +24,8 @@ export default new Tessar({ agents: [assistant] });
 npx @tessar/cli dev
 ```
 
-The CLI loads that default export, reads the project's optional `.env`, initializes
-HTTP routes and listens on `127.0.0.1:4117`. It supports local TypeScript files with
+The CLI loads that default export, reads the project's optional `.env`, registers
+the HTTP routes on Fastify and listens on `127.0.0.1:4117`. It supports local TypeScript files with
 ESM `.js` imports through Node's type transformation. There is no watch/reload,
 path-alias resolution, JSX compilation or playground in this release.
 
@@ -47,11 +47,38 @@ and records APIs require one. Direct independent Agent calls do not gain Session
 queues, persisted conversation history or model selection from an implicit host.
 `tessar.shutdown()` disposes explicit Controllers and shuts down independent Agents.
 
-Optional `server` configuration on Tessar contains `hostname`, `port`, `prefix`,
-`openapiPath`, `routes`, `middlewares` and `auth`. Port defaults to `4117`; `port: 0`
+Optional self-host configuration contains `hostname`, `port`, `prefix`,
+`openapiPath`, `auth`, `fastifyOptions` and `configure`. Port defaults to `4117`. `port: 0`
 selects a free port. The CLI handles SIGINT/SIGTERM, stops HTTP/SSE, then calls
 `tessar.shutdown()`. Startup failures print the original exception and exit nonzero.
 Borrowed database connections remain developer-owned.
+
+```ts
+export default new Tessar({
+  agents: [assistant],
+  server: {
+    prefix: "/tessar",
+    fastifyOptions: { logger: true },
+    configure(app) {
+      app.addHook("onRequest", async (_request, reply) => {
+        reply.header("x-service", "assistant");
+      });
+      app.get("/health", async () => ({ ok: true }));
+    },
+  },
+});
+```
+
+`fastifyOptions` goes to the Fastify constructor. `configure(app)` runs before
+listening in the configured prefix and accepts native routes, plugins, hooks,
+schemas, decorators and error handlers. A hook added directly to `app` applies
+to built-in endpoints below that scope. Registered plugins use Fastify's own
+encapsulation rules. Install the Fastify plugins your project uses. The CLI
+owns listening and shutdown. See [Fastify Server](https://fastify.dev/docs/latest/Reference/Server/).
+
+Move existing self-host `server.routes` and `server.middlewares` into `configure`,
+using Fastify route and hook signatures. The Hono and Express adapters still accept
+the existing `registerRoute` and `registerMiddleware` handlers.
 
 ## Existing applications
 
@@ -117,7 +144,7 @@ When JSON parsing middleware already consumed the body, rebuild it from the pars
 value. The built-in Express bridge covers both parsed and raw request bodies.
 A client disconnect detaches an SSE viewer; it does not abort or replay execution.
 
-## Custom handlers
+## Custom handlers for the Hono and Express adapters
 
 Keep composition and application logic in separate modules:
 

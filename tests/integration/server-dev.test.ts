@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { mkdtemp, mkdir, writeFile, symlink, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 
 async function project() {
   const root = await mkdtemp(join(tmpdir(), "tessar-dev-"));
@@ -13,9 +14,9 @@ async function project() {
     await symlink(resolve("packages", name), join(root, "node_modules/@tessar", name), process.platform === "win32" ? "junction" : "dir");
   return root;
 }
-function launch(root: string) {
+function launch(root: string, env = process.env) {
   const child = spawn(process.execPath, [resolve("packages/cli/dist/bin.js"), "dev"], {
-    cwd: root, windowsHide: true, stdio: ["ignore", "pipe", "pipe", "ipc"],
+    cwd: root, env, windowsHide: true, stdio: ["ignore", "pipe", "pipe", "ipc"],
   });
   let stdout = "", stderr = "";
   child.stdout!.on("data", value => { stdout += value; });
@@ -44,13 +45,30 @@ import { Agent } from "@tessar/core";
 import { Tessar } from "@tessar/server";
 import { model } from "./model.js";
 export default new Tessar({ agents: [new Agent({ id: process.env.TESSAR_DEV_AGENT!, model })],
-  server: { port: 0, prefix: "/t", openapiPath: "/schema.json" } });
+  server: { port: 0, prefix: "/t", openapiPath: "/schema.json",
+    configure(app) {
+      app.addHook("onRequest", async (_request, reply) => { reply.header("x-host", "fastify"); });
+      app.register(async plugin => { plugin.get("/health", async () => ({ ok: true })); });
+    },
+  } });
 `);
-  const host = launch(root);
+  const guard = join(root, "no-hono.mjs");
+  await writeFile(guard, `
+import { registerHooks } from "node:module";
+registerHooks({ resolve(specifier, context, next) {
+  if (specifier === "hono" || specifier.startsWith("hono/") || specifier === "@hono/node-server")
+    throw Error("Self-host imported Hono: " + specifier);
+  return next(specifier, context);
+} });
+`);
+  const host = launch(root, { ...process.env, NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${pathToFileURL(guard).href}` });
   try {
     await expect.poll(() => host.output().stdout.match(/http:\/\/[^\s]+/)?.[0], { timeout: 10000 }).toBeTruthy();
     const url = host.output().stdout.match(/http:\/\/[^\s]+/)![0];
-    expect((await (await fetch(url + "/t/api/agents")).json())[0].id).toBe("cli-assistant");
+    const agents = await fetch(url + "/t/api/agents");
+    expect((await agents.json())[0].id).toBe("cli-assistant");
+    expect(agents.headers.get("x-host")).toBe("fastify");
+    expect(await fetch(url + "/t/health").then(response => response.json())).toEqual({ ok: true });
     expect(await (await fetch(url + "/t/api/controllers")).json()).toEqual([]);
     const result = await fetch(url + "/t/api/agents/cli-assistant/generate", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: "hi" }),

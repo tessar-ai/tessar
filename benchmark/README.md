@@ -1,5 +1,22 @@
 # Core performance benchmarks
 
+For the self-host migration, run `node benchmark/server-self-host.mjs hono` on the
+Hono build and `node benchmark/server-self-host.mjs fastify` on the Fastify build.
+Each run starts the actual CLI with the same scripted model and tool, exercises
+JSON and SSE through `TessarClient`, and records process RSS before and after
+opening concurrent SSE viewers. Keep Node, the machine and Core code the same.
+
+One local comparison on Windows with Node 24.22.2, eight JSON workers, 60 measured
+agent tasks and 32 concurrent SSE viewers produced these results:
+
+| Metric | Hono | Fastify |
+| --- | ---: | ---: |
+| JSON requests per second | 4,205 | 4,587 |
+| JSON latency p95 | 3.98 ms | 3.64 ms |
+| First SSE event p95 | 2.52 ms | 2.62 ms |
+| Task completion p95 | 15.67 ms | 13.26 ms |
+| Process RSS with 32 SSE viewers | 151.7 MiB | 157.3 MiB |
+
 Measure Tessar's TypeScript execution overhead before considering native code.
 See [Memory lifecycle](memory-lifecycle.md) for retained-heap measurements and cache/queue limits.
 See [Rust feasibility](rust-analysis.md) for the fresh baseline, remaining CPU work and proposed native spike.

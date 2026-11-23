@@ -1,7 +1,8 @@
-import { ServerApplication } from "../http/application.js";
+import type { ServerApplication } from "../http/application.js";
 import { runtimeFor } from "../runtime/context.js";
 import { fields, invalid } from "../runtime/validation.js";
 import { TessarServerError, SERVER_ERROR_CODE } from "../errors.js";
+import { DEFAULT_OPENAPI_PATH, validateServerPaths } from "../http/paths.js";
 import type { Tessar } from "../tessar.js";
 import type { TessarRequestHandler, TessarServerOptions } from "../types.js";
 
@@ -22,13 +23,8 @@ export abstract class TessarServerAdapter<App> {
     this.app = options.app;
     this.tessar = options.tessar;
     this.prefix = options.prefix ?? options.tessar.server.prefix ?? "";
-    this.openapiPath = options.openapiPath ?? options.tessar.server.openapiPath ?? "/openapi.json";
-    for (const [name, path] of [["prefix", this.prefix], ["openapiPath", this.openapiPath]] as const) {
-      if (name === "prefix" && path === "") continue;
-      if (typeof path !== "string" || !/^\/(?:[A-Za-z0-9_.~-]+\/?)+$/.test(path) || path.endsWith("/") || path.split("/").some(part => part === "." || part === ".."))
-        invalid(name + " must be an absolute path without a trailing slash, query or fragment");
-    }
-    if (this.openapiPath === "/api" || this.openapiPath.startsWith("/api/")) invalid("OpenAPI path must be outside /api");
+    this.openapiPath = options.openapiPath ?? options.tessar.server.openapiPath ?? DEFAULT_OPENAPI_PATH;
+    validateServerPaths(this.prefix, this.openapiPath);
   }
 
   protected abstract registerHandler(handler: TessarRequestHandler): void | Promise<void>;
@@ -48,6 +44,7 @@ export abstract class TessarServerAdapter<App> {
     return this.initialization ??= (async () => {
       try {
         await runtimeFor(this.tessar).ready();
+        const { ServerApplication } = await import("../http/application.js");
         if (this.closed) throw new TessarServerError(SERVER_ERROR_CODE.DISPOSED, "Server adapter is shut down");
         const application = this.application = new ServerApplication(runtimeFor(this.tessar), {
           ...this.tessar.server, prefix: this.prefix, openapiPath: this.openapiPath,

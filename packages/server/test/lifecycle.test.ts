@@ -10,19 +10,13 @@ const servers: { shutdown(): Promise<void> }[] = [];
 afterEach(async () => { await Promise.all(servers.map(server => server.shutdown())); vi.restoreAllMocks(); });
 
 export async function start(options: Partial<ConstructorParameters<typeof Tessar>[0]> = {}) {
-  let resolve!: (url: string) => void;
-  const listening = new Promise<string>(done => { resolve = done; });
-  vi.spyOn(console, "log").mockImplementation(value => {
-    const match = String(value).match(/http:\/\/[^ ]+/);
-    if (match) resolve(match[0]);
-  });
   const tessar = new Tessar({
     agents: [new Agent({ id: crypto.randomUUID(), model: new ScriptedProvider([]) })], ...options,
     server: { port: 0, ...options.server }
   });
   const server = await startServer(tessar);
   servers.push(server);
-  return { server, url: await listening };
+  return { server, url: server.url };
 }
 
 test("auto boots and applies middleware in declaration order to built-in and custom routes", async () => {
