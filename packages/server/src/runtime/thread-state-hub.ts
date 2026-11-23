@@ -3,6 +3,7 @@ import { TessarServerError } from "../errors.js";
 
 type StateEvent = EventEnvelope<{ state: RuntimeState }>;
 const THREAD_UNAVAILABLE = { code: "ThreadNotFound", message: "Selected Thread is unavailable" } as const;
+const CANCELLED_STATUS = "cancelled";
 const LIFECYCLE_EVENTS = new Set<string>([stream.started, stream.resumed, stream.end, stream.suspended, stream.error]);
 interface ThreadView { streamId: string; handleId?: string; awaitingHandle?: boolean; state?: RuntimeState; active: boolean; deleted?: boolean }
 interface SessionView {
@@ -45,6 +46,12 @@ export class ThreadStateHub {
       view ??= { streamId: "", active: false };
       view.deleted = true;
       this.threads.set(key, view);
+    } else if (event.type === stream.end && event.payload.status === CANCELLED_STATUS && event.streamId && event.handleId
+      && (!view || (!view.deleted && !view.active && view.streamId === event.streamId))) {
+      // A committed cancellation of waiting work can arrive on a fresh handle.
+      this.threads.set(key, { streamId: event.streamId, handleId: event.handleId, active: false });
+      this.prune();
+      return;
     } else if (view && event.streamId === view.streamId &&
       (!event.handleId || event.handleId === view.handleId || (!view.handleId && !view.awaitingHandle))) {
       if (event.type === stateChanged) {

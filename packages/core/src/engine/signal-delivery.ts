@@ -28,6 +28,7 @@ interface Mailbox {
   threadId: string;
   runtime: ExecutionRuntime;
   frame?: ExecutionFrame;
+  admitted: boolean;
   ready: Promise<void>;
   resolve(): void;
   reject(error: unknown): void;
@@ -70,8 +71,9 @@ function reserveTarget(
     id,
     threadId,
     runtime,
+    admitted: false,
     ready,
-    resolve,
+    resolve() { box.admitted = true; resolve(); },
     reject,
     accepting: true,
     pending: [],

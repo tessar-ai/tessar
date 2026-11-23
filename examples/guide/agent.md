@@ -58,8 +58,9 @@ expose an AbortSignal. Existing `streamId` fields on results, events and storage
 continue to reference this same ID.
 
 Given only that ID, call `await agent.abort(streamId, { reason, scope })` on
-the Agent that started the work. This also works while that Agent is waiting
-for a tool response. For work started through a Session, use `session.abort()`.
+the Agent that started the work. This works after the execution is admitted,
+including while it is waiting for a tool response. Before admission it rejects
+with `InvalidTransition`. For work started through a Session, use `session.abort()`.
 
 Instruction sections have unique IDs. Lower `order` values come first; IDs break
 ties. Put stable sections before changing sections to keep their prompt prefix

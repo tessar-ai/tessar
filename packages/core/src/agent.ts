@@ -81,6 +81,7 @@ import {
 
 const ERROR_CODE = {
   INVALID_CONFIGURATION: "InvalidConfiguration",
+  INVALID_TRANSITION: "InvalidTransition",
   DISPOSED: "Disposed",
   THREAD_NOT_FOUND: "ThreadNotFound",
   STREAM_NOT_FOUND: "StreamNotFound",
@@ -259,7 +260,8 @@ export class Agent<M extends ModelSelection = ModelSelection> {
       fail(ERROR_CODE.STREAM_NOT_FOUND, STREAM_NOT_FOUND_MESSAGE);
     if (scope !== undefined && box.scope === undefined)
       await box.runtime.queries.requireThread(box.threadId, { scope });
-    await box.ready;
+    if (!box.admitted)
+      fail(ERROR_CODE.INVALID_TRANSITION, "Execution cannot be aborted before admission");
     await box.detaching;
     const owns = () => !box.sessionOwned && findSignalTarget(this, { streamId }) === box;
     if (!owns()) fail(ERROR_CODE.STREAM_NOT_FOUND, STREAM_NOT_FOUND_MESSAGE);

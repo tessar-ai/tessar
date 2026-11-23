@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { Agent, Controller, AssistantMessage, MessageCodec, createTool, stream } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
+import { TessarClient } from "@tessar/client";
 import { z } from "zod";
 import { start } from "./helpers.js";
 
@@ -149,4 +150,31 @@ test("lets a suspended hook request abort without waiting for itself", async () 
   const session = await controller.createSession();
   const thread = (await session.thread.get(result.threadId))!;
   await expect.poll(async () => (await thread.getStream(result.streamId))?.status).toBe("cancelled");
+});
+
+test("Session viewers see a waiting Agent's committed cancellation", async () => {
+  const ask = createTool({ name: "ask", description: "Choose", schema: z.object({}), resumeSchema: z.string(), execute: (_, context) => context.suspend({ question: "Choose" }) });
+  const model = new ScriptedProvider([{ response: { message: MessageCodec.encode(new AssistantMessage([{ type: "tool-call", name: "ask", toolCallId: "call", arguments: {} }])) } }]);
+  const agent = new Agent({ id: crypto.randomUUID(), model, tools: { ask } });
+  const controller = new Controller({ id: crypto.randomUUID(), agent });
+  host = await start({ controllers: [controller], server: { auth } });
+  const client = new TessarClient({ baseURL: host.url, headers: { "x-user": "alice" } });
+  const remoteAgent = client.getAgent(agent.id);
+  const result = await remoteAgent.generate("choose");
+  expect(result.status).toBe("suspended");
+  const session = await client.getController(controller.id).createSession();
+  await session.thread.switch(result.threadId);
+  const events = await session.state.stream({ signal: AbortSignal.timeout(3000) });
+  const iterator = events[Symbol.asyncIterator]();
+  try {
+    expect((await iterator.next()).value?.payload.state.status).toBe("suspended");
+    await remoteAgent.abort(result.streamId);
+    const terminal = await session.state.get();
+    expect(terminal).toMatchObject({ status: "cancelled", interrupt: null });
+    expect(terminal.messages.some(message => message.role === "user")).toBe(true);
+    expect(terminal.messages.some(message => message.role === "tool")).toBe(true);
+    let next = await iterator.next();
+    while (!next.done && next.value.payload.state.status !== "cancelled") next = await iterator.next();
+    expect(next.value?.payload.state.interrupt).toBe(null);
+  } finally { await iterator.return?.(); }
 });
