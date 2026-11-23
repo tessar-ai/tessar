@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { Hono } from "hono";
-import { body, httpError } from "../src/http/protocol.js";
+import { body, httpError, readHonoJson } from "../src/http/protocol.js";
 import { Agent } from "@tessar/core";
 import { ScriptedProvider } from "@tessar/core/testing";
 import { RuntimeContext } from "../src/runtime/context.js";
@@ -9,7 +9,7 @@ import { start } from "./helpers.js";
 
 function application() {
   const app = new Hono(); app.onError(httpError);
-  app.post("/", async c => c.json(await body(c, ["input"])));
+  app.post("/", async c => c.json(await body({ readJson: () => readHonoJson(c) }, ["input"])));
   return app;
 }
 
@@ -55,7 +55,7 @@ test("counts UTF-8 bytes and preserves ordinary JSON and malformed-body errors",
 test("supports a body already cached by a developer middleware", async () => {
   const app = application();
   app.use("/cached", async (c, next) => { await c.req.json(); await next(); });
-  app.post("/cached", async c => c.json(await body(c, ["input"])));
+  app.post("/cached", async c => c.json(await body({ readJson: () => readHonoJson(c) }, ["input"])));
   const response = await app.request("/cached", { method: "POST", body: JSON.stringify({ input: "cached" }) });
   expect(response.status).toBe(200); expect(await response.json()).toEqual({ input: "cached" });
 });

@@ -12,12 +12,15 @@ export class Tessar<User = unknown> {
     for (const list of [options.agents, options.controllers])
       if (list !== undefined && !Array.isArray(list)) invalid("Expected registration array");
     const config = options.server ?? {};
-    fields(config, ["hostname", "port", "routes", "middlewares", "prefix", "openapiPath", "auth"]);
+    fields(config, ["hostname", "port", "routes", "middlewares", "prefix", "openapiPath", "auth", "fastifyOptions", "configure"]);
     const auth = snapshotAuth(config.auth);
     if (config.hostname !== undefined && (typeof config.hostname !== "string" || !config.hostname.trim()) ||
       config.port !== undefined && (!Number.isInteger(config.port) || config.port < 0 || config.port > 65535)) invalid("Invalid listening address");
     for (const list of [config.routes, config.middlewares])
       if (list !== undefined && !Array.isArray(list)) invalid("Expected registration array");
+    if (config.configure !== undefined && typeof config.configure !== "function") invalid("Expected server.configure to be a function");
+    if (config.fastifyOptions !== undefined && (!config.fastifyOptions || typeof config.fastifyOptions !== "object" || Array.isArray(config.fastifyOptions)))
+      invalid("Expected server.fastifyOptions to be an object");
     this.server = Object.freeze({
       ...config, auth,
       routes: config.routes && Object.freeze([...config.routes]), middlewares: config.middlewares && Object.freeze([...config.middlewares]),

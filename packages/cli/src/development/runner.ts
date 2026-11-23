@@ -1,4 +1,3 @@
-import { startServer } from "./server.js";
 import { registerHooks } from "node:module";
 import { existsSync } from "node:fs";
 import { loadEnvFile } from "node:process";
@@ -6,6 +5,8 @@ import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { TessarCLIError, CLI_ERROR_CODE } from "../errors.js";
 
+const RUNTIME_MODULE = "tessar:runtime";
+const SELF_HOST_MODULE = "tessar:self-host";
 const entry = pathToFileURL(resolve("src/index.ts"));
 let host: { shutdown(): Promise<void> } | undefined;
 let tessar: { shutdown(): Promise<void> } | undefined;
@@ -24,8 +25,8 @@ const shutdown = () => {
 // Source projects follow the repository's ESM .js import convention.
 const hooks = registerHooks({
   resolve(specifier, context, next) {
-    if (specifier === "tessar:runtime" || specifier === "tessar:hono")
-      return next(specifier === "tessar:runtime" ? "@tessar/server" : "@tessar/server/hono", { ...context, parentURL: entry.href });
+    if (specifier === RUNTIME_MODULE || specifier === SELF_HOST_MODULE)
+      return next(specifier === RUNTIME_MODULE ? "@tessar/server" : "@tessar/server/self-host", { ...context, parentURL: entry.href });
     try { return next(specifier, context); }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ERR_MODULE_NOT_FOUND" || !context.parentURL || !specifier.startsWith(".") || !specifier.endsWith(".js")) throw error;
@@ -46,14 +47,17 @@ try {
   if (existsSync(resolve(".env"))) loadEnvFile(resolve(".env"));
   if (!existsSync(entry)) throw new TessarCLIError(CLI_ERROR_CODE.INVALID_PROJECT, "Expected src/index.ts with a default Tessar export");
   const module = await import(entry.href);
-  const runtimeModule = "tessar:runtime";
-  const { Tessar } = await import(runtimeModule);
+  const { Tessar } = await import(RUNTIME_MODULE);
   if (!(module.default instanceof Tessar)) throw new TessarCLIError(CLI_ERROR_CODE.INVALID_PROJECT, "src/index.ts must default-export a Tessar instance");
   tessar = module.default;
   if (!closing) {
-    const standaloneModule = "tessar:hono";
-    const { TessarServer } = await import(standaloneModule);
-    host = await startServer(module.default, app => new TessarServer({ app, tessar: module.default }));
+    const { startSelfHost } = await import(SELF_HOST_MODULE).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ERR_PACKAGE_PATH_NOT_EXPORTED") throw error;
+      throw new TessarCLIError(CLI_ERROR_CODE.INVALID_PROJECT, "Upgrade @tessar/server to a version compatible with this CLI");
+    });
+    const server = await startSelfHost(module.default);
+    host = server;
+    console.log(`Tessar listening at ${server.url}`);
   }
   if (closing) await shutdown();
 } catch (error) {

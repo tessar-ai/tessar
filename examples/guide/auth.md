@@ -94,6 +94,7 @@ including routes below `/api`, and the OpenAPI document remain developer-owned.
 Protect them with your middleware where needed. Existing middleware runs in
 declaration order before the built-in authentication gate.
 
-Use `registerRoute()` to connect your login/callback/refresh handlers; there is no
+Use native routes inside `server.configure(app)` to connect your login, callback
+or refresh handlers on the Fastify self-host; there is no
 automatic public-route list. When integrating into an existing application server,
 the host application remains responsible for authenticating its mounted Tessar routes.

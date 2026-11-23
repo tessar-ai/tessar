@@ -136,16 +136,19 @@ alongside their own templates as the SDK grows.
 Install `@tessar/server` in the application and default-export a Tessar instance
 from `src/index.ts`, then run `npx @tessar/cli dev`. The CLI resolves server packages
 from that project, reads optional `.env`, handles TypeScript source and relative
-`.js` imports, and starts standalone HTTP/SSE. Invalid exports or startup failures
+`.js` imports, and starts HTTP/SSE on Fastify. Invalid exports or startup failures
 exit nonzero. SIGINT/SIGTERM shut down HTTP and runtime. No watch/reload or UI is
 included. Existing scaffolds still run a single SDK prompt with `npm start`;
-add the entry above to expose their runtime as a server. Application integrations
+add the entry above to expose their runtime as a server. Configure native Fastify
+options, routes, hooks or plugins as shown in the [server guide](../../examples/guide/server.md).
+Use a matching `@tessar/server` version with this CLI. Application integrations
 use their backend's normal command rather than this CLI command.
 
 ## Source organization
 
 `src/bin.ts` is the executable entry; `src/cli.ts` parses arguments and dispatches
 commands. `commands/` contains new, generate and dev handlers. `development/` owns
-the child runner and HTTP listener lifecycle. `scaffolding/` owns project options,
+the child runner, which loads the application's self-host entry from `@tessar/server`.
+`scaffolding/` owns project options,
 the wizard, template rendering and safe file creation. Help/version stay in the
 dispatcher; no command registry or extra CLI framework is required.

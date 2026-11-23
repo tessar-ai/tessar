@@ -1,9 +1,11 @@
 import { TessarError, errorInfo, MessageCodec, normalizeContent, normalizeScope, type ErrorInfo, type RuntimeState } from "@tessar/core";
 import type { Context } from "hono";
+import type { EndpointRequest } from "./endpoint.js";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { TessarServerError, SERVER_ERROR_CODE } from "../errors.js";
 
 export const HTTP_STATUS = {
+  OK: 200,
   CREATED: 201,
   ACCEPTED: 202,
   NO_CONTENT: 204,
@@ -36,6 +38,10 @@ export const HTTP_ERROR_MESSAGE = {
   REASON_MUST_BE_STRING: "reason must be a string",
 } as const;
 
+export function payloadTooLarge(limit: number): TessarServerError {
+  return new TessarServerError(HTTP_ERROR_CODE.PAYLOAD_TOO_LARGE, `Request body exceeds ${limit} bytes`);
+}
+
 export const ROUTE_PARAM = {
   AGENT_ID: "agentId",
   CONTROLLER_ID: "controllerId",
@@ -53,7 +59,7 @@ export const SCOPED_PAGE_QUERY_FIELDS = ["scope", ...PAGE_QUERY_FIELDS] as const
 const STRING_FIELDS = ["id", "threadId", "interruptId", "streamId", "modelId", "level", "atCheckpointId", "atMessageId", "reason", "title", "tagName"];
 const EMPTY_STRING_FIELDS = ["reason", "title"];
 const OBJECT_FIELDS = ["metadata", "scope", "options", "modelOptions", "context", "limits", "attributes"];
-const MAX_REQUEST_BODY_BYTES = 16 * 1024 * 1024;
+export const MAX_REQUEST_BODY_BYTES = 16 * 1024 * 1024;
 const CONTENT_LENGTH_HEADER = "content-length";
 const BODY_LIMIT_CONTEXT_KEY = "tessar.body.limited";
 const ERROR_STATUS_BY_CODE = new Map<string, ContentfulStatusCode>([
@@ -90,7 +96,7 @@ export function required<T>(value: T | null | undefined): T {
 export async function limitBody(c: Context): Promise<void> {
   if (c.get(BODY_LIMIT_CONTEXT_KEY)) return;
   const request = c.req.raw;
-  const overflow = () => new TessarServerError(HTTP_ERROR_CODE.PAYLOAD_TOO_LARGE, `Request body exceeds ${MAX_REQUEST_BODY_BYTES} bytes`);
+  const overflow = () => payloadTooLarge(MAX_REQUEST_BODY_BYTES);
   if (Number(request.headers.get(CONTENT_LENGTH_HEADER)) > MAX_REQUEST_BODY_BYTES) {
     if (request.body && !request.body.locked) void request.body.cancel().catch(() => { });
     throw overflow();
@@ -111,10 +117,14 @@ export async function limitBody(c: Context): Promise<void> {
   }
   c.set(BODY_LIMIT_CONTEXT_KEY, true);
 }
-export async function body(c: Context, allowed: readonly string[]): Promise<Record<string, any>> {
+export async function readHonoJson(c: Context): Promise<unknown> {
   await limitBody(c);
+  return c.req.json();
+}
+
+export async function body(request: Pick<EndpointRequest, "readJson">, allowed: readonly string[]): Promise<Record<string, any>> {
   let value: unknown;
-  try { value = await c.req.json(); }
+  try { value = await request.readJson(); }
   catch (error) {
     if (TessarServerError.isInstance(error) && error.code === HTTP_ERROR_CODE.PAYLOAD_TOO_LARGE) throw error;
     return bad("Expected JSON object");
@@ -146,9 +156,9 @@ export function validateInput(value: unknown): void {
   if (!value || typeof value !== "object") bad("input must be text or MessageData");
   for (const message of Array.isArray(value) ? value : [value]) MessageCodec.decode(message);
 }
-export function query(c: Context, allowed: readonly string[]): Record<string, any> {
+export function query(request: EndpointRequest, allowed: readonly string[]): Record<string, any> {
   const result: Record<string, any> = {};
-  for (const [key, values] of Object.entries(c.req.queries())) {
+  for (const [key, values] of Object.entries(request.queries())) {
     if (!allowed.includes(key) || values.length !== 1) bad("Unexpected query parameter");
     const value = values[0]!;
     if (key === "limit") {
@@ -160,7 +170,7 @@ export function query(c: Context, allowed: readonly string[]): Record<string, an
   }
   return result;
 }
-export function httpError(error: unknown, c: Context): Response {
+export function describeHttpError(error: unknown) {
   const info = errorInfo(error);
   let status: ContentfulStatusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR;
   if (info.source === "provider") status = HTTP_STATUS.BAD_GATEWAY;
@@ -169,7 +179,11 @@ export function httpError(error: unknown, c: Context): Response {
     status = ERROR_STATUS_BY_CODE.get(info.code) ?? HTTP_STATUS.INTERNAL_SERVER_ERROR;
   }
   if (status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) console.error(error);
-  return c.json({ error: safeError(info, status < HTTP_STATUS.INTERNAL_SERVER_ERROR) }, status);
+  return { status, payload: { error: safeError(info, status < HTTP_STATUS.INTERNAL_SERVER_ERROR) } };
+}
+export function httpError(error: unknown, c: Context): Response {
+  const { status, payload } = describeHttpError(error);
+  return c.json(payload, status);
 }
 export function safeError(info: ErrorInfo | null, exposeMessage = false): ErrorInfo | null {
   if (!info) return null;
