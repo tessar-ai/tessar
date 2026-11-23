@@ -164,6 +164,8 @@ it("packs and installs the standalone CLI and scaffolds from a different working
     const project = join(work, "installed-app");
     expect(existsSync(join(project, "src/controllers/main.ts"))).toBe(true);
     expect(existsSync(join(project, "src/sessions/chat.ts"))).toBe(true);
+    const generated = JSON.parse(await readFile(join(project, "package.json"), "utf8"));
+    expect(generated.dependencies["@tessar/core"]).toBe(manifest.dependencies["@tessar/core"]);
     await run(bin, ["g", "plugin", "installed-hook", "--type", "hook", "--event", "context.prepare"], project);
     for (const kind of ["agent", "tool", "controller", "session"])
       await run(bin, ["g", kind, "installed-example"], project);

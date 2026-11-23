@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@tessar/core": "{{coreVersion}}",
+    "@tessar/core": "^{{coreVersion}}",
     "@tessar/openai": "{{openaiVersion}}",
     "zod": "{{zodVersion}}"
   },

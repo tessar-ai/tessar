@@ -1,11 +1,11 @@
-import { EventEnvelope, stateChanged, stream as streamEvents, errorInfo, errorFromInfo, type Scope, type Stream, type StreamEvent } from "@tessar/core";
+import { EventEnvelope, stateChanged, stream as streamEvents, errorInfo, errorFromInfo, type StreamEvent } from "@tessar/core";
 import type { Context, Hono } from "hono";
 import { agentDescriptor } from "../descriptors.js";
 import { body, required, bad, safeError, validateFields, ROUTE_PARAM, HTTP_ERROR_MESSAGE, HTTP_STATUS, wireModel } from "../protocol.js";
 import type { RuntimeRegistry } from "../../runtime/runtime-registry.js";
 import type { SseTransport, StateEvent } from "../sse.js";
 import type { ThreadStateHub } from "../../runtime/thread-state-hub.js";
-import { authScope, scoped, visible } from "../access.js";
+import { authScope, scoped } from "../access.js";
 
 const AGENTS_PATH = "/api/agents";
 const AGENT_PATH = AGENTS_PATH + "/:agentId";
@@ -13,8 +13,6 @@ const CONSUMER_TARGET = "consumer";
 const FAILED_STATUS = "failed";
 export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, transport: SseTransport, hub: ThreadStateHub) {
   const getAgent = (c: Context) => required(runtimes().agents.get(c.req.param(ROUTE_PARAM.AGENT_ID)!));
-  const active = new Map<string, { stream: Stream; scope: Scope }>();
-  const streamKey = (agentId: string, streamId: string) => JSON.stringify([agentId, streamId]);
   app.get(AGENTS_PATH, c => c.json([...runtimes().agents.values()].map(agent => agentDescriptor(agent, runtimes().agentControllers.get(agent.id)))));
   app.get(AGENT_PATH, c => c.json(agentDescriptor(getAgent(c), runtimes().agentControllers.get(getAgent(c).id))));
   app.get(AGENT_PATH + "/tools", c => c.json(getAgent(c).listTool().map(tool => ({
@@ -26,15 +24,13 @@ export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, trans
     const result = await agent.generate(input, options);
     return c.json({ ...result, error: safeError(result.error) });
   });
-  const deliver = (c: Context, stream: Stream, agentId: string, scope: Scope = {}, events: AsyncIterable<StreamEvent> = stream): Response => transport.response(c, (push, end) => {
+  const deliver = (c: Context, events: AsyncIterable<StreamEvent>): Response => transport.response(c, (push, end) => {
     let viewer: ((event: StateEvent) => void) | undefined = push;
     let last: StateEvent | undefined;
-    let key: string | undefined;
     void (async () => {
       try {
         for await (const event of events) {
           hub.observe(event);
-          if (stream.id && !key) { key = streamKey(agentId, stream.id); active.set(key, { stream, scope }); }
           if (event.type === stateChanged) { last = event as StateEvent; viewer?.(last); }
           if (event.type === streamEvents.error && event.payload.target === CONSUMER_TARGET) {
             // Only this viewer failed; do not publish a failure to the shared Thread state.
@@ -49,7 +45,6 @@ export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, trans
         console.error(error);
         if (last) viewer?.(new EventEnvelope(stateChanged, { state: { ...last.payload.state, status: FAILED_STATUS, error: errorInfo(error) } }, last));
       } finally {
-        if (key && active.get(key)?.stream === stream) active.delete(key);
         end();
       }
     })();
@@ -58,7 +53,7 @@ export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, trans
   app.post(AGENT_PATH + "/stream", async c => {
     const { input, options } = await executionBody(c);
     const agent = getAgent(c);
-    return deliver(c, agent.stream(input, options), agent.id, options.scope);
+    return deliver(c, agent.stream(input, options));
   });
   app.post(AGENT_PATH + "/resume", async c => {
     const value = await body(c, ["threadId", "interruptId", "value", "scope"]);
@@ -76,7 +71,7 @@ export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, trans
       if (!first.done) yield first.value;
       for (let next = await iterator.next(); !next.done; next = await iterator.next()) yield next.value;
     } };
-    return deliver(c, stream, agent.id, value.scope, events);
+    return deliver(c, events);
   });
   app.post(AGENT_PATH + "/signals", async c => {
     const value = await body(c, ["streamId", "threadId", "content", "persist", "tagName", "attributes", "metadata"]);
@@ -88,8 +83,7 @@ export function registerAgents(app: Hono, runtimes: () => RuntimeRegistry, trans
     const { reason } = await body(c, ["reason"]);
     if (reason !== undefined && typeof reason !== "string") bad(HTTP_ERROR_MESSAGE.REASON_MUST_BE_STRING);
     const agent = getAgent(c), streamId = c.req.param(ROUTE_PARAM.STREAM_ID)!;
-    const entry = required(active.get(streamKey(agent.id, streamId)));
-    required(visible(entry.scope, authScope(c)) ? entry : undefined).stream.abort(reason);
+    await agent.abort(streamId, { reason, scope: authScope(c) });
     return c.body(null, HTTP_STATUS.NO_CONTENT);
   });
 }

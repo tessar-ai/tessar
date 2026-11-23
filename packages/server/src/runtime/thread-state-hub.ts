@@ -3,6 +3,7 @@ import { TessarServerError } from "../errors.js";
 
 type StateEvent = EventEnvelope<{ state: RuntimeState }>;
 const THREAD_UNAVAILABLE = { code: "ThreadNotFound", message: "Selected Thread is unavailable" } as const;
+const CANCELLED_STATUS = "cancelled";
 const LIFECYCLE_EVENTS = new Set<string>([stream.started, stream.resumed, stream.end, stream.suspended, stream.error]);
 interface ThreadView { streamId: string; handleId?: string; awaitingHandle?: boolean; state?: RuntimeState; active: boolean; deleted?: boolean }
 interface SessionView {
@@ -45,6 +46,12 @@ export class ThreadStateHub {
       view ??= { streamId: "", active: false };
       view.deleted = true;
       this.threads.set(key, view);
+    } else if (event.type === stream.end && event.payload.status === CANCELLED_STATUS && event.streamId && event.handleId
+      && (!view || (!view.deleted && !view.active && view.streamId === event.streamId))) {
+      // A committed cancellation of waiting work can arrive on a fresh handle.
+      this.threads.set(key, { streamId: event.streamId, handleId: event.handleId, active: false });
+      this.prune();
+      return;
     } else if (view && event.streamId === view.streamId &&
       (!event.handleId || event.handleId === view.handleId || (!view.handleId && !view.awaitingHandle))) {
       if (event.type === stateChanged) {
@@ -87,7 +94,7 @@ export class ThreadStateHub {
     this.prune();
   }
   hasSubscribers(session: Session): boolean { return (this.sessions.get(session)?.listeners.size ?? 0) > 0; }
-  private compose(controllerId: string, session: Session): RuntimeState {
+  snapshot(controllerId: string, session: Session): RuntimeState {
     const own = session.state.get();
     const id = session.thread.getId();
     const view = id && this.threads.get(this.key(controllerId, id));
@@ -99,7 +106,7 @@ export class ThreadStateHub {
   }
   private publish(slot: SessionView): void {
     let state: RuntimeState;
-    try { state = this.compose(slot.controllerId, slot.session); }
+    try { state = this.snapshot(slot.controllerId, slot.session); }
     catch (error) { state = { ...slot.session.state.get(), status: "failed", error: errorInfo(error) }; }
     const event = new EventEnvelope(stateChanged, { state }, {
       controllerId: slot.controllerId, agentId: slot.session.agent.id, sessionId: slot.session.id,
@@ -122,7 +129,7 @@ export class ThreadStateHub {
       if (!handle) throw new TessarServerError(THREAD_UNAVAILABLE.code, THREAD_UNAVAILABLE.message);
       handle.dispose();
     }
-    return this.compose(controllerId, session);
+    return this.snapshot(controllerId, session);
   }
   private prune(): void {
     const interested = new Set([...this.sessions.values()].filter(slot => !slot.session.isDisposed())

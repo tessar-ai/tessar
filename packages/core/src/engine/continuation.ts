@@ -81,6 +81,11 @@ async function cancelWaiting(
   return entry.canceling;
 }
 
+export function abortStandalone(agent: Agent, threadId: string, reason: string): Promise<void> | undefined {
+  const entry = runtimes.get(agent)?.get(threadId);
+  return entry && cancelWaiting(agent, threadId, entry, reason);
+}
+
 export function retainStandalone(
   agent: Agent,
   threadId: string,
