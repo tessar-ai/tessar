@@ -22,6 +22,10 @@
       "types": "./dist/framework/hono.d.ts",
       "import": "./dist/framework/hono.js"
     },
+    "./self-host": {
+      "types": "./dist/framework/self-host.d.ts",
+      "import": "./dist/framework/self-host.js"
+    },
     "./express": {
       "types": "./dist/framework/express.d.ts",
       "import": "./dist/framework/express.js"
@@ -35,8 +39,8 @@
   },
   "peerDependencies": {
     "@tessar/core": "workspace:^",
-    "express": ">=4 <6",
-    "@types/express": ">=4 <6"
+    "@types/express": ">=4 <6",
+    "express": ">=4 <6"
   },
   "devDependencies": {
     "@tessar/core": "workspace:*",
@@ -45,6 +49,7 @@
   },
   "dependencies": {
     "@hono/node-server": "2.1.6",
+    "fastify": "5.12.8",
     "hono": "4.13.16"
   },
   "scripts": {

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -24,7 +24,7 @@ test("server tarball installs independently and public declarations compile", as
   const directory = await mkdtemp(join(tmpdir(), "tessar-server-package-"));
   try {
     const archives: string[] = [];
-    for (const path of ["packages/core", "packages/server", "integrations/auth/api-key"]) {
+    for (const path of ["packages/core", "packages/server", "integrations/auth/api-key", "packages/cli"]) {
       await execute(process.execPath, [resolve("scripts/copy-license.mjs")], { cwd: resolve(path), windowsHide: true });
       const packed = await command(["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", directory], resolve(path));
       archives.push(resolve(directory, JSON.parse(packed.stdout).filename));
@@ -38,18 +38,18 @@ test("server tarball installs independently and public declarations compile", as
     const project = join(directory, "application"); await mkdir(project);
     await writeFile(join(project, "package.json"), JSON.stringify({
       private: true, type: "module", packageManager: "pnpm@11.5.3",
-      dependencies: { "@tessar/core": `file:${archives[0]}`, "@tessar/server": `file:${archives[1]}`, "@tessar/auth-api-key": `file:${archives[2]}`, zod: external.zod }
+      dependencies: { "@tessar/core": `file:${archives[0]}`, "@tessar/server": `file:${archives[1]}`, "@tessar/auth-api-key": `file:${archives[2]}`, "@tessar/cli": `file:${archives[3]}`, zod: external.zod }
     }));
     await writeFile(join(project, "pnpm-workspace.yaml"), JSON.stringify({ overrides: external }));
-    await command(["install", "--offline", "--ignore-scripts"], project);
+    await command(["install", "--prefer-offline", "--ignore-scripts"], project);
     const manifest = JSON.parse(await readFile(join(project, "node_modules/@tessar/server/package.json"), "utf8"));
     expect(manifest.peerDependencies["@tessar/core"]).not.toContain("workspace:");
     expect(manifest.exports["./standalone"]).toBeUndefined();
-    for (const adapter of ["./hono", "./express"]) {
+    for (const adapter of ["./hono", "./express", "./self-host"]) {
       expect(existsSync(join(project, "node_modules/@tessar/server", manifest.exports[adapter].import))).toBe(true);
       expect(existsSync(join(project, "node_modules/@tessar/server", manifest.exports[adapter].types))).toBe(true);
     }
-    expect(Object.keys(manifest.dependencies).sort()).toEqual(["@hono/node-server", "hono"]);
+    expect(Object.keys(manifest.dependencies).sort()).toEqual(["@hono/node-server", "fastify", "hono"]);
     const authManifest = JSON.parse(await readFile(join(project, "node_modules/@tessar/auth-api-key/package.json"), "utf8"));
     expect(authManifest.peerDependencies["@tessar/server"]).not.toContain("workspace:");
     expect(existsSync(join(project, "node_modules/jose"))).toBe(false);
@@ -79,6 +79,33 @@ await tessar.shutdown();
 `);
     await execute(process.execPath, [resolve("node_modules/typescript/bin/tsc"), "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2023", "--module", "NodeNext", "usage.ts"], { cwd: project, windowsHide: true });
     await execute(process.execPath, ["usage.ts"], { cwd: project, windowsHide: true, timeout: 10000 });
+    await mkdir(join(project, "src"));
+    await writeFile(join(project, "src/index.ts"), `
+import { Agent } from "@tessar/core";
+import { ScriptedProvider } from "@tessar/core/testing";
+import { Tessar } from "@tessar/server";
+export default new Tessar({ agents: [new Agent({ id: "packed", model: new ScriptedProvider([]) })],
+  server: { port: 0, configure(app) {
+    app.register(async plugin => { plugin.get("/health", async () => ({ status: "fastify" })); });
+  } },
+});
+`);
+    const cli = spawn(process.execPath, [join(project, "node_modules/@tessar/cli/dist/bin.js"), "dev"], {
+      cwd: project, stdio: ["ignore", "pipe", "pipe", "ipc"], windowsHide: true,
+    });
+    const exited = new Promise<number | null>((resolve, reject) => { cli.once("exit", resolve); cli.once("error", reject); });
+    let stdout = "", stderr = "";
+    cli.stdout!.on("data", chunk => { stdout += chunk; });
+    cli.stderr!.on("data", chunk => { stderr += chunk; });
+    try {
+      await expect.poll(() => stdout.match(/Tessar listening at (http:\/\/[^\s]+)/)?.[1], { timeout: 10000 }).toBeTruthy();
+      const baseURL = stdout.match(/Tessar listening at (http:\/\/[^\s]+)/)![1];
+      expect(await fetch(baseURL + "/health").then(response => response.json())).toEqual({ status: "fastify" });
+      expect(await fetch(baseURL + "/api/agents").then(response => response.json())).toMatchObject([{ id: "packed" }]);
+    } finally {
+      if (cli.connected) cli.send("shutdown");
+      expect(await exited, stderr).toBe(0);
+    }
   } finally {
     if (!resolve(directory).startsWith(resolve(tmpdir()) + (process.platform === "win32" ? "\\" : "/"))) throw Error("Unsafe cleanup");
     await rm(directory, { recursive: true, force: true, maxRetries: 5 });

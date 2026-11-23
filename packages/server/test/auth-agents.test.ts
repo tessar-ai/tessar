@@ -3,7 +3,8 @@ import { Agent, Controller, AssistantMessage, MessageCodec, createTool, stream }
 import { ScriptedProvider } from "@tessar/core/testing";
 import { TessarClient } from "@tessar/client";
 import { z } from "zod";
-import { start } from "./helpers.js";
+import { start, startServer } from "./helpers.js";
+import { startSelfHost } from "../src/framework/self-host.js";
 
 let host: Awaited<ReturnType<typeof start>> | undefined;
 afterEach(async () => { await host?.server.shutdown(); host = undefined; });
@@ -152,12 +153,12 @@ test("lets a suspended hook request abort without waiting for itself", async () 
   await expect.poll(async () => (await thread.getStream(result.streamId))?.status).toBe("cancelled");
 });
 
-test("Session viewers see a waiting Agent's committed cancellation", async () => {
+test.each([["adapter", startServer], ["self-host", startSelfHost]] as const)("%s Session viewers see a waiting Agent's committed cancellation", async (_, boot) => {
   const ask = createTool({ name: "ask", description: "Choose", schema: z.object({}), resumeSchema: z.string(), execute: (_, context) => context.suspend({ question: "Choose" }) });
   const model = new ScriptedProvider([{ response: { message: MessageCodec.encode(new AssistantMessage([{ type: "tool-call", name: "ask", toolCallId: "call", arguments: {} }])) } }]);
   const agent = new Agent({ id: crypto.randomUUID(), model, tools: { ask } });
   const controller = new Controller({ id: crypto.randomUUID(), agent });
-  host = await start({ controllers: [controller], server: { auth } });
+  host = await start({ controllers: [controller], server: { auth } }, boot);
   const client = new TessarClient({ baseURL: host.url, headers: { "x-user": "alice" } });
   const remoteAgent = client.getAgent(agent.id);
   const result = await remoteAgent.generate("choose");

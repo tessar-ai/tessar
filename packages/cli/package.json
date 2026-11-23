@@ -29,9 +29,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@tessar/core": "workspace:^",
-    "hono": "4.13.16",
-    "@hono/node-server": "2.1.6"
+    "@tessar/core": "workspace:^"
   },
   "devDependencies": {
     "@tessar/openai": "workspace:*",

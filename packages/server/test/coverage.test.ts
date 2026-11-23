@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { Hono } from "hono";
+import { EndpointRouter } from "../src/http/endpoint.js";
 import { registerAgents } from "../src/http/routes/agents.js";
 import { registerControllers } from "../src/http/routes/controllers.js";
 import { registerSessions } from "../src/http/routes/sessions.js";
@@ -7,15 +7,14 @@ import { registerThreads } from "../src/http/routes/threads.js";
 import { registerRecords } from "../src/http/routes/records.js";
 import { registerState } from "../src/http/routes/state.js";
 import { ThreadStateHub } from "../src/runtime/thread-state-hub.js";
-import { SseTransport } from "../src/http/sse.js";
 import { openapiDocument } from "../src/http/openapi.js";
 
 test("route inventory covers the reviewed public SDK runtime surface", () => {
-  const app = new Hono(), transport = new SseTransport();
+  const app = new EndpointRouter();
   const unused = (): never => { throw Error("Registration must not read runtimes"); };
-  registerAgents(app, unused, transport, new ThreadStateHub()); registerControllers(app, unused); registerSessions(app, unused, unused);
+  registerAgents(app, unused, new ThreadStateHub()); registerControllers(app, unused); registerSessions(app, unused, unused);
   registerThreads(app, unused); registerRecords(app, unused);
-  registerState(app, unused, new ThreadStateHub(), transport);
+  registerState(app, unused, new ThreadStateHub());
   const a = "/api/agents/:agentId";
   const CONTROLLER_PATH = "/api/controllers/:controllerId";
   const SESSION_PATH = CONTROLLER_PATH + "/sessions/:sessionId";
@@ -29,8 +28,8 @@ test("route inventory covers the reviewed public SDK runtime surface", () => {
     ...["snapshot", "history", "checkpoints", "checkpoints/:checkpointId", "streams", "streams/:streamId", "turns", "model-attempts", "tool-executions", "interrupts", "interrupts/:interruptId"].map(path => `GET ${THREAD_PATH}/${path}`),
     `POST ${CONTROLLER_PATH}/records/:namespace`, `GET ${CONTROLLER_PATH}/records/:namespace`, `GET ${CONTROLLER_PATH}/records/:namespace/:recordId`,
   ];
-  expect(app.routes.filter(route => route.method !== "ALL").map(route => `${route.method} ${route.path}`).sort()).toEqual(expected.sort());
-  const document = openapiDocument(app.routes.filter(route => route.method !== "ALL"), "/tessar");
+  expect(app.routes.map(route => `${route.method} ${route.path}`).sort()).toEqual(expected.sort());
+  const document = openapiDocument(app.routes, "/tessar");
   const documented = Object.entries(document.paths).flatMap(([path, methods]) => Object.keys(methods)
     .map(method => `${method.toUpperCase()} ${path.replace(/^\/tessar/, "").replace(/\{([^}]+)\}/g, ":$1")}`));
   expect(documented.sort()).toEqual(expected.sort());

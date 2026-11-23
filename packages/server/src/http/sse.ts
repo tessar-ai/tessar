@@ -1,9 +1,10 @@
-import { streamSSE } from "hono/streaming";
-import type { Context } from "hono";
 import { stateChanged, type EventEnvelope, type RuntimeState } from "@tessar/core";
 import { safeState } from "./protocol.js";
 
 export type StateEvent = EventEnvelope<{ state: RuntimeState }>;
+export type StateSubscription = (push: (event: StateEvent) => void, end: () => void) => () => void;
+export const SSE_HEADERS = { "content-type": "text/event-stream", "cache-control": "no-cache" } as const;
+const encoder = new TextEncoder();
 
 export class LatestStateWriter {
   private pending?: StateEvent;
@@ -37,20 +38,32 @@ export class LatestStateWriter {
 
 export class SseTransport {
   private readonly connections = new Set<() => void>();
-  response(c: Context, subscribe: (push: (event: StateEvent) => void, end: () => void) => (() => void)): Response {
-    return streamSSE(c, async stream => {
-      let sequence = 0;
-      const writer = new LatestStateWriter(event => stream.writeSSE({
-        event: stateChanged, id: String(++sequence),
-        data: JSON.stringify({ ...event, payload: { state: safeState(event.payload.state) } })
-      }));
-      const stop = () => { writer.cancel(); };
-      this.connections.add(stop);
-      stream.onAbort(stop);
-      const unsubscribe = subscribe(event => writer.push(event), () => writer.end());
-      try { await writer.done; }
-      finally { unsubscribe(); this.connections.delete(stop); }
+  private closed = false;
+  open(subscribe: StateSubscription, disconnect?: () => void): ReadableStream<Uint8Array> {
+    if (this.closed) return new ReadableStream({ start(stream) { stream.close(); } });
+    let controller!: TransformStreamDefaultController<Uint8Array>;
+    const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>({
+      start(stream) { controller = stream; },
     });
+    const sink = writable.getWriter();
+    let sequence = 0;
+    const writer = new LatestStateWriter(event => {
+      const data = JSON.stringify({ ...event, payload: { state: safeState(event.payload.state) } });
+      return sink.write(encoder.encode(`event: ${stateChanged}\ndata: ${data}\nid: ${++sequence}\n\n`));
+    });
+    const terminate = () => { writer.cancel(); controller.terminate(); };
+    const stop = () => { terminate(); disconnect?.(); };
+    this.connections.add(stop);
+    void sink.closed.catch(() => writer.cancel());
+    let unsubscribe: (() => void) | undefined;
+    try { unsubscribe = subscribe(event => writer.push(event), () => writer.end()); }
+    catch (error) { this.connections.delete(stop); terminate(); throw error; }
+    void writer.done.then(async () => {
+      this.connections.delete(stop);
+      unsubscribe();
+      await sink.close().catch(() => { });
+    }).catch(error => console.error(error));
+    return readable;
   }
-  close(): void { for (const stop of this.connections) stop(); this.connections.clear(); }
+  close(): void { this.closed = true; for (const stop of this.connections) stop(); this.connections.clear(); }
 }

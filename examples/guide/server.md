@@ -11,7 +11,7 @@ export default new Tessar({ agents: [assistant] });
 
 Install `@tessar/server` alongside core and your provider, then run
 `npx @tessar/cli dev` from the project root. The CLI loads the entry and optional
-`.env`, initializes Hono routes and opens `127.0.0.1:4117`. It does not watch or
+`.env`, registers routes on Fastify and opens `127.0.0.1:4117`. It does not watch or
 restart files yet. `new Tessar()` itself never listens.
 
 Agent-only registration does not create a Controller or Session. Each direct Agent
@@ -33,9 +33,30 @@ the original instance even when it belongs to a registered Controller; use
 Plugin/subagent delegation remains developer-defined and is not automatically
 exposed by the server.
 
-Optional `server: { hostname, port, prefix, openapiPath, routes, middlewares, auth }`
+Optional `server: { hostname, port, prefix, openapiPath, auth, fastifyOptions, configure }`
 configures standalone hosting. Defaults are `127.0.0.1`, `4117`, empty prefix and
 `/openapi.json`. Swagger/playground UI is deferred.
+
+Pass native constructor settings through `fastifyOptions`. Add custom routes,
+hooks and plugins through `configure(app)` before the CLI starts listening:
+
+```ts
+export default new Tessar({
+  agents: [assistant],
+  server: {
+    fastifyOptions: { logger: true },
+    configure(app) {
+      app.register(async plugin => {
+        plugin.get("/health", async () => ({ ok: true }));
+      });
+    },
+  },
+});
+```
+
+Custom self-host routes and middleware move from `server.routes` and
+`server.middlewares` into `configure`. There they follow Fastify's route, hook
+and plugin conventions. Both custom and built-in routes use `server.prefix`.
 
 For an existing backend, use the same runtime with a built-in adapter:
 
@@ -99,9 +120,10 @@ Reconnect never resubmits input or runs recovery. Persisted unfinished work need
 explicit `/resume` or `/recover`; memory storage disappears on restart. Disconnect
 only detaches the viewer. `/abort` explicitly cancels the selected execution.
 
-Add application routes and middleware with `registerRoute`/`registerMiddleware`;
-keep their handlers in separate modules. The [package README](../../packages/server/README.md)
-documents registration, route inventory, lifecycle and errors. Application auth,
+For the Hono and Express adapters, `registerRoute` and `registerMiddleware` are
+still available for Tessar-managed custom routes and middleware. The
+[package README](../../packages/server/README.md) documents registration, route
+inventory, lifecycle and errors. Application auth,
 authorization and UI remain developer choices. A packaged CLI can start this host
 locally and call HTTP/SSE, or use the SDK directly without a server.
 For typed remote access from a frontend or Node application, see the
