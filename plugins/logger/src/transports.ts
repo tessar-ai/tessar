@@ -1,6 +1,10 @@
-import { appendFile, mkdir } from "node:fs/promises";
+import { mkdir, open } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import type { LogEntry } from "./logger.js";
+
+const MAX_BATCH_ENTRIES = 32;
+const MAX_BATCH_BYTES = 256 * 1024;
+const FILE_APPEND_MODE = "a";
 
 /** A destination for structured log entries, owned and closed by LoggerPlugin. */
 export interface LogTransport {
@@ -43,11 +47,21 @@ function filename(id: string): string {
     : encoded;
 }
 
-/** Append JSON Lines, serializing writes so concurrent events cannot interleave. */
+interface FileWrite {
+  path: string;
+  line: Buffer;
+  resolve(): void;
+  reject(error: unknown): void;
+  next?: FileWrite;
+}
+
+/** Append queued JSON Lines in order, batching consecutive writes to one file. */
 export class FileTransport implements LogTransport {
   readonly #path: string;
   readonly #group: LogGroup;
-  #pending = Promise.resolve();
+  #head?: FileWrite;
+  #tail?: FileWrite;
+  #pending?: Promise<void>;
   #closed = false;
 
   constructor(options: FileTransportOptions) {
@@ -85,15 +99,63 @@ export class FileTransport implements LogTransport {
       );
     else if (this.#group === logGroup.stream && entry.streamId)
       path = join(directory, "streams", filename(entry.streamId) + extension);
-    const line = JSON.stringify(entry) + "\n";
-    // ponytail: one queue per transport; per-file queues if disk throughput requires it.
-    const writing = this.#pending.then(async () => {
-      await mkdir(dirname(path), { recursive: true });
-      await appendFile(path, line, "utf8");
+    const line = Buffer.from(JSON.stringify(entry) + "\n");
+    return new Promise<void>((resolve, reject) => {
+      const write = { path, line, resolve, reject };
+      if (this.#tail) this.#tail.next = write;
+      else this.#head = write;
+      this.#tail = write;
+      this.#pending ??= Promise.resolve().then(() => this.#drain());
     });
-    // A failed write is reported to its caller without blocking subsequent entries.
-    this.#pending = writing.catch(() => {});
-    return writing;
+  }
+
+  async #drain(): Promise<void> {
+    while (this.#head) {
+      const first = this.#head;
+      const batch = [first];
+      let last = first;
+      let size = first.line.length;
+      while (
+        last.next?.path === first.path && batch.length < MAX_BATCH_ENTRIES &&
+        size + last.next.line.length <= MAX_BATCH_BYTES
+      ) {
+        last = last.next;
+        batch.push(last);
+        size += last.line.length;
+      }
+      this.#head = last.next;
+      last.next = undefined;
+      if (!this.#head) this.#tail = undefined;
+
+      let written = 0;
+      let failure: unknown;
+      try {
+        const bytes = batch.length === 1
+          ? first.line
+          : Buffer.concat(batch.map(write => write.line), size);
+        await mkdir(dirname(first.path), { recursive: true });
+        const file = await open(first.path, FILE_APPEND_MODE);
+        try {
+          while (written < size) {
+            const { bytesWritten } = await file.write(bytes, written, size - written);
+            if (bytesWritten === 0) throw new Error("Failed to write log batch");
+            written += bytesWritten;
+          }
+        } finally {
+          await file.close();
+        }
+      } catch (error) {
+        failure = error;
+      }
+
+      let end = 0;
+      for (const write of batch) {
+        end += write.line.length;
+        if (end <= written) write.resolve();
+        else write.reject(failure);
+      }
+    }
+    this.#pending = undefined;
   }
 
   async close(): Promise<void> {

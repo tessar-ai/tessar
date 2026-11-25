@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import type { Plugin } from "@tessar/core";
+import type { Plugin } from "../context.js";
 
 const PACKAGE_MANIFEST = "package.json";
 const PLUGIN_CONFIGURATION = "plugins.json";

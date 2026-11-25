@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, open, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { expect, it, onTestFinished, vi } from "vitest";
@@ -13,7 +13,9 @@ import {
   type LogEntry,
   type LoggerOptions,
   type LogTransport,
-} from "@tessar/plugins/logger";
+} from "@tessar/logger";
+
+vi.mock("node:fs/promises", { spy: true });
 
 async function directory(): Promise<string> {
   const path = await mkdtemp(join(tmpdir(), "tessar-logger-"));
@@ -89,14 +91,14 @@ it("defaults to one named file and drains concurrent writes before closing", asy
     entry({ payload: { index, text: "x".repeat(100_000) } }),
   );
   const writing = entries.map((value) => transport.write(value));
-  await transport.close();
-  await Promise.all(writing);
+  await Promise.all([transport.close(), transport.close()]);
   expect(
     (await readFile(path, "utf8"))
       .trimEnd()
       .split("\n")
       .map((line) => JSON.parse(line)),
   ).toEqual(entries);
+  await Promise.all(writing);
   await transport.close();
   await expect(transport.write(entry())).rejects.toThrow(/closed/i);
 });
@@ -135,7 +137,7 @@ it("encodes caller-supplied IDs as portable filenames within the configured dire
   }
 });
 
-it("reports a failed file write without poisoning later writes", async () => {
+it("reports failed queued writes without poisoning later destinations", async () => {
   const root = await directory();
   await writeFile(
     join(root, "threads"),
@@ -145,14 +147,45 @@ it("reports a failed file write without poisoning later writes", async () => {
     path: join(root, "app.log"),
     groupBy: logGroup.thread,
   });
-  await expect(
+  const accepted = [entry({ payload: { index: 0 } }), entry({ payload: { index: 1 } })];
+  const writes = Promise.allSettled([
+    transport.write(accepted[0]!),
     transport.write(entry({ threadId: "blocked" })),
-  ).rejects.toThrow();
-  await transport.write(entry());
+    transport.write(entry({ threadId: "blocked" })),
+    transport.write(accepted[1]!),
+  ]);
   await transport.close();
+  expect((await writes).map(result => result.status)).toEqual([
+    "fulfilled", "rejected", "rejected", "fulfilled",
+  ]);
   expect(
-    JSON.parse((await readFile(join(root, "app.log"), "utf8")).trim()),
-  ).toEqual(entry());
+    (await readFile(join(root, "app.log"), "utf8")).trim().split("\n").map(line => JSON.parse(line)),
+  ).toEqual(accepted);
+});
+
+it("batches queued lines and acknowledges the written prefix after a short write", async () => {
+  const path = join(await directory(), "app.log");
+  const transport = new FileTransport({ path });
+  const first = entry({ payload: { index: 0 } });
+  const second = entry({ payload: { index: 1 } });
+  const prefix = Buffer.byteLength(JSON.stringify(first) + "\n") + 2;
+  const failure = new Error("Write failed after a partial batch");
+  const file = {
+    write: vi.fn().mockResolvedValueOnce({ bytesWritten: prefix }).mockRejectedValueOnce(failure),
+    close: vi.fn().mockResolvedValue(undefined),
+  };
+  vi.mocked(open).mockResolvedValueOnce(file as unknown as Awaited<ReturnType<typeof open>>);
+
+  const writes = Promise.allSettled([transport.write(first), transport.write(second)]);
+  await transport.close();
+
+  const batch = Buffer.from(`${JSON.stringify(first)}\n${JSON.stringify(second)}\n`);
+  expect(file.write).toHaveBeenNthCalledWith(1, batch, 0, batch.length);
+  expect(file.write).toHaveBeenNthCalledWith(2, batch, prefix, batch.length - prefix);
+  expect(await writes).toEqual([
+    { status: "fulfilled", value: undefined },
+    { status: "rejected", reason: failure },
+  ]);
 });
 
 it("validates transport configuration", () => {
@@ -168,13 +201,13 @@ it("validates transport configuration", () => {
   // @ts-expect-error level is a typed threshold.
   expect(() => new LoggerPlugin({ level: "verbose" })).toThrow();
   // @ts-expect-error Custom output is provided through LogTransport.
-  const oldOptions: LoggerOptions = { write() {} };
+  const oldOptions: LoggerOptions = { write() { } };
   void oldOptions;
   expect(new LoggerPlugin()).not.toHaveProperty("write");
 });
 
 it("writes structured JSON to stderr through ConsoleTransport", () => {
-  const stderr = vi.spyOn(console, "error").mockImplementation(() => {});
+  const stderr = vi.spyOn(console, "error").mockImplementation(() => { });
   try {
     new ConsoleTransport().write(entry());
     expect(stderr).toHaveBeenCalledWith(JSON.stringify(entry()));

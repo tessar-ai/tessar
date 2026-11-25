@@ -1,44 +1,26 @@
-# @tessar/plugins
+# @tessar/logger
 
-Optional Node host utilities for loading plugins after an application is packaged,
-managing npm plugin packages, and structured logging. Requires Node 24.22.1 or newer.
+Standalone structured logging plugin for Tessar. Requires Node 24.22.1 or newer.
 
 ```sh
-npm install @tessar/core @tessar/plugins
+npm install @tessar/core @tessar/logger
 ```
 
 ```ts
-import { PluginManager } from "@tessar/plugins";
-import { LoggerPlugin } from "@tessar/plugins/logger";
+import { Controller } from "@tessar/core";
+import { LoggerPlugin } from "@tessar/logger";
 
-const manager = new PluginManager({
-  directory: ".my-cli",
-  hostUrl: import.meta.url,
+const controller = new Controller({
+  id: "app",
+  agent,
+  plugins: [new LoggerPlugin()],
 });
-const userPlugins = await manager.load();
-const plugins = [new LoggerPlugin(), ...userPlugins];
-// Pass plugins to new Controller({ id, agent, plugins }).
-// Dispose Controller first, then call manager.dispose() in finally.
 ```
 
-Custom files under `plugins/`, or folders with an index entry, default-export a
-plugin instance. The manager supplies the host's public `@tessar/core` imports.
-Erasable TypeScript custom files are supported; npm packages publish JavaScript.
-
-`install(source)`, `update(name?)` and `remove(name)` use npm in the managed `npm/`
-subdirectory. Installed package names are recorded in `plugins.json` under
-`packages`; custom files are discovered automatically. `load()` never installs
-missing dependencies. A consuming CLI chooses its own command name and directory.
-
-For registry plugins saved with an exact version, an explicit `update(name?)`
-installs the registry's `latest` version and saves its exact version again. This
-can cross major versions. File, Git, URL and other dependency specifications keep
-their selected source and follow native `npm update` behavior. Omit the name to
-update configured plugins; unrelated helper dependencies are not selected as targets.
-
-Controller owns plugin setup and cleanup. Its `plugins.attach(instance)` and
-`plugins.detach(id)` operations also work with directly imported plugins, without
-a PluginManager. The manager does not activate plugins or watch for file changes.
+For a managed installation, call `manager.install("@tessar/logger")` with the
+`PluginManager` from `@tessar/core/plugin`. The default export is a configured
+logger instance that loads by package name. See the
+[plugin guide](../../examples/guide/plugins.md#load-plugins-after-packaging-your-cli).
 
 ## Logger transports
 
@@ -48,7 +30,7 @@ minimum level and destinations through `transports`:
 ```ts
 import {
   LoggerPlugin, ConsoleTransport, FileTransport, logGroup,
-} from "@tessar/plugins/logger";
+} from "@tessar/logger";
 
 const logger = new LoggerPlugin({
   level: "debug",
@@ -80,8 +62,9 @@ the extension supplied in `path` is reused for grouped files:
 
 An entry missing the required IDs goes to the original `path`, including a
 Session event without a Thread. IDs are encoded as portable filenames, while
-the original IDs remain in the JSON. Writes are serialized within each
-FileTransport instance, and `close()` waits for pending writes.
+the original IDs remain in the JSON. Each FileTransport writes in queue order
+and combines consecutive entries that are already waiting for the same file.
+`write()` completes after its entry is written, and `close()` waits for pending writes.
 
 For another destination, implement the exported `LogTransport` contract:
 

@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - integrations/auth/*
+  - plugins/*
   - plugins/database/*
   - tests/fixtures/apps/*
 minimumReleaseAgeExclude:

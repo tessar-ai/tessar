@@ -15,7 +15,7 @@ const { checkRelease, verifyArchive, checkRegistry } = await import(script);
 afterEach(() => vi.unstubAllGlobals());
 
 function fixture(
-  versions = { core: "0.1.4", opentelemetry: "0.1.0", plugins: "0.8.0" },
+  versions = { core: "0.1.4", opentelemetry: "0.1.0", logger: "0.1.0" },
 ) {
   const root = mkdtempSync(join(tmpdir(), "tessar-release-test-"));
   onTestFinished(() => {
@@ -74,6 +74,7 @@ const files = [
 
 it.each([
   ["integrations/auth", "jwt", "auth-jwt"],
+  ["plugins", "compaction", "compaction"],
   ["plugins/database", "libsql", "libsql"],
 ])("discovers scoped packages nested under %s", (parent, leaf, name) => {
   const root = fixture();
@@ -107,7 +108,7 @@ it.each([
   const root = fixture({
     core: "0.1.4",
     opentelemetry: version,
-    plugins: "3.2.1",
+    logger: "3.2.1",
   });
   expect(checkRelease({ root, ref: "opentelemetry@" + version })).toEqual({
     package: "@tessar/opentelemetry",
@@ -197,12 +198,12 @@ it("validates packed dependencies against their own workspace versions, independ
 
 it("preserves independently versioned workspace peer ranges", () => {
   const root = fixture();
-  patch(root, "plugins", {
+  patch(root, "logger", {
     peerDependencies: { "@tessar/core": "workspace:^" },
   });
-  const plan = checkRelease({ root, ref: "plugins@0.8.0" });
+  const plan = checkRelease({ root, ref: "logger@0.1.0" });
   const packed = {
-    ...manifest(root, "plugins"),
+    ...manifest(root, "logger"),
     peerDependencies: { "@tessar/core": "^0.1.4" },
   };
   expect(verifyArchive(root, plan, packed, files)).toBe(packed);

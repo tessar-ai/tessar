@@ -11,7 +11,7 @@ import {
   type Plugin,
 } from "@tessar/core";
 import { AgentHarness } from "@tessar/core/testing";
-import { LoggerPlugin, type LogEntry } from "@tessar/plugins/logger";
+import { LoggerPlugin, type LogEntry } from "@tessar/logger";
 
 it("logs provider errors with execution identity and persists their source", async () => {
   const entries: LogEntry[] = [];
@@ -251,7 +251,7 @@ it("logs decision hook failures without exposing mutable services to diagnostics
 });
 
 it("writes JSON to stderr by default and stops receiving events after detach", async () => {
-  const stderr = vi.spyOn(console, "error").mockImplementation(() => {});
+  const stderr = vi.spyOn(console, "error").mockImplementation(() => { });
   const harness = await AgentHarness.create({
     modelScripts: [{ text: "one" }, { text: "two" }],
     plugins: [new LoggerPlugin()],

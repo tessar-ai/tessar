@@ -11,12 +11,6 @@ For application examples covering environment context and human approval, see
 
 ## Register a tool and extend instructions
 
-Install the optional logger package:
-
-```sh
-npm install @tessar/plugins
-```
-
 Save as `plugins.ts` after the [setup](README.md).
 
 ```ts
@@ -26,7 +20,6 @@ import {
 } from "@tessar/core";
 import { createTool } from "@tessar/core/tool";
 import { OpenAIChat } from "@tessar/openai";
-import { LoggerPlugin } from "@tessar/plugins/logger";
 import { z } from "zod";
 
 class AppInfoPlugin implements Plugin {
@@ -65,7 +58,7 @@ const agent = new Agent({
 const controller = new Controller({
   id: "my-app",
   agent,
-  plugins: [new AppInfoPlugin(), new LoggerPlugin()],
+  plugins: [new AppInfoPlugin()],
 });
 
 try {
@@ -134,10 +127,16 @@ result before SDK invocation. Agent calls without a Controller still work.
 
 ## Configure logging
 
+Install the standalone logging plugin for your application:
+
+```sh
+npm install @tessar/logger
+```
+
 ```ts
 import {
   LoggerPlugin, FileTransport, logGroup,
-} from "@tessar/plugins/logger";
+} from "@tessar/logger";
 
 const logger = new LoggerPlugin({
   level: "info",
@@ -181,7 +180,7 @@ The following class belongs to the consuming application; Tessar does not
 provide a built-in HTTP transport:
 
 ```ts
-import { LoggerPlugin, type LogEntry, type LogTransport } from "@tessar/plugins/logger";
+import { LoggerPlugin, type LogEntry, type LogTransport } from "@tessar/logger";
 
 class HttpTransport implements LogTransport {
   readonly url: string;
@@ -252,7 +251,7 @@ Use this separate host example instead of the preceding one. Save as
 ```ts
 import { Agent, Controller } from "@tessar/core";
 import { OpenAIChat } from "@tessar/openai";
-import { PluginManager } from "@tessar/plugins";
+import { PluginManager } from "@tessar/core/plugin";
 
 const manager = new PluginManager({
   directory: ".my-cli",
@@ -314,7 +313,15 @@ Updating an exact registry version installs `latest` and pins the result, includ
 major upgrades. Other source specifications retain native npm update behavior.
 Installation records entries in `plugins.json`; `load()` discovers custom files
 and loads configured packages, without installing missing dependencies. Tessar
-does not impose a CLI command name. See [PluginManager](../../packages/plugins/README.md).
+does not impose a CLI command name. For example, `manager.install("@tessar/logger")`
+installs the standalone logger in the managed environment. The package provides
+a default plugin instance that `manager.load()` can load by name.
+
+If you are upgrading from `@tessar/plugins`, import `PluginManager` from
+`@tessar/core/plugin` and import logger exports from `@tessar/logger`. For managed
+installations of the old logger, replace its `@tessar/plugins/logger` entry in
+`plugins.json` with an installed `@tessar/logger` entry. Keep only one logger
+entry to avoid registering the same plugin ID twice.
 
 ## Change active plugins without a manager
 

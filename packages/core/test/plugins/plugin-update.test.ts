@@ -5,7 +5,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { PluginManager } from "../src/plugin-manager.js";
+import { PluginManager } from "@tessar/core/plugin";
 
 const execute = promisify(execFile);
 

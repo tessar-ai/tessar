@@ -68,7 +68,7 @@ Error records carry an explicit source (`tessar`, `provider`, `plugin`, `tool`,
 `storage`, `application`) and available component identity. Provider/plugin
 exceptions retain their original objects in-process; JSON snapshots belong to
 trace/state. A diagnostic handler failure is isolated without emitting another
-diagnostic. `@tessar/plugins/logger` subscribes to lifecycle notifications and diagnostics;
+diagnostic. `@tessar/logger` subscribes to lifecycle notifications and diagnostics;
 its default ConsoleTransport emits JSON to stderr. Configure `transports` with
 FileTransport or a custom LogTransport implementing `write(entry)` and optional `close()`.
 
@@ -173,7 +173,7 @@ During development, instantiate the plugin class with `new` and pass the instanc
 in Controller options. For external loading, default-export an instance, for example
 `export default new GreetingPlugin()`. The loader passes that instance to core;
 it does not instantiate classes or require a different plugin API.
-Node hosts can also use `PluginManager` from the optional `@tessar/plugins`.
+Node hosts can also import `PluginManager` from `@tessar/core/plugin`.
 The host chooses its directory, calls load before constructing Controller and keeps
 the manager alive through Controller disposal. Use a finally block even if loading
 or initialization fails. The loader does not call setup or install missing packages.

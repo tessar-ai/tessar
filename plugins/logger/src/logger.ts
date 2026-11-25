@@ -17,15 +17,7 @@ import {
   type Plugin,
   type PluginContext,
 } from "@tessar/core";
-import { ConsoleTransport, type LogTransport } from "./logger-transports.js";
-export {
-  ConsoleTransport,
-  FileTransport,
-  logGroup,
-  type LogTransport,
-  type LogGroup,
-  type FileTransportOptions,
-} from "./logger-transports.js";
+import { ConsoleTransport, type LogTransport } from "./transports.js";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 export interface LogEntry extends EventContext {
@@ -40,20 +32,21 @@ export interface LoggerOptions {
   /** Defaults to a ConsoleTransport writing JSON to stderr. */
   transports?: readonly LogTransport[];
 }
-const ranks: Record<LogLevel, number> = {
+const DEFAULT_LEVEL: LogLevel = "info";
+const LEVEL_RANK: Record<LogLevel, number> = {
   debug: 0,
   info: 1,
   warn: 2,
   error: 3,
 };
-const debugEvents = new Set<string>([
+const DEBUG_EVENTS = new Set<string>([
   inputHooks.received,
   text.delta,
   reasoning.delta,
   toolHooks.update,
   modelHooks.usage,
 ]);
-const events = [
+const EVENTS = [
   readyHooks,
   threadHooks.started,
   threadHooks.forked,
@@ -114,8 +107,8 @@ export class LoggerPlugin implements Plugin {
   readonly #level: LogLevel;
 
   constructor(options: LoggerOptions = {}) {
-    this.#level = options.level ?? "info";
-    if (!Object.hasOwn(ranks, this.#level))
+    this.#level = options.level ?? DEFAULT_LEVEL;
+    if (!Object.hasOwn(LEVEL_RANK, this.#level))
       throw new Error("Invalid logger level");
     this.#transports = Object.freeze([
       ...(options.transports ?? [new ConsoleTransport()]),
@@ -141,17 +134,17 @@ export class LoggerPlugin implements Plugin {
     tessar.defer(() =>
       settle(this.#transports.map((transport) => () => transport.close?.())),
     );
-    for (const name of events)
+    for (const name of EVENTS)
       tessar.hook(name, (event) => {
         const level: LogLevel =
           "error" in event.payload && event.payload.error
             ? "error"
             : event.type === streamHooks.suspended
               ? "warn"
-              : debugEvents.has(event.type)
+              : DEBUG_EVENTS.has(event.type)
                 ? "debug"
                 : "info";
-        if (ranks[level] < ranks[this.#level]) return;
+        if (LEVEL_RANK[level] < LEVEL_RANK[this.#level]) return;
         const entry: LogEntry = Object.freeze({
           ...event,
           timestamp: event.timestamp,

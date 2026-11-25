@@ -17,6 +17,9 @@ importers:
       '@tessar/libsql':
         specifier: workspace:*
         version: link:plugins/database/libsql
+      '@tessar/logger':
+        specifier: workspace:*
+        version: link:plugins/logger
       '@tessar/mongodb':
         specifier: workspace:*
         version: link:plugins/database/mongodb
@@ -26,9 +29,6 @@ importers:
       '@tessar/opentelemetry':
         specifier: workspace:*
         version: link:packages/opentelemetry
-      '@tessar/plugins':
-        specifier: workspace:*
-        version: link:packages/plugins
       '@tessar/postgresql':
         specifier: workspace:*
         version: link:plugins/database/postgresql
@@ -173,12 +173,6 @@ importers:
         specifier: workspace:*
         version: link:../core
 
-  packages/plugins:
-    devDependencies:
-      '@tessar/core':
-        specifier: workspace:*
-        version: link:../core
-
   packages/rag:
     dependencies:
       csv-parse:
@@ -271,6 +265,12 @@ importers:
         specifier: ^8.16.3
         version: 8.16.3
 
+  plugins/logger:
+    devDependencies:
+      '@tessar/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
   tests/fixtures/apps/cli:
     dependencies:
       '@tessar/core':
@@ -282,9 +282,6 @@ importers:
       '@tessar/openai':
         specifier: workspace:*
         version: link:../../../../packages/openai
-      '@tessar/plugins':
-        specifier: workspace:*
-        version: link:../../../../packages/plugins
       libsql:
         specifier: 0.5.29
         version: 0.5.29

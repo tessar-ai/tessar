@@ -451,7 +451,7 @@ vẫn cần thiết kế; chưa coi các cơ chế đó là khả năng đã tri
 ## Nợ kỹ thuật TD-001: phân phối, cài đặt và nạp plugin
 
 Ngày ghi nhận: 2026-10-15. Cập nhật: người dùng yêu cầu trả nợ; đã triển khai
-`@tessar/plugins` cho Node/npm CLI. Phạm vi hoãn bên dưới là ghi nhận lịch sử.
+`@tessar/core/plugin` cho Node/npm CLI. Phạm vi hoãn bên dưới là ghi nhận lịch sử.
 Standalone executable cần kiểm chứng riêng theo runtime đóng gói được chọn.
 
 Phạm vi để phase sau:

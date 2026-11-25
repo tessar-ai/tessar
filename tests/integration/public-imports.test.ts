@@ -36,10 +36,11 @@ it("loads built core without product startup I/O and runs the public APIs", () =
   assert.deepEqual((await tool.execute('subpath works',{})).content,[{type:'text',text:'subpath works'}]);
   const {ScriptedProvider}=await import('@tessar/core/testing');
   const provider=new ScriptedProvider([{text:'built answer'}]);
-  const {PluginManager}=await import('@tessar/plugins');
+  assert.equal(core.PluginManager,undefined);
+  const {PluginManager}=await import('@tessar/core/plugin');
   const manager=new PluginManager({directory:process.cwd(),hostUrl:import.meta.url});
-  try{const [logger]=await manager.load(['@tessar/plugins/logger']);assert.equal(logger.id,'logger');assert.equal(typeof logger.setup,'function');}finally{manager.dispose();}
-  const {LoggerPlugin,FileTransport,ConsoleTransport,logGroup}=await import('@tessar/plugins/logger');const logs=[];
+  try{const [logger]=await manager.load(['@tessar/logger']);assert.equal(logger.id,'logger');assert.equal(typeof logger.setup,'function');}finally{manager.dispose();}
+  const {LoggerPlugin,FileTransport,ConsoleTransport,logGroup}=await import('@tessar/logger');const logs=[];
   assert.equal(typeof FileTransport,'function');assert.equal(typeof ConsoleTransport,'function');assert.equal(logGroup.thread,'thread');
   const telemetry=await import('@tessar/opentelemetry');assert.deepEqual(Object.keys(telemetry).sort(),['LaminarAdapter','LangfuseAdapter','OTLPAdapter','OpenTelemetryPlugin']);assert.equal(new telemetry.OpenTelemetryPlugin({adapters:[new telemetry.OTLPAdapter()]}).id,'opentelemetry');
   const logger=new LoggerPlugin({transports:[{write:entry=>{logs.push(entry);}}]});assert.ok(logger instanceof LoggerPlugin);assert.ok(!('write' in logger));

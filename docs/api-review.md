@@ -46,8 +46,8 @@ Danh mục gồm API ứng dụng, API viết plugin/provider/storage và các s
 | `@tessar/core/testing` | ScriptedProvider, AgentHarness, ModelScript |
 | `@tessar/core/testing/storage-conformance` | initialBatch, storageConformance |
 | `@tessar/openai` | OpenAIChat, OpenAIEmbedding, OpenAIPlugin và các type cấu hình |
-| `@tessar/plugins` | PluginManager, PluginManagerOptions |
-| `@tessar/plugins/logger` | LoggerPlugin, FileTransport, ConsoleTransport, logGroup và các type logger; default export là một instance logger |
+| `@tessar/core/plugin` | PluginManager, PluginManagerOptions |
+| `@tessar/logger` | LoggerPlugin, FileTransport, ConsoleTransport, logGroup và các type logger; default export là một instance logger |
 | `@tessar/opentelemetry` | OpenTelemetryPlugin, OTLPAdapter, LangfuseAdapter, LaminarAdapter và các type cấu hình |
 | `@tessar/libsql` | LibsqlStoragePlugin, createLibsqlBackend, LibsqlStorageOptions |
 | `@tessar/libsql/vector` | LibsqlVectorStore, LibsqlVectorStoreOptions (requires optional RAG peer) |
@@ -3017,7 +3017,7 @@ exception nhưng chưa được serialize vào ErrorInfo. Xem [hướng dẫn l�
 
 ### PluginManager options
 
-Nguồn: [packages/plugins/src/index.ts](packages/plugins/src/index.ts).
+Nguồn: [entry quản lý plugin của Core](../packages/core/src/plugins/node/index.ts).
 
 ```ts
 export interface PluginManagerOptions {
@@ -3028,7 +3028,7 @@ export interface PluginManagerOptions {
 
 ### Logger types
 
-Nguồn: `packages/plugins/src/build-in/logger.ts` và `logger-transports.ts`.
+Nguồn: [entry của logger](../plugins/logger/src/index.ts).
 
 ```ts
 export type LogLevel = "debug" | "info" | "warn" | "error";

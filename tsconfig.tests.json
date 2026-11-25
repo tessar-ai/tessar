@@ -18,19 +18,15 @@
       "@tessar/server/fastify": ["./packages/server/src/framework/fastify.ts"],
       "@tessar/rag": ["./packages/rag/src/index.ts"],
       "@tessar/typesafe": ["./packages/typesafe/src/index.ts"],
-      "@tessar/plugins/logger": [
-        "./packages/plugins/src/build-in/logger.ts"
-      ],
+      "@tessar/logger": ["./plugins/logger/src/index.ts"],
       "@tessar/opentelemetry": ["./packages/opentelemetry/src/index.ts"],
-      "@tessar/plugins": [
-        "./packages/plugins/src/index.ts"
-      ],
       "@tessar/core": [
         "./packages/core/src/index.ts"
       ],
       "@tessar/core/tool": [
         "./packages/core/src/tools/index.ts"
       ],
+      "@tessar/core/plugin": ["./packages/core/src/plugins/node/index.ts"],
       "@tessar/core/testing": [
         "./packages/core/src/testing/index.ts"
       ],
@@ -59,6 +55,8 @@
     "packages/*/test/**/*.ts",
     "integrations/auth/*/src/**/*.ts",
     "integrations/auth/*/test/**/*.ts",
+    "plugins/*/src/**/*.ts",
+    "plugins/*/test/**/*.ts",
     "plugins/database/*/src/**/*.ts",
     "plugins/database/*/test/**/*.ts",
     "tests/**/*.ts",

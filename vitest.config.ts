@@ -14,12 +14,12 @@ export default defineConfig({
     { find: "@tessar/server/fastify", replacement: path("./packages/server/src/framework/fastify.ts") },
     { find: "@tessar/server", replacement: path("./packages/server/src/index.ts") },
     { find: "@tessar/rag", replacement: path("./packages/rag/src/index.ts") },
-    { find: "@tessar/plugins/logger", replacement: path("./packages/plugins/src/build-in/logger.ts") },
+    { find: "@tessar/logger", replacement: path("./plugins/logger/src/index.ts") },
     { find: "@tessar/opentelemetry", replacement: path("./packages/opentelemetry/src/index.ts") },
-    { find: "@tessar/plugins", replacement: path("./packages/plugins/src/index.ts") },
     { find: "@tessar/core/testing/storage-conformance", replacement: path("./packages/core/src/testing/storage-conformance.ts") },
     { find: "@tessar/core/testing", replacement: path("./packages/core/src/testing/index.ts") },
     { find: "@tessar/core/tool", replacement: path("./packages/core/src/tools/index.ts") },
+    { find: "@tessar/core/plugin", replacement: path("./packages/core/src/plugins/node/index.ts") },
     { find: "@tessar/core", replacement: path("./packages/core/src/index.ts") },
     { find: "@tessar/libsql/vector", replacement: path("./plugins/database/libsql/src/vector.ts") },
     { find: "@tessar/libsql", replacement: path("./plugins/database/libsql/src/index.ts") },
@@ -29,6 +29,6 @@ export default defineConfig({
     { find: "@tessar/mongodb", replacement: path("./plugins/database/mongodb/src/index.ts") },
     { find: "@tessar/openai", replacement: path("./packages/openai/src/index.ts") },
   ] },
-  test: { include: ["packages/*/test/**/*.test.ts", "integrations/auth/*/test/**/*.test.ts", "plugins/database/*/test/**/*.test.ts", "tests/integration/**/*.test.ts"], testTimeout: 15000 }
+  test: { include: ["packages/*/test/**/*.test.ts", "integrations/auth/*/test/**/*.test.ts", "plugins/*/test/**/*.test.ts", "plugins/database/*/test/**/*.test.ts", "tests/integration/**/*.test.ts"], testTimeout: 15000 }
 });
 

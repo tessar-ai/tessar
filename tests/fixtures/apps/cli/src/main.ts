@@ -17,7 +17,7 @@ import { ScriptedProvider } from "@tessar/core/testing";
 import { z } from "zod";
 import { LibsqlStoragePlugin } from "@tessar/libsql";
 import { OpenAIPlugin } from "@tessar/openai";
-import { PluginManager } from "@tessar/plugins";
+import { PluginManager } from "@tessar/core/plugin";
 import { resolve, isAbsolute } from "node:path";
 
 const args = process.argv.slice(2);
