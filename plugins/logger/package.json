@@ -14,14 +14,14 @@
   "exports": {
     ".": {"types": "./dist/index.d.ts", "import": "./dist/index.js"}
   },
-  "files": ["dist/index.*", "dist/logger.*", "dist/bin/*.node"],
+  "files": ["dist/index.*", "dist/logger.*", "dist/logger-transports.*"],
   "engines": {"node": ">=24.22.1"},
   "peerDependencies": {"@tessar/core": "workspace:^"},
   "peerDependenciesMeta": {"@tessar/core": {"optional": true}},
   "devDependencies": {"@tessar/core": "workspace:*"},
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/build-addon.mjs",
-    "prepack": "tsc -p tsconfig.json && node scripts/build-addon.mjs && node ../../scripts/copy-license.mjs",
+    "build": "tsc -p tsconfig.json",
+    "prepack": "tsc -p tsconfig.json && node ../../scripts/copy-license.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   }
 }

@@ -361,11 +361,7 @@ it("loads the independently packed logger using the host SDK without installing 
     expect(existsSync(join(npmDirectory, "node_modules/@tessar/core"))).toBe(
       false,
     );
-    expect(existsSync(join(
-      npmDirectory,
-      "node_modules/@tessar/logger/dist/bin",
-      `${process.platform}-${process.arch}.node`,
-    ))).toBe(true);
+    expect(existsSync(join(npmDirectory, "node_modules/@tessar/logger/dist/bin"))).toBe(false);
     expect(
       existsSync(
         join(

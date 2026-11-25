@@ -8,35 +8,8 @@ concurrency:
   group: npm-release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  logger_binaries:
-    if: startsWith(github.ref_name, 'logger@')
-    strategy:
-      matrix:
-        include:
-          - { runner: ubuntu-22.04, platform: linux, arch: x64 }
-          - { runner: ubuntu-22.04-arm, platform: linux, arch: arm64 }
-          - { runner: macos-15-intel, platform: darwin, arch: x64 }
-          - { runner: macos-15, platform: darwin, arch: arm64 }
-          - { runner: windows-latest, platform: win32, arch: x64 }
-          - { runner: windows-11-arm, platform: win32, arch: arm64 }
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.22.1
-          architecture: ${{ matrix.arch }}
-      - run: node plugins/logger/scripts/build-addon.mjs
-      - run: node -e "require('./plugins/logger/dist/bin/' + process.platform + '-' + process.arch + '.node')"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: logger-rust-${{ matrix.platform }}-${{ matrix.arch }}
-          path: plugins/logger/dist/bin/${{ matrix.platform }}-${{ matrix.arch }}.node
-          if-no-files-found: error
   publish:
-    needs: logger_binaries
-    if: ${{ !cancelled() && (needs.logger_binaries.result == 'success' || needs.logger_binaries.result == 'skipped') }}
-    runs-on: ${{ startsWith(github.ref_name, 'logger@') && 'ubuntu-22.04' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
@@ -68,13 +41,6 @@ jobs:
         id: release
         run: node scripts/release.mjs check
       - run: pnpm build
-      - name: Assemble logger binaries
-        if: steps.release.outputs.package == '@tessar/logger'
-        uses: actions/download-artifact@v4
-        with:
-          pattern: logger-rust-*
-          merge-multiple: true
-          path: plugins/logger/dist/bin
       - name: Pack the selected package
         env:
           RELEASE_PACKAGE: ${{ steps.release.outputs.package }}

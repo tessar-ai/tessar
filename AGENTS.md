@@ -16,8 +16,7 @@ Tessar is a TypeScript ESM monorepo for building CLI agents and application inte
 
 ## Build, Test, and Development Commands
 
-Use Node.js >=24.22.1 and pnpm 11.5.3 from the repository root. Building the
-logger from source also requires the Rust toolchain.
+Use Node.js >=24.22.1 and pnpm 11.5.3 from the repository root.
 
 - `pnpm install --frozen-lockfile`: install the workspace using its committed lockfile.
 - `pnpm typecheck`: check source and test types without emitting files.

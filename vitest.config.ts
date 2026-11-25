@@ -14,7 +14,7 @@ export default defineConfig({
     { find: "@tessar/server/fastify", replacement: path("./packages/server/src/framework/fastify.ts") },
     { find: "@tessar/server", replacement: path("./packages/server/src/index.ts") },
     { find: "@tessar/rag", replacement: path("./packages/rag/src/index.ts") },
-    { find: "@tessar/logger", replacement: path("./plugins/logger/dist/index.js") },
+    { find: "@tessar/logger", replacement: path("./plugins/logger/src/index.ts") },
     { find: "@tessar/opentelemetry", replacement: path("./packages/opentelemetry/src/index.ts") },
     { find: "@tessar/core/testing/storage-conformance", replacement: path("./packages/core/src/testing/storage-conformance.ts") },
     { find: "@tessar/core/testing", replacement: path("./packages/core/src/testing/index.ts") },

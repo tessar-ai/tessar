@@ -1,5 +1,8 @@
 # Logger benchmark
 
+The current logger uses TypeScript and keeps batching. The measurements below
+document the earlier Rust implementation and its batching experiment.
+
 Measured on Windows x64 with Node.js 24.22.2 using `benchmark/logger.mjs`.
 The first run captured the TypeScript build before changing the logger. The
 final comparison loaded that saved build and the Rust build in the same Node
@@ -24,5 +27,22 @@ To reproduce the paired run, retain the built TypeScript logger's entry and
 sibling modules before building Rust, then pass both entries to the benchmark:
 
 ```sh
-node benchmark/logger.mjs --compare benchmark/results/logger-ts/index.js plugins/logger/dist/index.js benchmark/results/logger-comparison.json
+node benchmark/logger.mjs --compare benchmark/results/logger-ts/index.js benchmark/results/logger-unbatched/index.js benchmark/results/logger-comparison.json
 ```
+
+## Batched file writes
+
+Compared the Rust build above with a Rust build that appends consecutive queued
+entries for the same file together. The worker takes up to 32 entries or 256 KiB
+per batch and writes an oversized entry on its own. It starts as soon as an
+entry arrives. Both builds ran in the same process with alternating sample
+order on Windows x64, Node.js 24.22.2.
+
+| Workload | Individual appends | Batched appends |
+| --- | ---: | ---: |
+| 1,000 writes, awaited individually | 94.0 ms | 96.5 ms |
+| 1,000 writes, up to 32 pending | 73.2 ms | 7.1 ms |
+| 12 scripted agent tasks, 145 log entries | 83.3 ms | 79.0 ms |
+
+Batching made the concurrent file case roughly 10.4 times as fast. The sample
+ranges overlapped for individually awaited writes and for the agent workload.

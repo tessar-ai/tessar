@@ -1,13 +1,15 @@
 export {
   default,
   LoggerPlugin,
+  type LogEntry,
+  type LoggerOptions,
+  type LogLevel,
+} from "./logger.js";
+export {
   ConsoleTransport,
   FileTransport,
   logGroup,
-  type LoggerOptions,
-  type LogEntry,
-  type LogLevel,
   type FileTransportOptions,
-  type LogTransport,
   type LogGroup,
-} from "./logger.js";
+  type LogTransport,
+} from "./transports.js";

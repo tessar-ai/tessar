@@ -2,10 +2,6 @@
 
 Standalone structured logging plugin for Tessar. Requires Node 24.22.1 or newer.
 
-The published package includes a Rust Node-API addon for Linux (glibc 2.35 or
-newer), macOS and Windows on x64 and arm64. The package loads the binary for the
-running Node process. Building from the repository requires the Rust toolchain.
-
 ```sh
 npm install @tessar/core @tessar/logger
 ```
@@ -66,8 +62,9 @@ the extension supplied in `path` is reused for grouped files:
 
 An entry missing the required IDs goes to the original `path`, including a
 Session event without a Thread. IDs are encoded as portable filenames, while
-the original IDs remain in the JSON. Writes are serialized within each
-FileTransport instance, and `close()` waits for pending writes.
+the original IDs remain in the JSON. Each FileTransport writes in queue order
+and combines consecutive entries that are already waiting for the same file.
+`write()` completes after its entry is written, and `close()` waits for pending writes.
 
 For another destination, implement the exported `LogTransport` contract:
 

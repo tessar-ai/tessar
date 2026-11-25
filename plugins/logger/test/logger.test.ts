@@ -251,7 +251,7 @@ it("logs decision hook failures without exposing mutable services to diagnostics
 });
 
 it("writes JSON to stderr by default and stops receiving events after detach", async () => {
-  const stderr = vi.spyOn(console, "error").mockImplementation(() => {});
+  const stderr = vi.spyOn(console, "error").mockImplementation(() => { });
   const harness = await AgentHarness.create({
     modelScripts: [{ text: "one" }, { text: "two" }],
     plugins: [new LoggerPlugin()],
