@@ -7,8 +7,12 @@ import {
   diagnostic,
 } from "../src/index.js";
 import { expect, it } from "vitest";
+import { z } from "zod";
 import {
+  AssistantMessage,
   HumanMessage,
+  MessageCodec,
+  createTool,
   defineInterruption,
   ToolDecision,
   createMemoryBackend,
@@ -415,6 +419,63 @@ it("discards queued input on cancellation and preserves selection when switching
     expect(provider.calls).toHaveLength(1);
   } finally {
     release();
+    await controller.dispose();
+  }
+});
+it("ends an in-flight tool call on explicit abort and keeps the same thread available", async () => {
+  const running = Promise.withResolvers<string>();
+  const toolReturn = Promise.withResolvers<string>();
+  let calls = 0;
+  let reconciliations = 0;
+  const { controller, provider } = await fixture([
+    { response: { message: MessageCodec.encode(new AssistantMessage([
+      { type: "tool-call", name: "write", toolCallId: "write-1", arguments: {} },
+    ])) } },
+    { text: "next answer" },
+  ], [{
+    id: "cancel-write",
+    setup(tessar) {
+      tessar.tools.register(createTool({
+        name: "write", description: "Write a file", schema: z.object({}),
+        async execute(_, context) {
+          calls++;
+          running.resolve(context.streamId);
+          return toolReturn.promise;
+        },
+        recovery: {
+          idempotencyKey: (_, context) => context.toolExecutionId,
+          async reconcile() { reconciliations++; return { status: "unknown" }; },
+        },
+      }));
+    },
+  }]);
+  try {
+    const session = await controller.createSession();
+    const thread = await session.thread.create();
+    const errors: string[] = [];
+    const off = session.subscribe(streamHooks.error, (event) => { errors.push(event.payload.error.code); });
+    try {
+      await session.followUp("Run the write tool");
+      const id = await running.promise;
+      await session.abort("Esc");
+      expect((await thread.getStream(id))?.status).toBe("cancelled");
+      expect((await thread.snapshot()).activeStreamId).toBeNull();
+      expect(errors).toEqual([]);
+      expect(reconciliations).toBe(0);
+      expect(provider.calls).toHaveLength(1);
+
+      const ended = boundary(session, streamHooks.end);
+      await session.followUp("What happened?");
+      await ended;
+      expect(session.thread.getId()).toBe(thread.id);
+      expect(provider.calls[1]?.messages).toContainEqual(expect.objectContaining({
+        role: "tool", toolCallId: "write-1",
+        content: [{ type: "text", text: expect.stringContaining("effects may already have been applied") }],
+      }));
+      expect(calls).toBe(1);
+    } finally { off(); }
+  } finally {
+    toolReturn.resolve("late result");
     await controller.dispose();
   }
 });

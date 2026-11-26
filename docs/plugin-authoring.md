@@ -40,16 +40,20 @@ includes it in model context. Missing returns and non-JSON data are rejected.
 The same Tool can be declared directly in `new Agent({ id, tools: { greet: greetTool } })`;
 no plugin wrapper is required. All tools share hooks, registry snapshots and name
 conflict checks. Agent object keys are registered tool aliases; plugin registration
-uses the Tool's own name. Agent `tools.concurrency` optionally limits active executions;
-omitting it adds no concurrency limit. Policy preparation and approvals happen
+uses the Tool's own name. Agent `tools.concurrency` defaults to three active
+executions and can be overridden. Policy preparation and approvals happen
 before dispatch; executions can complete out of order, and results are published
 in call order before the next model call. Completed results are checkpointed
-individually and reused during recovery. Unknown dispatched outcomes require the
-tool's recovery contract; arbitrary external effects are never blindly replayed.
+individually and reused during recovery. If a dispatched tool's recovery outcome
+is unknown, Tessar cancels the stream and records the uncertain result in the
+Thread history. A verified result or an explicitly safe retry can continue the
+original stream.
 
 Use `tools.select` to filter advertised tools and `tool.before` to deny execution.
-Retry, per-tool limits, caching, sandboxing and conditional availability belong
-in tools or plugins rather than additional core configuration fields.
+Set `retry: { maxRetries, delayMs }` on a tool to retry connection failures and
+timeouts during execution. See the [tool guide](../examples/guide/tools.md#retry-connection-failures).
+Per-tool limits, caching, sandboxing and conditional availability belong in tools
+or plugins.
 
 ## Hooks and lifecycle
 

@@ -88,6 +88,7 @@ const ERROR_CODE = {
 } as const;
 const SUSPENDED_STATUS = "suspended";
 const DEFAULT_CANCEL_REASON = "Cancelled";
+const DEFAULT_TOOL_CONCURRENCY = 3;
 const STREAM_NOT_FOUND_MESSAGE = "Execution is not active or waiting";
 
 export type ModelSelection = ModelAdapter | Model | ModelRef;
@@ -197,7 +198,7 @@ export class Agent<M extends ModelSelection = ModelSelection> {
         return name === value.name ? value : new Tool({ ...value, name });
       }),
     );
-    this.toolConcurrency = concurrency ?? Infinity;
+    this.toolConcurrency = concurrency ?? DEFAULT_TOOL_CONCURRENCY;
     this.model = (
       "ref" in options.model ? options.model : immutable(options.model)
     ) as M;
@@ -515,6 +516,11 @@ export class Agent<M extends ModelSelection = ModelSelection> {
         finish(execution, frame, status, reason, error),
     };
     return execution;
+  }
+  /** @internal */ abortSessionStream(stream: Stream, reason: string): void {
+    const frame = stream.id ? this.active.get(stream.id) : undefined;
+    if (frame?.sink.stream === stream) frame.cancelReason = reason;
+    stream.abort(reason);
   }
   /** @internal */ async cancel(
     threadId: string,

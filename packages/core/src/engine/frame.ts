@@ -57,6 +57,7 @@ export interface ExecutionFrame {
   commitQueue?: Promise<void>;
   heartbeat?: ReturnType<typeof setInterval>;
   ownershipError?: ErrorInfo;
+  cancelReason?: string;
   request: ExecutionRequest;
   sink: Attachment;
   registry: RegistryLease;

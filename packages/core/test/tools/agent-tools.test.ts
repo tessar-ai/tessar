@@ -50,6 +50,78 @@ it("uses Agent tool keys as aliases without mutating the reusable Tool", async (
     expect(result.output.find((message) => message.role === "tool")!.content).toEqual([{ type: "text", text: "result" }]);
   } finally { await harness.dispose(); }
 });
+it("retries transient failures as a single tool call through an Agent alias", async () => {
+  const attempts: { id: string; index: number }[] = [];
+  const work = createTool({
+    name: "shared-read",
+    description: "Read",
+    schema: z.object({ index: z.number() }),
+    retry: { maxRetries: 2, delayMs: 0 },
+    execute({ index }, { toolExecutionId }) {
+      attempts.push({ id: toolExecutionId, index });
+      if (attempts.length === 1)
+        throw new TypeError("fetch failed", {
+          cause: Object.assign(new Error("Connection lost"), { code: "ECONNRESET" }),
+        });
+      if (attempts.length === 2)
+        throw new DOMException("Request timed out", "TimeoutError");
+      return "done";
+    },
+  });
+  const harness = await AgentHarness.create({
+    tools: { work },
+    modelScripts: [response(1), { text: "done" }],
+  });
+  try {
+    const execution = await start(harness);
+    const events = await execution.collected;
+    const records = await harness.records(execution.stream.id!);
+    expect(records.tools).toHaveLength(1);
+    expect(records.tools[0]).toMatchObject({ status: "succeeded", toolCallId: "call-0" });
+    expect(attempts).toEqual(Array(3).fill({ id: records.tools[0]!.id, index: 0 }));
+    expect(events.filter((event) => event.type === toolHooks.start)).toHaveLength(1);
+    expect(events.filter((event) => event.type === toolHooks.error)).toHaveLength(0);
+    expect(harness.provider.calls).toHaveLength(2);
+    expect(harness.provider.calls[1]!.messages.filter((message) => message.role === "tool"))
+      .toMatchObject([{ toolCallId: "call-0", content: [{ type: "text", text: "done" }] }]);
+  } finally {
+    await harness.dispose();
+  }
+});
+
+it("returns invalid arguments to the model without executing a retry-enabled tool", async () => {
+  let attempts = 0;
+  const work = createTool({
+    name: "work",
+    description: "Read",
+    schema: z.object({ index: z.string() }),
+    retry: { maxRetries: 2, delayMs: 0 },
+    execute() {
+      attempts++;
+      return "done";
+    },
+  });
+  const harness = await AgentHarness.create({
+    tools: { work },
+    modelScripts: [response(1), { text: "done" }],
+  });
+  try {
+    const execution = await start(harness);
+    await execution.collected;
+    expect(attempts).toBe(0);
+    expect((await harness.records(execution.stream.id!)).tools[0]).toMatchObject({
+      status: "failed",
+      error: { name: "ZodError" },
+    });
+    expect(harness.provider.calls[1]!.messages).toContainEqual(expect.objectContaining({
+      role: "tool",
+      toolCallId: "call-0",
+      content: [{ type: "text", text: expect.stringContaining("expected string") }],
+    }));
+  } finally {
+    await harness.dispose();
+  }
+});
 function deferred() {
   let resolve!: () => void;
   const promise = new Promise<void>((done) => {
@@ -71,7 +143,7 @@ async function start(harness: AgentHarness) {
   return { thread, stream, collected };
 }
 
-it("executes direct and plugin tools together without a default concurrency limit", async () => {
+it("runs direct and plugin tools with a default concurrency of three", async () => {
   const gate = deferred(),
     started: number[] = [];
   let transforms = 0;
@@ -126,7 +198,7 @@ it("executes direct and plugin tools together without a default concurrency limi
   });
   const execution = await start(harness);
   try {
-    await expect.poll(() => started.length, { timeout: 1000 }).toBe(5);
+    await expect.poll(() => started.length, { timeout: 1000 }).toBe(3);
     expect(harness.provider.calls).toHaveLength(1);
     gate.resolve();
     await execution.collected;
@@ -392,15 +464,18 @@ it("cancels concurrent calls without dispatching queued calls or replaying unkno
         (tool) => tool.status,
       ),
     ).toEqual(["interrupted", "interrupted", "pending", "pending"]);
-    await expect(
-      harness.collect(
-        harness.admit({
-          kind: "recover",
-          threadId: execution.thread.id,
-          streamId: execution.stream.id!,
-        }),
-      ),
-    ).rejects.toMatchObject({ code: "RecoveryRequired" });
+    await harness.collect(
+      harness.admit({
+        kind: "recover",
+        threadId: execution.thread.id,
+        streamId: execution.stream.id!,
+      }),
+    );
+    const recovered = await harness.records(execution.stream.id!);
+    expect(recovered.stream.status).toBe("cancelled");
+    expect(recovered.tools.map((tool) => tool.status)).toEqual([
+      "interrupted", "interrupted", "cancelled", "cancelled",
+    ]);
     expect(started).toEqual([0, 1]);
   } finally {
     gate.resolve();

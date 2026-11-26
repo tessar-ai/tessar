@@ -12,7 +12,7 @@ import { type ToolPreparation } from "../events/type.js";
 import { MessageCodec } from "../messages/codec.js";
 import { immutable } from "../helpers/json.js";
 import type { ToolExecutionRecord } from "../trace/records.js";
-import { TessarError, errorInfo } from "../errors.js";
+import { TessarError, errorInfo, type ErrorInfo } from "../errors.js";
 import { abortable } from "./abort.js";
 import { Suspension } from "./interrupt.js";
 import { ToolSuspension } from "../tools/suspension.js";
@@ -24,6 +24,60 @@ const ERROR_CODE = {
   CANCELLED: "Cancelled",
   RECOVERY_REQUIRED: "RecoveryRequired",
 } as const;
+
+const TRANSPORT_ERROR_CODES = new Set([
+  "EAI_AGAIN",
+  "ECONNABORTED",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "EHOSTUNREACH",
+  "ENETDOWN",
+  "ENETUNREACH",
+  "EPIPE",
+  "ETIMEDOUT",
+  "UND_ERR_BODY_TIMEOUT",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_HEADERS_TIMEOUT",
+  "UND_ERR_SOCKET",
+]);
+const ABORT_ERROR_NAME = "AbortError";
+const TIMEOUT_ERROR_NAME = "TimeoutError";
+
+function isTransportFailure(error: unknown): boolean {
+  const seen = new Set<Error>();
+  while (error instanceof Error && !seen.has(error)) {
+    seen.add(error);
+    if (error.name === ABORT_ERROR_NAME) return false;
+    const { code } = error as Error & { code?: string };
+    if (error.name === TIMEOUT_ERROR_NAME || (code && TRANSPORT_ERROR_CODES.has(code)))
+      return true;
+    error = error.cause;
+  }
+  return false;
+}
+
+function interruptedTool(): TessarError {
+  return new TessarError(
+    ERROR_CODE.RECOVERY_REQUIRED,
+    "In-flight tool cancellation has unknown external outcome",
+  );
+}
+
+async function waitForRetry(delayMs: number, signal: AbortSignal): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await abortable(
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, delayMs);
+      }),
+      signal,
+      interruptedTool,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function executeTool(
   tool: Tool,
   input: unknown,
@@ -32,29 +86,36 @@ export async function executeTool(
 ): Promise<ToolMessage | ToolSuspension> {
   if (context.signal.aborted)
     throw new TessarError(ERROR_CODE.CANCELLED, "Tool cancelled before dispatch");
-  try {
-    return await abortable(
-      response
-        ? Promise.resolve(
-          tool.resume
-            ? tool.resume(response.value, input, context)
-            : response.value,
-        ).then((value) =>
-          value instanceof ToolSuspension
-            ? value
-            : normalizeToolOutput(value),
-        )
-        : tool.execute(input, context),
-      context.signal,
-      () =>
-        new TessarError(
-          ERROR_CODE.RECOVERY_REQUIRED,
-          "In-flight tool cancellation has unknown external outcome",
-        ),
-    );
-  } catch (error) {
-    errorInfo(error, { source: "tool", toolName: tool.name });
-    throw error;
+  const retry = response ? undefined : tool.retry;
+  for (let retries = 0; ; retries++) {
+    try {
+      return await abortable(
+        response
+          ? Promise.resolve(
+            tool.resume
+              ? tool.resume(response.value, input, context)
+              : response.value,
+          ).then((value) =>
+            value instanceof ToolSuspension
+              ? value
+              : normalizeToolOutput(value),
+          )
+          : tool.execute(input, context),
+        context.signal,
+        interruptedTool,
+      );
+    } catch (error) {
+      const info = errorInfo(error, { source: "tool", toolName: tool.name });
+      if (
+        !retry ||
+        retries >= retry.maxRetries ||
+        context.signal.aborted ||
+        mustPropagateToolFailure(info) ||
+        !isTransportFailure(error)
+      ) throw error;
+    }
+    if (retry.delayMs) await waitForRetry(retry.delayMs, context.signal);
+    if (context.signal.aborted) throw interruptedTool();
   }
 }
 
@@ -68,10 +129,8 @@ function pendingTools(
   );
 }
 
-function toolFailure(record: ToolExecutionRecord, error: unknown): ToolMessage {
-  const info = errorInfo(error);
-  if (
-    error instanceof Suspension ||
+function mustPropagateToolFailure(info: ErrorInfo): boolean {
+  return (
     [
       "StorageUnavailable",
       "CommitConflict",
@@ -80,8 +139,12 @@ function toolFailure(record: ToolExecutionRecord, error: unknown): ToolMessage {
       ERROR_CODE.RECOVERY_REQUIRED,
     ].includes(info.code) ||
     ["plugin", "storage", "provider"].includes(info.source)
-  )
-    throw error;
+  );
+}
+
+function toolFailure(record: ToolExecutionRecord, error: unknown): ToolMessage {
+  const info = errorInfo(error);
+  if (error instanceof Suspension || mustPropagateToolFailure(info)) throw error;
   record.status = "failed";
   record.error = errorInfo(error, {
     source: "tool",
@@ -423,11 +486,10 @@ export async function callTools(
 export async function recoverTools(
   frame: ExecutionFrame,
   context: LoopContext,
-  cancel = false,
-): Promise<void> {
+): Promise<boolean> {
+  const retry: ToolExecutionRecord[] = [];
   for (const record of pendingTools(frame, context)) {
-    if (record.result) continue;
-    if (record.status === "running" || record.status === "interrupted") {
+    if (!record.result && (record.status === "running" || record.status === "interrupted")) {
       record.status = "interrupted";
       await context.commit(frame, EXECUTION_TRANSITION);
       const tool = frame.registry.find<Tool>("tool", record.toolName);
@@ -439,27 +501,18 @@ export async function recoverTools(
             key: record.idempotencyKey,
           })
           : { status: "unknown" as const };
-      if (outcome.status === "unknown") {
-        frame.stream.status = "interrupted";
-        await context.commit(frame, EXECUTION_TRANSITION);
-        throw new TessarError(
-          ERROR_CODE.RECOVERY_REQUIRED,
-          "Tool dispatch outcome is unknown",
-        );
-      }
+      if (outcome.status === "unknown") return false;
       if (outcome.status === "completed") {
         saveResult(record, normalizeToolOutput(outcome.result), context);
         record.status = "succeeded";
-      } else record.status = "pending";
+        await context.commit(frame, EXECUTION_TRANSITION);
+      } else retry.push(record);
     }
-    if (cancel && !record.result) {
-      record.status = "cancelled";
-      saveResult(record, new ToolMessage("Execution cancelled"), context);
-    }
-    await context.commit(frame, EXECUTION_TRANSITION);
   }
+  for (const record of retry) record.status = "pending";
   await publishResults(frame, context);
   frame.cp.execution!.phase = frame.cp.execution!.pendingToolExecutionIds.length
     ? ExecutionPhase.BeforeTool
     : ExecutionPhase.TurnBoundary;
+  return true;
 }

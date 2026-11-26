@@ -9,7 +9,11 @@ import { TessarError, errorInfo, errorFromInfo, fail } from "../errors.js";
 
 import type { RegistryLease } from "../plugins/registry.js";
 import type { Lease } from "../state/storage-ports.js";
-import type { ModelAttemptRecord, StreamRecord } from "../trace/records.js";
+import {
+  TOOL_OUTCOME_UNKNOWN,
+  type ModelAttemptRecord,
+  type StreamRecord,
+} from "../trace/records.js";
 import type { EventContext } from "../events/definition.js";
 import type { RuntimeState } from "../runtime-state.js";
 import { aggregateUsage } from "../trace/usage.js";
@@ -30,7 +34,6 @@ import {
 import { eventContext } from "./hooks.js";
 import { Suspension } from "./interrupt.js";
 import { prepareResume, prepareRecovery, restoreFrame } from "./resume.js";
-import { recoverTools } from "./tool-executor.js";
 import {
   bindSignals,
   detachSignals,
@@ -109,6 +112,14 @@ export async function execute(
           checkpointId: frame.cp.id,
           interrupt: interrupt!,
         });
+        return;
+      }
+      if (frame.stream.status === "interrupted") {
+        await finishCancellation(
+          execution,
+          frame,
+          frame.cancelReason ?? TOOL_OUTCOME_UNKNOWN,
+        );
         return;
       }
       await execution.hook(frame, streamHooks.resumed, {
@@ -277,10 +288,14 @@ export async function execute(
         "StorageUnavailable",
         "CommitConflict",
         "OwnershipLost",
-        "RecoveryRequired",
-      ].includes(info.code)
+      ].includes(info.code) &&
+      (info.code !== "RecoveryRequired" || frame.cancelReason !== undefined)
     ) {
       try {
+        if (frame.cancelReason !== undefined && frame.cp.execution) {
+          await finishCancellation(execution, frame, frame.cancelReason);
+          return;
+        }
         await execution.finish(
           frame,
           sink.controller.signal.aborted ? "cancelled" : "failed",
@@ -345,6 +360,27 @@ export async function execute(
   }
 }
 
+async function finishCancellation(
+  execution: ExecutionContext,
+  frame: ExecutionFrame,
+  reason: string,
+): Promise<void> {
+  for (const interrupt of execution.rows<
+    import("../state/schema.js").InterruptRecord
+  >(frame, "interrupts"))
+    if (interrupt.streamId === frame.stream.id && interrupt.status === "pending") {
+      interrupt.status = "cancelled";
+      interrupt.resolvedAt = execution.clock.now();
+    }
+  for (const attempt of execution.rows<ModelAttemptRecord>(frame, "model_attempts"))
+    if (attempt.streamId === frame.stream.id && attempt.status === "running") {
+      attempt.status = "cancelled";
+      attempt.endedAt = execution.clock.now();
+    }
+  await execution.hook(frame, streamHooks.cancel, { reason });
+  await execution.finish(frame, "cancelled", reason);
+}
+
 export async function cancel(
   execution: ExecutionContext,
   threadId: string,
@@ -385,25 +421,7 @@ export async function cancel(
       ),
     );
     watchLease(execution, frame);
-    if (frame.cp.execution?.pendingToolExecutionIds.length)
-      await recoverTools(frame, execution, true);
-    for (const interrupt of execution.rows<
-      import("../state/schema.js").InterruptRecord
-    >(frame, "interrupts"))
-      if (interrupt.streamId === streamId && interrupt.status === "pending") {
-        interrupt.status = "cancelled";
-        interrupt.resolvedAt = execution.clock.now();
-      }
-    for (const attempt of execution.rows<ModelAttemptRecord>(
-      frame,
-      "model_attempts",
-    ))
-      if (attempt.streamId === streamId && attempt.status === "running") {
-        attempt.status = "cancelled";
-        attempt.endedAt = execution.clock.now();
-      }
-    await execution.hook(frame, streamHooks.cancel, { reason });
-    await execution.finish(frame, "cancelled", reason);
+    await finishCancellation(execution, frame, reason);
     if (snapshot)
       await execution.runtime.hooks.dispatch(
         stateChanged,

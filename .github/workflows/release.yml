@@ -8,7 +8,36 @@ concurrency:
   group: npm-release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  workspace-native:
+    if: startsWith(github.ref_name, 'workspace@')
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-22.04, arch: x64, target: linux-x64 }
+          - { os: ubuntu-22.04-arm, arch: arm64, target: linux-arm64 }
+          - { os: macos-15-intel, arch: x64, target: darwin-x64 }
+          - { os: macos-15, arch: arm64, target: darwin-arm64 }
+          - { os: windows-2025, arch: x64, target: win32-x64 }
+          - { os: windows-11-arm, arch: arm64, target: win32-arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+          architecture: ${{ matrix.arch }}
+      - run: rustup default stable
+      - run: node plugins/workspace/scripts/build-native.mjs
+      - name: Load the compiled addon
+        run: node -e "require('./plugins/workspace/dist/native/${{ matrix.target }}.node')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workspace-native-${{ matrix.target }}
+          path: plugins/workspace/dist/native/${{ matrix.target }}.node
+          if-no-files-found: error
   publish:
+    needs: workspace-native
+    if: ${{ !cancelled() && (needs.workspace-native.result == 'success' || needs.workspace-native.result == 'skipped') }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -41,6 +70,12 @@ jobs:
         id: release
         run: node scripts/release.mjs check
       - run: pnpm build
+      - uses: actions/download-artifact@v4
+        if: steps.release.outputs.shortName == 'workspace'
+        with:
+          pattern: workspace-native-*
+          merge-multiple: true
+          path: plugins/workspace/dist/native
       - name: Pack the selected package
         env:
           RELEASE_PACKAGE: ${{ steps.release.outputs.package }}

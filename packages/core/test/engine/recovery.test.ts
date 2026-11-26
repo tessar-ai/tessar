@@ -1,4 +1,4 @@
-import { model as modelHooks } from "../../src/events/type.js";
+import { model as modelHooks, stream as streamHooks } from "../../src/events/type.js";
 import { z } from "zod";
 import { expect, it } from "vitest";
 import { AgentHarness } from "../../src/testing/harness.js";
@@ -230,8 +230,10 @@ it("reconciles a completed external tool without dispatching it again", async ()
     await harness.dispose();
   }
 });
-it("does not replay a dispatched tool whose external outcome is unknown", async () => {
+it("closes recovery with an unknown tool result and accepts another message in the same thread", async () => {
   let effects = 0;
+  let reconciled = 0;
+  const cancellation = Promise.withResolvers<void>();
   const harness = await AgentHarness.create({
     plugins: [
       {
@@ -242,6 +244,13 @@ it("does not replay a dispatched tool whose external outcome is unknown", async 
               name: "write",
               description: "write",
               schema: z.object({}),
+              recovery: {
+                idempotencyKey: (_, { toolExecutionId }) => toolExecutionId,
+                reconcile: async () => {
+                  reconciled++;
+                  return { status: "unknown" };
+                },
+              },
               execute: async () => {
                 effects++;
                 throw new TessarError(
@@ -251,6 +260,7 @@ it("does not replay a dispatched tool whose external outcome is unknown", async 
               },
             }),
           );
+          tessar.hook(streamHooks.cancel, () => cancellation.promise);
         },
       },
     ],
@@ -269,6 +279,7 @@ it("does not replay a dispatched tool whose external outcome is unknown", async 
           ),
         },
       },
+      { text: "next answer" },
     ],
   });
   try {
@@ -280,20 +291,29 @@ it("does not replay a dispatched tool whose external outcome is unknown", async 
         model: { providerId: "scripted", modelId: "test" },
       });
     await expect(harness.collect(stream)).rejects.toThrow();
-    await expect(
-      harness.collect(
-        harness.admit({
-          kind: "recover",
-          threadId: thread.id,
-          streamId: stream.id!,
-        }),
-      ),
-    ).rejects.toMatchObject({ code: "RecoveryRequired" });
+    const session = await harness.controller.createSession();
+    await session.thread.switch(thread.id);
+    const recoveredReceipt = await session.recover({ streamId: stream.id! });
+    expect(recoveredReceipt.streamId).toBe(stream.id);
+    expect(reconciled).toBe(1);
+    expect(harness.provider.calls).toHaveLength(1);
+    await session.followUp("Read the previous outcome");
+    cancellation.resolve();
+    await expect.poll(() => harness.provider.calls.length).toBe(2);
+    const recovered = await harness.records(stream.id!);
+    expect(recovered.stream).toMatchObject({
+      status: "cancelled",
+      stopReason: "ToolOutcomeUnknown",
+    });
+    expect(recovered.tools[0]).toMatchObject({ status: "interrupted", result: { toolCallId: "c" } });
+    expect(session.thread.getId()).toBe(thread.id);
+    expect(harness.provider.calls[1]?.messages).toContainEqual(expect.objectContaining({
+      role: "tool", toolCallId: "c",
+      content: [{ type: "text", text: expect.stringContaining("effects may already have been applied") }],
+    }));
     expect(effects).toBe(1);
-    expect((await harness.records(stream.id!)).stream.status).toBe(
-      "interrupted",
-    );
   } finally {
+    cancellation.resolve();
     await harness.dispose();
   }
 });

@@ -41,6 +41,9 @@ importers:
       '@tessar/typesafe':
         specifier: workspace:*
         version: link:packages/typesafe
+      '@tessar/workspace':
+        specifier: workspace:*
+        version: link:plugins/workspace
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
@@ -270,6 +273,15 @@ importers:
       '@tessar/core':
         specifier: workspace:*
         version: link:../../packages/core
+
+  plugins/workspace:
+    devDependencies:
+      '@tessar/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
 
   tests/fixtures/apps/cli:
     dependencies:

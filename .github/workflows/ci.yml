@@ -107,6 +107,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm build
+      - run: cargo test --locked --manifest-path plugins/workspace/native/Cargo.toml
       - run: pnpm test --maxWorkers 4
       - run: pnpm test:integration --maxWorkers ${{ runner.os == 'Windows' && 2 || 4 }}
       - run: pnpm check:boundaries

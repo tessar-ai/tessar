@@ -49,6 +49,7 @@ import type { CreateThreadOptions } from "./state/threads.js";
 import type { ForkOptions } from "./state/fork.js";
 import type { HistoryOptions } from "./state/queries.js";
 import type { Stream } from "./engine/delivery.js";
+import { TOOL_OUTCOME_UNKNOWN } from "./trace/records.js";
 import {
   createThread,
   getThread,
@@ -767,6 +768,7 @@ export class Session {
     };
     this.foreground = foreground;
     this.publishState({ status: "running", interrupt: null, error: null });
+    let discardQueued = true;
     return new Promise((resolve, reject) => {
       const rejected = (error: ErrorInfo) => {
         reject(errorFromInfo(error));
@@ -786,7 +788,7 @@ export class Session {
             this.blocked.add(thread.id);
           else {
             this.foreground = undefined;
-            if (foreground.status !== "completed")
+            if (foreground.status !== "completed" && discardQueued)
               this.discard(foreground.status);
           }
         }
@@ -804,8 +806,10 @@ export class Session {
             },
             rejected,
             observe: (event) => {
-              if (event.type === streamHooks.end)
+              if (event.type === streamHooks.end) {
                 foreground.status = event.payload.status;
+                discardQueued = !options.recover || event.payload.reason !== TOOL_OUTCOME_UNKNOWN;
+              }
               if (event.type === streamHooks.suspended)
                 foreground.status = "suspended";
               if (event.type === streamHooks.error)
@@ -861,7 +865,7 @@ export class Session {
     this.check();
     const foreground = this.foreground;
     if (foreground?.status === "running") {
-      foreground.stream?.abort(reason);
+      if (foreground.stream) this.agent.abortSessionStream(foreground.stream, reason);
       await foreground.done;
       return;
     }

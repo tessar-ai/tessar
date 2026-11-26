@@ -1,33 +1,18 @@
-# Core performance benchmarks
+# Tessar benchmarks
 
-Run `node benchmark/logger.mjs [logger-entry] [json-report-path]` to compare logger
-builds on the same machine. It checks ordered JSON Lines output and measures
-sequential writes, concurrent writes and an agent with a scripted model. The
-elapsed time includes disposal. See [Logger benchmark](logger.md) for the comparisons.
+Use [agent-loop.mjs](agent-loop.mjs) as the Tessar baseline for framework
+comparisons. It uses the real Agent, Controller, checkpoints and stream iterator
+with a deterministic local model and tool. Start with `tools-short`,
+`tools-history` and `stream-history` for execution and streaming overhead.
 
-For the self-host migration, run `node benchmark/server-self-host.mjs hono` on the
-Hono build and `node benchmark/server-self-host.mjs fastify` on the Fastify build.
-Each run starts the actual CLI with the same scripted model and tool, exercises
-JSON and SSE through `TessarClient`, and records process RSS before and after
-opening concurrent SSE viewers. Keep Node, the machine and Core code the same.
+For each framework, use the same scripted responses, tool implementation,
+history, output and streaming boundaries. Keep storage and observation settings
+equivalent for the workloads being compared. Verify model calls, tool calls and
+final output before comparing elapsed time or CPU measurements. Record platform,
+runtime and framework versions alongside each run.
 
-One local comparison on Windows with Node 24.22.2, eight JSON workers, 60 measured
-agent tasks and 32 concurrent SSE viewers produced these results:
-
-| Metric | Hono | Fastify |
-| --- | ---: | ---: |
-| JSON requests per second | 4,205 | 4,587 |
-| JSON latency p95 | 3.98 ms | 3.64 ms |
-| First SSE event p95 | 2.52 ms | 2.62 ms |
-| Task completion p95 | 15.67 ms | 13.26 ms |
-| Process RSS with 32 SSE viewers | 151.7 MiB | 157.3 MiB |
-
-Measure Tessar's TypeScript execution overhead before considering native code.
-See [Memory lifecycle](memory-lifecycle.md) for retained-heap measurements and cache/queue limits.
-See [Rust feasibility](rust-analysis.md) for the fresh baseline, remaining CPU work and proposed native spike.
 The fixed in-memory provider has no network, timers, request cloning or variable
-model decisions. Every tool returns the same in-memory result. The benchmark
-uses the real Agent, Controller, memory backend, checkpoints and stream iterator.
+model decisions. These workloads measure runtime overhead with synthetic inputs.
 
 ## Run
 
@@ -81,44 +66,31 @@ stream through EOF. Compare each case only with its matching baseline. A full
 CPU profile also includes setup, GC and teardown; use it to locate work, not to
 attribute every sample to the timed interval.
 
-## Optimization scope
+## Other benchmarks
 
-1. Capture baseline timings and CPU profiles using the current implementation.
-2. Optimize repeated validation/copying of immutable data where profiling shows
-   it costs time. Preserve validation of caller-owned data, frozen snapshots,
-   event order, tool scheduling and all checkpoint/recovery boundaries.
-3. Add deterministic regression tests for removed repeated work and mutation
-   isolation. Run package/process tests, then repeat the identical benchmark.
-4. Record measured improvements and remaining hotspots here. Further changes to
-   durability, scheduling or public APIs need a separate design.
+| Area | Run or report |
+| --- | --- |
+| Session and Thread lifecycle, storage calls and capability registration | `node --expose-gc benchmark/core-lifecycle.mjs` · [report](core-lifecycle.md) |
+| Filesystem read, including full 2,000-line and 50 KiB pages | [setup and results](fs-read.md) |
+| Filesystem writes and TypeScript/Rust parity | [setup and results](fs-write.md) |
+| Workspace command execution and output tail | [setup and results](workspace-exec.md) |
+| Logger file writes and agent logging | `node benchmark/logger.mjs` · [report](logger.md) |
+| Self-hosted JSON requests, SSE task completion and viewer RSS | `node benchmark/server-self-host.mjs fastify` |
 
-These are local synthetic workloads, not a comparison with other frameworks.
-They do not measure browser rendering, HTTP transport, external tools, model
-latency, durable database I/O or maximum concurrent server throughput.
+The server benchmark starts the built CLI and exercises the server with
+`TessarClient`. The historical self-host migration comparison used Windows,
+Node 24.22.2, eight JSON workers, 60 tasks and 32 concurrent SSE viewers.
 
-See [analysis.md](analysis.md) for the measured baseline, retained optimizations
-and remaining work.
+| Historical metric | Hono | Fastify |
+| --- | ---: | ---: |
+| JSON requests per second | 4,205 | 4,587 |
+| JSON latency p95 | 3.98 ms | 3.64 ms |
+| First SSE event p95 | 2.52 ms | 2.62 ms |
+| Task completion p95 | 15.67 ms | 13.26 ms |
+| Process RSS with 32 SSE viewers | 151.7 MiB | 157.3 MiB |
 
-For lifecycle work outside the execution loop, run `node --expose-gc
-benchmark/core-lifecycle.mjs` and see [core-lifecycle.md](core-lifecycle.md). This
-inspects core storage-call counts and synthetic capability registration; it does
-not benchmark built-in plugins or backend drivers.
-
-Additional lifecycle probes, also described in that report:
-
-```powershell
-node benchmark/session-hydration.mjs
-node --expose-gc benchmark/message-input.mjs
-```
-
-The hydration probe records returned tool rows/JSON bytes after real scripted
-executions. The input benchmark isolates core normalization through its built
-internal module; it does not introduce a public API.
-
-For checkpoint/commit preparation, run `node --expose-gc
-benchmark/commit-pipeline.mjs` and read [commit-pipeline.md](commit-pipeline.md).
-It records repeated work in real executions, then measures individual operations
-separately. Instrumented execution time is not used as a latency benchmark.
+Earlier Core measurements are recorded in [execution analysis](analysis.md),
+[checkpoint analysis](commit-pipeline.md) and [memory lifecycle](memory-lifecycle.md).
 
 ## PostgreSQL execution comparison
 

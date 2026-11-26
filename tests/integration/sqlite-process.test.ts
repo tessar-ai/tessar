@@ -103,18 +103,17 @@ it.skipIf(!supportsSpawn).each(["crash-model-result", "crash-tool-dispatch"])(
         const recovery = harness.collect(
           harness.admit({ kind: "recover", ...identity }),
         );
+        await recovery;
+        const recovered = await harness.records(identity.streamId);
         if (mode === "crash-tool-dispatch") {
-          await expect(recovery).rejects.toMatchObject({
-            code: "RecoveryRequired",
+          expect(recovered.stream.status).toBe("cancelled");
+          expect(recovered.tools[0]).toMatchObject({
+            status: "interrupted",
+            resultMessageId: expect.any(String),
           });
-          expect((await harness.records(identity.streamId)).stream.status).toBe(
-            "interrupted",
-          );
+          expect(harness.provider.calls).toHaveLength(0);
         } else {
-          await recovery;
-          expect((await harness.records(identity.streamId)).stream.status).toBe(
-            "completed",
-          );
+          expect(recovered.stream.status).toBe("completed");
           expect(harness.provider.calls).toHaveLength(1);
         }
         expect(

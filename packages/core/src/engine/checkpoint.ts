@@ -3,6 +3,7 @@ import {
   checkpoint as checkpointHooks,
   message as messageHooks,
   stream as streamHooks,
+  tool as toolHooks,
   turn as turnHooks,
 } from "../events/type.js";
 import { fail, type ErrorInfo } from "../errors.js";
@@ -195,26 +196,44 @@ export async function finish(
       if (part.type === "tool-call") pending.add(part.toolCallId);
     if (message.role === "tool") pending.delete(message.toolCallId!);
   }
+  const cancelledTools: ToolExecutionRecord[] = [];
+  const cancelled = status === "cancelled" && error === null;
+  const tools = pending.size
+    ? execution.rows<ToolExecutionRecord>(frame, "tool_executions")
+    : [];
   for (const toolCallId of pending) {
-    const message = MessageCodec.encode(
-      new ToolMessage("Execution " + status, { toolCallId }),
+    const tool = tools.find(
+      (t) => t.toolCallId === toolCallId && t.streamId === frame.stream.id,
+    );
+    const uncertain = tool?.status === "running" || tool?.status === "interrupted";
+    const text = cancelled && uncertain
+      ? "Tool execution was interrupted. Its effects may already have been applied."
+      : "Execution " + status;
+    const result = (cancelled ? tool?.result : null) ?? MessageCodec.encode(
+      new ToolMessage(text, { toolCallId }),
     );
     frame.cp.state = {
       ...frame.cp.state,
-      messages: [...frame.cp.state.messages, message],
+      messages: [...frame.cp.state.messages, result],
     };
     frame.stream.outputMessageIds = [
       ...frame.stream.outputMessageIds,
-      message.id,
+      result.id,
     ];
-    const tool = execution
-      .rows<ToolExecutionRecord>(frame, "tool_executions")
-      .find(
-        (t) => t.toolCallId === toolCallId && t.streamId === frame.stream.id,
-      );
-    if (tool && tool.status === "pending") {
+    if (tool && cancelled) {
+      if (!tool.result) {
+        tool.status = uncertain ? "interrupted" : "cancelled";
+        tool.result = result;
+        tool.endedAt ??= execution.clock.now();
+        tool.durationMs = tool.startedAt
+          ? Date.parse(tool.endedAt) - Date.parse(tool.startedAt)
+          : null;
+      }
+      tool.resultMessageId = result.id;
+      cancelledTools.push(tool);
+    } else if (tool?.status === "pending") {
       tool.status = "cancelled";
-      tool.resultMessageId = message.id;
+      tool.resultMessageId = result.id;
       tool.endedAt = execution.clock.now();
     }
   }
@@ -253,6 +272,20 @@ export async function finish(
   frame.stream.durationMs = timing?.complete ? timing.completedActiveMs : null;
   frame.cp.execution = null;
   await execution.commit(frame, "Terminal");
+  for (const tool of cancelledTools) {
+    await execution.hook(frame, messageHooks.committed, {
+      message: tool.result!,
+      checkpointId: frame.cp.id,
+    });
+    await execution.hook(frame, toolHooks.end, {
+      toolExecutionId: tool.id,
+      toolCallId: tool.toolCallId,
+      result: tool.result!,
+      status: tool.status,
+      startedAt: tool.startedAt,
+      endedAt: tool.endedAt,
+    }, tool.id);
+  }
   for (const turn of activeTurns)
     await execution.hook(frame, turnHooks.end, {
       turnId: turn.id,

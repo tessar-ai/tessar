@@ -1,0 +1,20 @@
+{
+  "name": "@tessar/workspace",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "Local workspace tools for Tessar agents.",
+  "type": "module",
+  "engines": { "node": ">=24.22.1" },
+  "files": ["dist"],
+  "repository": { "type": "git", "url": "git+https://github.com/tessar-ai/tessar.git", "directory": "plugins/workspace" },
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "peerDependencies": { "@tessar/core": "workspace:^", "zod": "^4.6.7" },
+  "devDependencies": { "@tessar/core": "workspace:*", "zod": "^4.6.7" },
+  "scripts": {
+    "build:native": "node scripts/build-native.mjs",
+    "build": "tsc -p tsconfig.json && pnpm run build:native",
+    "prepack": "pnpm run build && node ../../scripts/copy-license.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}
