@@ -157,6 +157,28 @@ Completion requires building and starting an artifact in a clean production
 environment and verifying a deployment through the agreed adapter. Running
 `tessar dev` alone is not evidence of production deployment support.
 
+## TD-007 — Workspace documents and original file attachments
+
+**Status:** deferred. **Scope:** document extraction and provider attachments
+for tools working with files in a developer-configured workspace.
+
+### Gap
+
+`@tessar/workspace` reads UTF-8 text. `DocumentReader` in `@tessar/rag` already extracts
+text from PDF, DOCX and XLSX. A scanned PDF can have no extractable text.
+The OpenAI Responses adapter handles file parts in user messages and currently
+handles text and JSON in tool results.
+
+### Direction
+
+- Reuse local document extraction when a tool needs text from a document.
+- Explore an opt-in fallback for a valid PDF with no extractable text. Let
+  the app control whether the original bytes can go to the provider and set a
+  file size limit. Keep workspace path validation in effect.
+- Support file parts in OpenAI Responses tool outputs with the original tool
+  call ID, filename and MIME type. Verify original Word and Excel attachments
+  with a compatible provider.
+
 ## Boundaries
 
 Preserve the minimal core and the "anything are plugin" direction. Server,

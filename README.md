@@ -153,6 +153,7 @@ Install the packages your application uses:
 | [`@tessar/typesafe`](packages/typesafe/README.md)     | Typed TypeSafe calls for classification, routing and application decisions, with optional persistence |
 | [`@tessar/core/plugin`](examples/guide/plugins.md#load-plugins-after-packaging-your-cli) | Optional Node entry for plugin discovery, loading and npm management |
 | [`@tessar/logger`](plugins/logger/README.md) | Standalone structured logging plugin with console and file transports |
+| [`@tessar/workspace`](plugins/workspace/README.md)   | Local workspace tools for reading, editing, applying patches and running shell commands |
 | [`@tessar/rag`](packages/rag/README.md)               | Independent document reading and structure-aware chunking                      |
 | [`@tessar/opentelemetry`](packages/opentelemetry/README.md)     | OTLP tracing with Langfuse and Laminar adapters                 |
 | [`@tessar/libsql`](plugins/database/libsql/README.md)         | State/checkpoint storage using a borrowed libSQL database; optional `/vector` entry for vector/BM25 search                 |

@@ -115,6 +115,14 @@ export function verifyArchive(root, plan, packed, files) {
       files.includes("package/" + target.replace(/^\.\//, "")),
       "Missing export " + target,
     );
+  if (plan.package === "@tessar/workspace") {
+    for (const platform of ["darwin", "linux", "win32"])
+      for (const arch of ["arm64", "x64"])
+        assert.ok(
+          files.includes(`package/dist/native/${platform}-${arch}.node`),
+          `Missing @tessar/workspace addon for ${platform}-${arch}`,
+        );
+  }
 
   // pnpm resolves each workspace dependency against that package's own version.
   for (const kind of dependencyKinds) {

@@ -101,6 +101,23 @@ it("releases the scoped CLI from packages/cli", () => {
   });
 });
 
+it("requires an addon for every supported platform before releasing workspace", () => {
+  const root = fixture();
+  const directory = join(root, "plugins", "workspace");
+  mkdirSync(directory, { recursive: true });
+  const source = { ...manifest(root, "core"), name: "@tessar/workspace", version: "0.1.0" };
+  writeFileSync(join(directory, "package.json"), JSON.stringify(source));
+  const plan = checkRelease({ root, ref: "workspace@0.1.0" });
+  expect(plan.archive).toBe("dist/release/tessar-workspace-0.1.0.tgz");
+  const binaries = [
+    "darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "win32-arm64", "win32-x64",
+  ].map((target) => `package/dist/native/${target}.node`);
+
+  expect(() => verifyArchive(root, plan, source, [...files, ...binaries.slice(0, -1)]))
+    .toThrow("Missing @tessar/workspace addon for win32-x64");
+  expect(verifyArchive(root, plan, source, [...files, ...binaries])).toBe(source);
+});
+
 it.each([
   ["0.1.0", "latest"],
   ["0.2.0-beta.1", "next"],

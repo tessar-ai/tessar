@@ -82,5 +82,11 @@ preserves the original input behavior without that additional pass.
   retention and actual tool algorithms separately before making claims about
   those workloads.
 
-No Rust, new dependency, public API, persistence migration or release/version
-change is part of this pass.
+## Core baseline after lifecycle and checkpoint work
+
+The follow-up run on Windows x64 with Node 24.22.2 and an Intel i7-12650H used
+the same seven memory-backed cases. The median times in case order were 78.95,
+196.16, 8.80, 18.48, 30.63, 290.56 and 38.20 ms. The raw loop results, CPU
+profile and checkpoint measurements are in the local `results/rust-analysis/`
+directory from that run. Rerun `agent-loop.mjs` on the current builds for a
+new comparison.

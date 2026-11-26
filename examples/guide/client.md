@@ -99,6 +99,8 @@ const saved = await controller.records.get("notes", record.id);
 
 For a Session pending interruption, show the interruption payload/schema from state and submit the user's answer through `session.resume({ interruptId, value })`. `session.recover({ streamId })` invokes the server's explicit recovery operation. Independent Agent continuation uses `await agent.resume({ threadId, interruptId, value })`, returning another finite state stream. No local plugin execution is involved.
 
+If recovery finds an unknown tool outcome, the old stream ends as `cancelled`. Its Thread history records the uncertain tool result, and the next message starts a new stream on that Thread.
+
 ```ts
 try {
   await session.followUp("Continue");

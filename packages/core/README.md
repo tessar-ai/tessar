@@ -70,11 +70,10 @@ console.log(result.output);
 
 Tools can also be registered by plugins using `tessar.tools.register(addTool)`.
 Both paths share hooks and execution. Tool names must be unique.
-`tools: { concurrency: 4, addTool }` optionally limits active calls, including
-plugin tools; omit concurrency to execute the model's tool calls without a
-scheduling limit. Tools are authorized before dispatch; results enter the
-conversation in call order after the executions complete. Execution budgets
-such as `limits.maxToolCalls` still apply.
+`tools: { concurrency: 4, addTool }` overrides the default limit of three
+concurrent calls, including plugin tools. Tools are authorized before dispatch
+and results enter the conversation in call order after the executions complete.
+Execution budgets such as `limits.maxToolCalls` still apply.
 
 The Agent constructor's `model` option is required; read it with `agent.getModel()`. `stream(message, options?)` and
 `generate(message, options?)` accept a string, a message, or message history.

@@ -260,7 +260,8 @@ export async function prepareRecovery(
         );
       frame.cp.execution!.phase = ExecutionPhase.BeforeModel;
     }
-    if (plan.kind === "tools") await recoverTools(frame, execution);
+    if (plan.kind === "tools" && !(await recoverTools(frame, execution)))
+      return frame;
     frame.stream.status = "running";
     await execution.commit(frame, "Resumed");
     return frame;

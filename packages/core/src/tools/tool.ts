@@ -11,6 +11,11 @@ import type { TrackedServices } from "../engine/tracked-effects.js";
 import { ToolSuspension } from "./suspension.js";
 import { canonicalJson } from "../state/commit.js";
 export { ToolSuspension } from "./suspension.js";
+
+const DEFAULT_RETRY_DELAY_MS = 250;
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
+const INVALID_CONFIGURATION = "InvalidConfiguration";
+
 export type ToolOutput = JsonValue | ToolMessage;
 export type ToolResult = ToolOutput | ToolSuspension;
 type ToolReturn = ToolResult | Promise<ToolResult>;
@@ -36,6 +41,10 @@ export interface ToolRecovery<I> {
     key: string;
   }): Promise<ReconcileResult>;
 }
+export interface ToolRetryOptions {
+  maxRetries: number;
+  delayMs?: number;
+}
 export interface ToolDefinition<
   I,
   R = JsonValue,
@@ -52,6 +61,7 @@ export interface ToolDefinition<
     context: ToolExecutionContext,
   ): ToolResult | Promise<ToolResult>;
   recovery?: ToolRecovery<I>;
+  retry?: ToolRetryOptions;
 }
 export class Tool<I = any, R = any, O extends ToolReturn = ToolReturn> {
   readonly name: string;
@@ -71,6 +81,7 @@ export class Tool<I = any, R = any, O extends ToolReturn = ToolReturn> {
   ) => ToolResult | Promise<ToolResult>;
   readonly configurationId: string;
   readonly recovery?: ToolRecovery<I>;
+  readonly retry?: Readonly<Required<ToolRetryOptions>>;
   constructor(definition: ToolDefinition<I, R, O>) {
     this.name = requireId(definition.name, "tool name");
     this.description = definition.description;
@@ -108,6 +119,17 @@ export class Tool<I = any, R = any, O extends ToolReturn = ToolReturn> {
       ) as Normalized<Awaited<O>>;
     };
     this.recovery = definition.recovery;
+    if (definition.retry !== undefined) {
+      const retry = definition.retry;
+      if (typeof retry !== "object" || retry === null)
+        fail(INVALID_CONFIGURATION, "Tool retry must be an object");
+      const { maxRetries, delayMs = DEFAULT_RETRY_DELAY_MS } = retry;
+      if (!Number.isSafeInteger(maxRetries) || maxRetries < 0)
+        fail(INVALID_CONFIGURATION, "Tool retry maxRetries must be a non-negative safe integer");
+      if (!Number.isInteger(delayMs) || delayMs < 0 || delayMs > MAX_TIMER_DELAY_MS)
+        fail(INVALID_CONFIGURATION, "Tool retry delayMs must be within the timer range");
+      this.retry = Object.freeze({ maxRetries, delayMs });
+    }
   }
 }
 export function createTool<I, R = JsonValue, O extends ToolReturn = ToolReturn>(

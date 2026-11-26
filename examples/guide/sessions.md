@@ -223,7 +223,7 @@ These are operations on a Session instance, after initialization:
 | `session.thread.getHistory({ limit, cursor })` | Page through message history |
 | `session.thread.fork()` | Create a fork; explicitly switch to its returned ID to select it |
 | `session.thread.delete()` | Soft-delete the selected thread |
-| `session.abort(reason)` | Abort active work |
+| `session.abort(reason)` | Cancel active work and release the Thread for the next message |
 | `session.thread.purge({ threadId })` | Permanently remove a previously deleted thread |
 | `session.model.get()` | Read the full `providerId/modelId` ID |
 | `session.model.name()` | Read the native model ID for display |

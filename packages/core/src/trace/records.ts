@@ -5,6 +5,8 @@ import { normalizeUsage, type ModelUsage, type UsageSummary } from "./usage.js";
 import type { Checkpoint } from "../state/schema.js";
 import type { ModelRef } from "../models/contract.js";
 
+export const TOOL_OUTCOME_UNKNOWN = "ToolOutcomeUnknown";
+
 /** @internal Creates a record only within an active turn. */
 export function createModelAttempt(
   context: { ids: IdGenerator; clock: Clock },

@@ -72,8 +72,8 @@ maps the records directly to rendering fields before publishing the new view.
 No extra Thread head reads are needed. Page order follows the existing storage
 paging contract, also used by the durable adapters' record lists.
 
-Run `node benchmark/session-hydration.mjs`. A real scripted execution completes
-20 historical tool calls, then suspends on one tool in a new stream:
+The hydration probe used a scripted execution that completed
+20 historical tool calls, then suspended on one tool in a new stream.
 
 | Tool data returned through storage port | Before | After |
 | --- | ---: | ---: |
@@ -124,8 +124,8 @@ validation. The final wire projection now freezes a fresh plain wrapper around
 the constructor's owned immutable fields, rather than cloning the whole message
 again. Public `MessageCodec.encode()` retains its detached-copy behavior.
 
-Run `node --expose-gc benchmark/message-input.mjs`. Each sample normalizes 2,000
-messages of 1,024 text characters plus metadata and provider state, with two
+The input probe normalized 2,000 messages per sample, using messages of 1,024
+text characters plus metadata and provider state, with two
 warmups and five samples:
 
 | Input | Before median, ms | After median, ms |
@@ -189,5 +189,5 @@ all durable publication, ownership, retry and recovery boundaries. This profile
 does not authorize dropping checkpoints or reducing validation at storage trust
 boundaries, and does not yet establish a Rust implementation target.
 
-The follow-up [commit analysis](commit-pipeline.md) measures these operations
-separately and proposes an implementation order. It changes no commit behavior.
+The follow-up [commit analysis](commit-pipeline.md) records the measurements and
+subsequent optimization.

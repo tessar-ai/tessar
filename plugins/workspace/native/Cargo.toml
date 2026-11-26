@@ -1,0 +1,16 @@
+[package]
+name = "tessar_workspace"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "=3.16.2", default-features = false, features = ["napi8", "dyn-symbols"] }
+napi-derive = "=3.7.1"
+
+[build-dependencies]
+napi-build = "=2.6.0"

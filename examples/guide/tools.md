@@ -82,14 +82,35 @@ application data; it is not automatically appended to the model-visible text.
 cancelable I/O and `emit()` for progress events. These IDs describe the active
 execution; they do not replace application authentication or credentials.
 
-Tool calls can execute concurrently when the model requests several. The default
-has no concurrency limit; `tools: { concurrency: 4, add, explain }` sets one.
-Retries and availability rules belong in your tool implementation or plugins.
+When the model requests several tool calls, up to three run concurrently by
+default. Use `tools: { concurrency: 4, add, explain }` to set a different limit.
 For external side effects, design idempotency and recovery explicitly; a saved
 checkpoint alone does not guarantee an external action runs exactly once.
 
 See [Agent](agent.md) for `HumanMessage` and `SystemMessage`. Use `ToolMessage`
 when constructing a tool result, rather than fabricating provider-specific JSON.
+
+## Retry connection failures
+
+```ts
+const getOrder = createTool({
+  name: "get_order",
+  description: "Look up an order",
+  schema: z.object({ orderId: z.uuid() }),
+  retry: { maxRetries: 2, delayMs: 300 },
+  execute: ({ orderId }, { signal }) => orders.get(orderId, { signal }),
+});
+```
+
+Here `orders` is your API client. `maxRetries` counts additional attempts, so
+`2` allows up to three executions. `delayMs` sets the fixed wait between attempts
+and defaults to 250 ms. Omitting `retry` makes one attempt.
+
+Tessar retries recognized connection and timeout errors, including native error
+codes exposed through `Error.cause`. Invalid arguments, permission failures,
+and HTTP responses use normal tool error handling. Each retry calls `execute()`
+with the same input and `toolExecutionId`. The model receives the final result
+or error, and abort cancels both the wait and any remaining attempts.
 
 ## Suspend a tool to ask the user
 

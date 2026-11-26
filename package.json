@@ -20,6 +20,7 @@
   "devDependencies": {
     "@tessar/client": "workspace:*",
     "@tessar/core": "workspace:*",
+    "@tessar/workspace": "workspace:*",
     "@tessar/logger": "workspace:*",
     "@tessar/mongodb": "workspace:*",
     "@tessar/openai": "workspace:*",

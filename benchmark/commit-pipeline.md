@@ -5,23 +5,17 @@ approved implementation and its measured results follow at the end. Public APIs,
 checkpoint frequency, fingerprint format and backend implementations are unchanged.
 Measurements use Node 24.22.2 on Windows x64.
 
-## Reproduce
+## Measurement method
 
-Build core, then run:
-
-```powershell
-node --expose-gc benchmark/commit-pipeline.mjs | Set-Content -Encoding utf8 benchmark/results/commit-pipeline.json
-```
-
-The script runs real Agent executions with fixed prebuilt model chunks, a
+The probe ran real Agent executions with fixed prebuilt model chunks, a
 deterministic in-memory tool and the memory storage fixture. Assertions check
 completion, exact model/tool counts, one publish per submitted commit, unique
 commit IDs, record-change accounting and SHA-256 matching the existing full
 fingerprint. Results are Git-ignored.
 
-Counters temporarily instrument serialization/cloning and inspect call stacks;
-they add overhead. No task latency is reported. Separate microbenchmarks run
-after restoring these functions, with two warmups, five samples and 20 calls per
+Counters temporarily instrumented serialization and cloning and inspected call stacks.
+Separate microbenchmarks ran after restoring these functions, with two warmups,
+five samples and 20 calls per
 sample. They measure elapsed time per operation, including promise overhead where
 applicable, not pure CPU time. All use the final representative batch; they do
 not measure the total contribution of that operation over an execution.
